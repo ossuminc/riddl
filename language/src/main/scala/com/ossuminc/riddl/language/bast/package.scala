@@ -171,7 +171,9 @@ package object bast {
     // 29 (2026-09-22, B2) adds statement sub-kinds 25-28 (store, upsert, update, delete) and
     // value tag 17 (query). A revision-28 reader has no arm for any of them and throws at the
     // dispatch -- the honest failure.
-    29 // B2 repository storage statements and the query value
+    // 30 (2026-09-23, B5) adds value tags 18-21 (collection predicate, filter, count,
+    // membership). A revision-29 reader has no arm for any of them and throws at the dispatch.
+    30 // B5 collection predicates, filter, count and membership
     // 23 was multi-line `do` / `prompt`
     // 22 was: `system` value: tag 13 in readValue/writeValue. A revision-21 reader hitting tag 13 throws
     // rather than misreading, which is what the revision gate is for.

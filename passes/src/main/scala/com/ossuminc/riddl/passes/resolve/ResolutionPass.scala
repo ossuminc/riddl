@@ -611,6 +611,16 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case _: DurationLiteral => ()
       case cr: ConstantRef    => associateUsage(parents.head, resolveARef[Constant](cr, parents))
       case qv: QueryValue     => qv.where.foreach(w => resolveValue(w, parents)) // B2
+      // B5 (2026-09-23): recurse into the collection and the predicate. The element BINDING is
+      // lexical -- like a `foreach` element and B2's row scope -- so there is nothing here for
+      // the refMap; ValidationPass threads it and owns the diagnostic.
+      case cp: CollectionPredicate =>
+        resolveValue(cp.collection, parents); resolveValue(cp.predicate, parents)
+      case cf: CollectionFilter =>
+        resolveValue(cf.collection, parents); resolveValue(cf.predicate, parents)
+      case cv: CountValue      => resolveValue(cv.collection, parents)
+      case mv: MembershipValue =>
+        resolveValue(mv.collection, parents); resolveValue(mv.element, parents)
 
   /** A28: resolve a comparison operand ([[Comparand]] = ValueRef | GetValue | ConstantRef |
     * NumericLiteral). A `ConstantRef` and a `GetValue` source resolve here (into the refMap); a

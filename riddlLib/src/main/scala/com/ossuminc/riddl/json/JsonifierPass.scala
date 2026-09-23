@@ -1557,6 +1557,17 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
       ArithmeticDto(ae.op.symbol, serializeValue(ae.left), serializeValue(ae.right))
     case dl: DurationLiteral => DurationLiteralDto(dl.amount.text, dl.unit)
     case qv: QueryValue => QueryValueDto(qv.table.format, qv.one, qv.where.map(serializeValue)) // B2
+    case cp: CollectionPredicate => // B5
+      CollectionPredicateDto(
+        cp.quantifier.keyword,
+        serializeValue(cp.collection),
+        cp.element.value,
+        serializeValue(cp.predicate)
+      )
+    case cf: CollectionFilter =>
+      CollectionFilterDto(serializeValue(cf.collection), cf.element.value, serializeValue(cf.predicate))
+    case cv: CountValue      => CountValueDto(serializeValue(cv.collection))
+    case mv: MembershipValue => MembershipValueDto(serializeValue(mv.collection), serializeValue(mv.element))
     case cr: ConstantRef     => ConstantRefDto(path(cr.pathId))
     case le: LogicalExpression =>
       LogicalDto(le.op.symbol, serializeValue(le.left), serializeValue(le.right))

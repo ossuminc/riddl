@@ -116,6 +116,11 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
     case us: UpdateStatement  => (us.table +: us.assignments.map(_._2)) :+ us.where
     case ds: DeleteStatement  => Seq(ds.table, ds.where)
     case qv: QueryValue       => qv.table +: qv.where.toSeq
+    // B5 (2026-09-23): the collection kinds
+    case cp: CollectionPredicate => Seq(cp.collection, cp.predicate)
+    case cf: CollectionFilter    => Seq(cf.collection, cf.predicate)
+    case cv: CountValue          => Seq(cv.collection)
+    case mv: MembershipValue     => Seq(mv.collection, mv.element)
     case lt: LetStatement     => Seq(lt.expression)
     case pt: PutStatement     => Seq(pt.value)
     case rt: ReturnStatement  => Seq(rt.value)

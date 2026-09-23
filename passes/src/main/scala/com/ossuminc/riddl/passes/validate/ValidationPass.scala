@@ -6617,6 +6617,12 @@ case class ValidationPass(
     case ne: NotExpression        => valueReferencedDefs(ne.expr)
     case ce: ComparisonExpression => valueReferencedDefs(ce.left) ++ valueReferencedDefs(ce.right)
     case ae: ArithmeticExpression => valueReferencedDefs(ae.left) ++ valueReferencedDefs(ae.right)
+    case cp: CollectionPredicate =>
+      valueReferencedDefs(cp.collection) ++ valueReferencedDefs(cp.predicate) // B5
+    case cf: CollectionFilter =>
+      valueReferencedDefs(cf.collection) ++ valueReferencedDefs(cf.predicate)
+    case cv: CountValue      => valueReferencedDefs(cv.collection)
+    case mv: MembershipValue => valueReferencedDefs(mv.collection) ++ valueReferencedDefs(mv.element)
     case cr: ConstantRef =>
       resolution.refMap.definitionOf[Constant](cr.pathId).map(cr.pathId -> _).toSeq
     case _                        => Seq.empty
@@ -7746,6 +7752,13 @@ case class ValidationPass(
     case ne: NotExpression        => countValueFailPoints(ne.expr)
     case ce: ComparisonExpression => countValueFailPoints(ce.left) + countValueFailPoints(ce.right)
     case ae: ArithmeticExpression => countValueFailPoints(ae.left) + countValueFailPoints(ae.right)
+    // B5: reading a collection cannot fail by itself; its operands are counted.
+    case cp: CollectionPredicate =>
+      countValueFailPoints(cp.collection) + countValueFailPoints(cp.predicate)
+    case cf: CollectionFilter =>
+      countValueFailPoints(cf.collection) + countValueFailPoints(cf.predicate)
+    case cv: CountValue      => countValueFailPoints(cv.collection)
+    case mv: MembershipValue => countValueFailPoints(mv.collection) + countValueFailPoints(mv.element)
     // B2: a query READS the store and may fail, exactly as `get` does (1), plus its condition.
     case qv: QueryValue => 1 + qv.where.map(countValueFailPoints).getOrElse(0)
     case _: DurationLiteral       => 0 // B4: a literal, like a NumericLiteral
@@ -7861,6 +7874,10 @@ case class ValidationPass(
     case ce: ComparisonExpression => stateReadsIn(ce.left) ++ stateReadsIn(ce.right)
     case ae: ArithmeticExpression => stateReadsIn(ae.left) ++ stateReadsIn(ae.right)
     case qv: QueryValue           => qv.where.toSeq.flatMap(stateReadsIn) // B2: reads the STORE
+    case cp: CollectionPredicate  => stateReadsIn(cp.collection) ++ stateReadsIn(cp.predicate) // B5
+    case cf: CollectionFilter     => stateReadsIn(cf.collection) ++ stateReadsIn(cf.predicate)
+    case cv: CountValue           => stateReadsIn(cv.collection)
+    case mv: MembershipValue      => stateReadsIn(mv.collection) ++ stateReadsIn(mv.element)
     case _: DurationLiteral       => Seq.empty // B4: a literal
     // A17's ASK form: `when invariant Limit with <expr>`. The `with` operand is a full Value, so it
     // CAN hold a state read and this must recurse rather than stop. `ref` needs no arm -- an
@@ -7920,6 +7937,10 @@ case class ValidationPass(
     case ce: ComparisonExpression => initiatesIn(ce.left) ++ initiatesIn(ce.right)
     case ae: ArithmeticExpression => initiatesIn(ae.left) ++ initiatesIn(ae.right)
     case qv: QueryValue           => qv.where.toSeq.flatMap(initiatesIn) // B2
+    case cp: CollectionPredicate  => initiatesIn(cp.collection) ++ initiatesIn(cp.predicate) // B5
+    case cf: CollectionFilter     => initiatesIn(cf.collection) ++ initiatesIn(cf.predicate)
+    case cv: CountValue           => initiatesIn(cv.collection)
+    case mv: MembershipValue      => initiatesIn(mv.collection) ++ initiatesIn(mv.element)
     case _: DurationLiteral       => Seq.empty // B4: a literal
     case ic: InvariantCondition   => ic.argument.toSeq.flatMap(initiatesIn)
     // A `get from state`/`get from input` holds only a StateRef/InputRef -- no nested value -- so
@@ -7977,6 +7998,10 @@ case class ValidationPass(
     case ce: ComparisonExpression => asksIn(ce.left) ++ asksIn(ce.right)
     case ae: ArithmeticExpression => asksIn(ae.left) ++ asksIn(ae.right)
     case qv: QueryValue           => qv.where.toSeq.flatMap(asksIn) // B2
+    case cp: CollectionPredicate  => asksIn(cp.collection) ++ asksIn(cp.predicate) // B5
+    case cf: CollectionFilter     => asksIn(cf.collection) ++ asksIn(cf.predicate)
+    case cv: CountValue           => asksIn(cv.collection)
+    case mv: MembershipValue      => asksIn(mv.collection) ++ asksIn(mv.element)
     case _: DurationLiteral       => Seq.empty // B4: a literal
     // A17's ASK form. Same reasoning as `stateReadsIn`: the `with` operand is a full Value, so an
     // `ask` can hide inside one -- and a saga step is exactly where that must not go unnoticed.
@@ -9875,6 +9900,10 @@ case class ValidationPass(
       case _: ArithmeticExpression | _: DurationLiteral => None
       // B2: a query denotes the stored record's Type, cardinality aside (see `valueTypeExpr`).
       case qv: QueryValue => queryRecordType(qv, parents)
+      // B5: a predicate/count/membership denotes a predefined type, a filter its collection's
+      // own TypeExpression -- none of them a NAMED Type. See `valueTypeExpr`.
+      case _: CollectionPredicate | _: CountValue | _: MembershipValue => None
+      case cf: CollectionFilter => valueType(cf.collection, parents, lets, elements)
       case cr: ConstantRef =>
         resolution.refMap.definitionOf[Constant](cr.pathId).flatMap { k =>
           k.typeEx match
@@ -10385,6 +10414,11 @@ case class ValidationPass(
       // B2: `query one T` is `R?`, `query T` is `R*` -- the stored record with a cardinality.
       // `checkAssignable` strips cardinality, so `let r: record R = query one T` types `r` as R
       // and `r.f` walks as any other let does.
+      // B5 (2026-09-23): a count is a Whole -- a count is never negative (B4's lattice); a
+      // filter is its collection's own type. The quantifier and the membership test need no arm:
+      // they extend `BooleanExpression`, whose arm above already answers Bool.
+      case cv: CountValue => Some(Whole(cv.loc))
+      case cf: CollectionFilter => valueTypeExpr(cf.collection, parents, lets, elements)
       case qv: QueryValue =>
         queryRecordType(qv, parents).map { t =>
           // The record's own TypeExpression, wrapped in the cardinality the form implies. Using
@@ -10562,6 +10596,27 @@ case class ValidationPass(
       case _: DurationLiteral => ()
       case cr: ConstantRef    => checkRef[Constant](cr, parents)
       case qv: QueryValue     => validateQueryValue(qv, parents, lets, elements) // B2
+      // B5: the collection must be one, the element binds into the predicate's scope only, and
+      // the predicate must be boolean.
+      case cp: CollectionPredicate =>
+        validateOverCollection(
+          cp.collection, Some(cp.element), Some(cp.predicate), "'" + cp.quantifier.keyword + " of'",
+          parents, lets, elements
+        )
+      case cf: CollectionFilter =>
+        validateOverCollection(
+          cf.collection, Some(cf.element), Some(cf.predicate), "a filter", parents, lets, elements
+        )
+      case cv: CountValue =>
+        validateOverCollection(cv.collection, None, None, "'count of'", parents, lets, elements)
+      case mv: MembershipValue =>
+        validateValue(mv.element, parents, lets, elements)
+        validateOverCollection(mv.collection, None, None, "'contains'", parents, lets, elements)
+          .foreach { elemType =>
+            operandTypeExpr(mv.element, parents, lets, elements).foreach { actual =>
+              checkAssignable(elemType, actual, None, parents, mv.element.loc, "The tested value")
+            }
+          }
       case le: LogicalExpression =>
         validateValue(le.left, parents, lets, elements)
         validateValue(le.right, parents, lets, elements)
@@ -11603,6 +11658,46 @@ case class ValidationPass(
         ruleId = Some(RuleId.DoValidatesARange)
       )
     }
+
+  /** B5 (2026-09-23): validate a value that operates on a COLLECTION, and answer its element
+    * type when it has one.
+    *
+    * The collection is validated, required to BE a collection, and -- when the form binds an
+    * element -- the element name is bound to the element type for the PREDICATE ONLY, through
+    * the same `elements` map a `foreach` element and B2's row scope use. The predicate must be
+    * boolean. `what` names the form in the message.
+    */
+  private def validateOverCollection(
+    collection: Value,
+    element: Option[Identifier],
+    predicate: Option[Value],
+    what: String,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Option[TypeExpression] =
+    validateValue(collection, parents, lets, elements)
+    val te = valueTypeExpr(collection, parents, lets, elements)
+    val elemType = te.flatMap(collectionElementType)
+    te match
+      case Some(t) if !isCollectionType(t) =>
+        messages.addError(
+          collection.loc,
+          s"$what needs a collection but '${collection.format}' is a '${t.format}'",
+          suggestion = "Name a field or value whose type is a collection -- 'T*', 'T+', " +
+            "'set of T', 'sequence of T', a mapping or a table.",
+          ruleId = Some(RuleId.NotACollection)
+        )
+      case _ => () // untypable: reported by `validateValue`, or a collection
+    for
+      e <- element
+      p <- predicate
+    do
+      val scope = elements ++ elemType.map(t => e.value -> t).toMap
+      validateValue(p, parents, lets, scope)
+      checkBooleanOperand(p, what, parents, lets, scope)
+    elemType
+  end validateOverCollection
 
   /** B2 (2026-09-22): the [[Schema]] a [[TableRef]] names -- the one its path identifies, or the
     * enclosing repository's SINGLE schema when the reference is unqualified. None when there is

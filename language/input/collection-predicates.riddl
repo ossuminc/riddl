@@ -1,0 +1,44 @@
+// Exercises B5 (2026-09-23): the collection predicates, the filter, `count of` and `contains`.
+// The kitchen-ticket guard is riddl-generator's own example -- the one the AI got wrong twice
+// as a prompt. `map` is deliberately absent: a per-element expression is a lambda, and RIDDL
+// does not have one.
+domain Kitchen is {
+  context Tickets is {
+    record TicketItem is { menuItemId: String, ready: Boolean, category: String } with { briefly "i" }
+    record TicketData is { ticketId: String, items: Tickets.TicketItem*, zips: String* } with { briefly "d" }
+
+    command MarkReady yields event ItemReady is { ticketId: String, menuItemId: String } with { briefly "c" }
+
+    entity KitchenTicket is {
+      event ItemReady is { ticketId: String, menuItemId: String } with { briefly "e" }
+      state Preparing of record Tickets.TicketData
+      inlet In is command Tickets.MarkReady with { briefly "i" }
+      outlet Out is event KitchenTicket.ItemReady with { briefly "o" }
+      handler H is {
+        on init is { yield event KitchenTicket.ItemReady(ticketId = "x", menuItemId = "y") }
+        on m: command Tickets.MarkReady is {
+          yield event KitchenTicket.ItemReady(ticketId = m.ticketId, menuItemId = m.menuItemId)
+        }
+        on ev: event KitchenTicket.ItemReady is {
+          // the guard riddlg named: every item ready
+          when all of TicketData.items as item where item.ready then
+            do "the whole ticket is ready"
+          end
+          when any of TicketData.items as item where item.category == "drink" then
+            do "route the drinks"
+          end
+          when none of TicketData.items as item where item.ready then
+            do "nothing has started"
+          end
+          // the filter, and counting it
+          let drinks = TicketData.items as item where item.category == "drink"
+          let n = count of TicketData.items
+          when count of TicketData.items > 0 then do "not empty" end
+          // membership, collection-first
+          when TicketData.zips contains ev.menuItemId then do "in the service area" end
+        }
+        on other is { error "unexpected" }
+      } with { briefly "h" }
+    } with { briefly "a ticket" }
+  } with { briefly "tickets" }
+} with { briefly "kitchen" }

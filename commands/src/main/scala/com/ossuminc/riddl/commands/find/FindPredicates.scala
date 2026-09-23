@@ -51,6 +51,7 @@ object FindPredicates {
     "log-statement", // B7 (2026-09-21)
     "store-statement", "upsert-statement", "update-statement", "delete-statement", // B2
     "query-value", "table-reference",
+    "collection-predicate", "collection-filter", "count-value", "membership-value", // B5
     "handler", "inlet", "input", "invariant", "item", "let-statement", "linecomment", "list",
     "match-statement", "method", "methodargument", "module", "morph-statement", "on-event",
     "on-init", "on-other", "on-quiescence", "on-term", "onmessageclause", "optional-interaction", "outlet",

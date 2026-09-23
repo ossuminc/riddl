@@ -323,6 +323,9 @@ enum RuleId(
   case UpsertNeedsKey extends RuleId("stmt-upsert-needs-key")
   case UpdateFieldNotInRow extends RuleId("stmt-update-field-not-in-row")
   case QueryOutsideRepository extends RuleId("value-query-outside-repository")
+  // B5 (2026-09-23): collection predicates, the filter, count and membership.
+  case NotACollection extends RuleId("value-not-a-collection")
+  case MembershipTypeMismatch extends RuleId("value-membership-type-mismatch")
   case RepositoryNoHandler extends RuleId("repo-no-handler")
   case RepositoryNoCommandsOrQueries extends RuleId("repo-no-commands-or-queries")
   case RepositoryInletCarriesEvent extends RuleId("repo-inlet-carries-event")

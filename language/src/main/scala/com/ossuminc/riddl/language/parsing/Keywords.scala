@@ -220,6 +220,10 @@ object Keywords {
 
   def delete[u: P]: P[Unit] = keyword(Keyword.delete)
 
+  def count[u: P]: P[Unit] = keyword(Keyword.count)
+
+  def none[u: P]: P[Unit] = keyword(Keyword.none)
+
   def history[u: P]: P[Unit] = keyword(Keyword.history)
 
   def init[u: P]: P[Unit] = keyword(Keyword.init)
@@ -508,6 +512,7 @@ object Keywords {
           Keyword.from,
           Keyword.function,
           Keyword.get,
+          Keyword.count,
           Keyword.delete,
           Keyword.graph,
           Keyword.group,
@@ -531,6 +536,7 @@ object Keywords {
           Keyword.label,
           Keyword.link,
           Keyword.log,
+          Keyword.none,
           Keyword.many,
           Keyword.mapping,
           Keyword.merge,
@@ -698,6 +704,7 @@ object Keyword {
   final val fully = "fully"
   final val function = "function"
   final val get = "get"
+  final val count = "count"
   final val delete = "delete"
   final val graph = "graph"
   final val group = "group"
@@ -719,6 +726,7 @@ object Keyword {
   final val label = "label"
   final val let = "let"
   final val link = "link"
+  final val none = "none"
   final val log = "log"
   final val many = "many"
   final val match_ = "match"
@@ -881,6 +889,7 @@ object Keyword {
     from,
     fully,
     function,
+    count,
     delete,
     graph,
     group,
@@ -905,6 +914,7 @@ object Keyword {
     let,
     link,
     log,
+    none,
     many,
     mapping,
     match_,

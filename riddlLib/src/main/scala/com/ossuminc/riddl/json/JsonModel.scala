@@ -974,6 +974,26 @@ object JsonModel:
     */
   case class ArithmeticDto(op: String, left: ValueDto, right: ValueDto) extends ValueDto
 
+  /** B5 (2026-09-23): `{ "value": "quantifier", "quantifier": "all"|"any"|"none", "collection":
+    * <value>, "element": "e", "predicate": <value> }` -- a boolean over a collection.
+    */
+  case class CollectionPredicateDto(
+    quantifier: String,
+    collection: ValueDto,
+    element: String,
+    predicate: ValueDto
+  ) extends ValueDto
+
+  /** B5: `{ "value": "filter", "collection": <value>, "element": "e", "predicate": <value> }` */
+  case class CollectionFilterDto(collection: ValueDto, element: String, predicate: ValueDto)
+      extends ValueDto
+
+  /** B5: `{ "value": "count", "collection": <value> }` */
+  case class CountValueDto(collection: ValueDto) extends ValueDto
+
+  /** B5: `{ "value": "contains", "collection": <value>, "element": <value> }` */
+  case class MembershipValueDto(collection: ValueDto, element: ValueDto) extends ValueDto
+
   /** B2 (2026-09-22): `{ "value": "query", "table": "Schema.table", "one"?: true, "where"?:
     * <value> }` -- reading the repository's own storage.
     */
@@ -1862,6 +1882,17 @@ object JsonModel:
       case "boolLiteral" => BooleanLiteralDto(m("bool").bool)
       case "comparison"  => ComparisonDto(m("op").str, readValue(m("left")), readValue(m("right")))
       case "arithmetic"  => ArithmeticDto(m("op").str, readValue(m("left")), readValue(m("right")))
+      case "quantifier" => // B5
+        CollectionPredicateDto(
+          m("quantifier").str,
+          readValue(m("collection")),
+          m("element").str,
+          readValue(m("predicate"))
+        )
+      case "filter" =>
+        CollectionFilterDto(readValue(m("collection")), m("element").str, readValue(m("predicate")))
+      case "count"    => CountValueDto(readValue(m("collection")))
+      case "contains" => MembershipValueDto(readValue(m("collection")), readValue(m("element")))
       case "query" => // B2
         QueryValueDto(
           m("table").str,
@@ -1962,6 +1993,29 @@ object JsonModel:
           "op" -> ujson.Str(op),
           "left" -> writeValue(left),
           "right" -> writeValue(right)
+        )
+      case CollectionPredicateDto(q, collection, element, predicate) => // B5
+        ujson.Obj(
+          "value" -> ujson.Str("quantifier"),
+          "quantifier" -> ujson.Str(q),
+          "collection" -> writeValue(collection),
+          "element" -> ujson.Str(element),
+          "predicate" -> writeValue(predicate)
+        )
+      case CollectionFilterDto(collection, element, predicate) =>
+        ujson.Obj(
+          "value" -> ujson.Str("filter"),
+          "collection" -> writeValue(collection),
+          "element" -> ujson.Str(element),
+          "predicate" -> writeValue(predicate)
+        )
+      case CountValueDto(collection) =>
+        ujson.Obj("value" -> ujson.Str("count"), "collection" -> writeValue(collection))
+      case MembershipValueDto(collection, element) =>
+        ujson.Obj(
+          "value" -> ujson.Str("contains"),
+          "collection" -> writeValue(collection),
+          "element" -> writeValue(element)
         )
       case QueryValueDto(table, one, where) =>
         ujson.Obj.from(
@@ -2985,6 +3039,9 @@ object JsonModel:
     "amount", // B4: DurationLiteralDto
     "unit",
     "table", // B2: the storage statements and the query value
+    "quantifier", // B5: the collection kinds
+    "collection",
+    "predicate",
     "assignments",
     "one",
     "where",

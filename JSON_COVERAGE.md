@@ -176,6 +176,10 @@ is covered in that construct's phase. The builder emits references as
 | StoreStatement / UpsertStatement | ✅ B2 (2026-09-22) | `{ "kind": "store"\|"upsert", "value": <value>, "table": "Schema.table" }` — the table AS WRITTEN; a bare name means the repository's single schema |
 | UpdateStatement | ✅ B2 (2026-09-22) | `{ "kind": "update", "table": …, "assignments": [{"field","value"}], "where": <value> }` — a LIST, so assignment order survives |
 | DeleteStatement | ✅ B2 (2026-09-22) | `{ "kind": "delete", "table": …, "where": <value> }` |
+| CollectionPredicate | ✅ B5 (2026-09-23) | `{ "value": "quantifier", "quantifier": "all"\|"any"\|"none", "collection": <value>, "element": "e", "predicate": <value> }` |
+| CollectionFilter | ✅ B5 (2026-09-23) | `{ "value": "filter", "collection": <value>, "element": "e", "predicate": <value> }` |
+| CountValue | ✅ B5 (2026-09-23) | `{ "value": "count", "collection": <value> }` |
+| MembershipValue | ✅ B5 (2026-09-23) | `{ "value": "contains", "collection": <value>, "element": <value> }` |
 | QueryValue | ✅ B2 (2026-09-22) | `{ "value": "query", "table": …, "one"?: true, "where"?: <value> }` |
 | LogStatement | ✅ B7 (2026-09-21) | `{ "kind": "log", "value": <value> }` — record a value for humans; deterministic, not state |
 | TerminateStatement | ✅ 2.0 | `{ "kind": "terminate", "target": <value>, "args": [<arg>] }` — end the instance denoted by `target`, invoking its `on term`. **`target` REPLACED the `processor`/`processorKind` pair on 2026-08-15**: it is a value whose type must be `Id(entity E)`, so it names WHICH INSTANCE ends rather than which kind. **No longer the same shape as `Initiate`**, which still names a type because the instance does not exist yet. A producer still emitting the old pair has it silently dropped and gets a null `target` — the reader diffs no keys |

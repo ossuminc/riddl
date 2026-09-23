@@ -1619,6 +1619,18 @@ object JsonAstBuilder:
         ArithmeticExpression(curAt, aop, buildValue(left), buildValue(right))
       case DurationLiteralDto(amount, unit) =>
         DurationLiteral(curAt, NumericLiteral(curAt, amount), unit)
+      case CollectionPredicateDto(q, collection, element, predicate) => // B5
+        val quant = CollectionQuantifier.values
+          .find(_.keyword == q)
+          .getOrElse { ctx.err(s"unknown quantifier '$q'"); CollectionQuantifier.All }
+        CollectionPredicate(
+          curAt, quant, buildValue(collection), Identifier(curAt, element), buildValue(predicate)
+        )
+      case CollectionFilterDto(collection, element, predicate) =>
+        CollectionFilter(curAt, buildValue(collection), Identifier(curAt, element), buildValue(predicate))
+      case CountValueDto(collection)             => CountValue(curAt, buildValue(collection))
+      case MembershipValueDto(collection, element) =>
+        MembershipValue(curAt, buildValue(collection), buildValue(element))
       case QueryValueDto(table, one, where) => // B2
         QueryValue(curAt, tableRef(table), one, where.map(buildValue))
       case LogicalDto(op, left, right) =>

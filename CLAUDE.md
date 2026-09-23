@@ -1580,6 +1580,11 @@ resolution and type-checking — in `checkStatementScopes`.
   compiler names plus the catch-alls `append` needed (`statementValues`,
   `valueReferencedDefs`, `checkStatementScopes`, `Finder.fieldChildren`, the emitter), the
   `KeywordsTest` count, BAST sub-kind + revision, JSON, find kinds, EBNF + `statement_start`.
+  **B5's collection predicates (2026-09-23)**: a form that must be legal in a CONDITION has to
+  extend `BooleanExpression` — `when`/`require`/invariant filter the ladder to that trait, so a
+  plain `RiddlValue` is a parse error there, not a type error. And a new value whose `format`
+  omits parentheses its own grammar needs is a round trip that passes on TEXT while the TREES
+  diverge: compare trees in the round-trip suite.
   **B2's storage statements (2026-09-22)** joined A23's effect set (`store`, `upsert`,
   `update`, `delete` — a refusal after one leaves a partial change) and `classifyHandlers`'
   executable set; `query` is a VALUE. Two traps recorded in

@@ -44,7 +44,11 @@ class KeywordsTest extends AbstractTestingBasis {
       // 175 as of 2026-09-22: `store`, `upsert`, `update` and `delete`, for B2's repository
       // storage statements. None is a definitionKeyword; the corpus's two fields named `update`
       // stay legal, since only a statement-start position tries the keyword.
-      Keyword.allKeywords.size must be(175)
+      // 177 as of 2026-09-23: `count` and `none`, for B5's `count of` and `none of`. Neither is
+      // a definitionKeyword, and both are reached only behind a `NoCut` keyword pair, so the 24
+      // corpus fields named `count` and `none`'s role as `empty`'s synonym are unaffected.
+      // (`contains` was already a keyword; membership reuses it.)
+      Keyword.allKeywords.size must be(177)
     }
   }
 

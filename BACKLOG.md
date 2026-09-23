@@ -1392,11 +1392,25 @@ measurements on reactive-bbq: 553 AI-filled holes, 4h37m, each hole a sentence R
 spelling for). Reid approved riddlg's PLAN to file these — not the features. Each needs a
 ruling ("does the CM require this?"), then its own plan. Sizes are estimates.
 
-- **[2.16] B5 — collection expressions**: `all of xs where p`, `any of …`, a filter, `count of`,
-  `x in xs`, `map`. Every one is a prompt today; the kitchen fold's guard is the one the AI got
-  wrong twice. **Large** — a value-expression family with per-element scoping; touches the
-  `Value` union (96 sites by the B4 survey, 12 compile-enforced). **RULED by Reid 2026-09-21:
-  plan it now** (after B3 and B2).
+**ALL EIGHT ARE DECIDED AND BUILT** (2026-09-18 → 2026-09-23): B1 union-common field access,
+B2 repository storage statements (+`upsert`), B3 schema keys and history, B4 bounded
+arithmetic, B5 collection predicates, B6 the yield-prompt advisory, B7 the `log` statement, B8
+the range-prose lint. Two things were deliberately NOT taken, and the CM records why: `map`
+(a lambda is general computation) and math-library functions (system-dependent). What follows
+is the one item this work produced.
+
+- **[2.19] Duration literals in the two string-duration windows.** B4 (2026-09-21) added the
+  `30 days` / `1 hour` duration literal as a VALUE, and Reid ruled the same day that
+  `on quiescence "30 minutes"` and `times out after "6 hours"` keep their string form for now.
+  The inconsistency is recorded here: the literal should be accepted in both windows (the
+  string form staying legal — it carries the ISO and abbreviated spellings). Touches
+  `HandlerParser.quiescenceWindow` (`LiteralString | ValueRef` → add `DurationLiteral`),
+  `ProjectorParser.correlationTimeout` (`Correlation.timeout: LiteralString` — an AST field
+  type change, so BAST/JSON/prettify move with it), the EBNF, and `checkPreciseDuration`'s
+  callers. **Small–medium.** Verified: `AST.scala` `OnQuiescenceClause.window` and
+  `Correlation.timeout` as of B4. *(This entry was deleted by accident in the B2 commit's
+  BACKLOG edit and restored here.)*
+
 #### Decided in `../RIDDL-Tools-To-Do-List.md` but never built
 
 **RULINGS TAKEN 2026-08-14, before an unattended run.** Reid answered four questions

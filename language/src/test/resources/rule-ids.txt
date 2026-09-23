@@ -415,3 +415,5 @@ stmt-store-value-not-table-record
 stmt-upsert-needs-key
 stmt-update-field-not-in-row
 value-query-outside-repository
+value-not-a-collection
+value-membership-type-mismatch

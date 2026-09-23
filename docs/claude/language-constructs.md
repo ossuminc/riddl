@@ -550,6 +550,29 @@ decision.
   ResolutionPass resolves `c.value` (it resolved only the type before B4, which
   is why a constant's prompt ascription never resolved).
 
+- **B5 — collection predicates, filter, count and membership (landed 2026-09-23).**
+  `CollectionPredicate(quantifier, collection, element, predicate)` and `MembershipValue`
+  extend **`BooleanExpression`**, not bare `RiddlValue` — a `when`/`require`/invariant condition
+  filters the ladder's result to that trait (`booleanExprOnly`), so a plain value is rejected at
+  PARSE (which is also why `when <filter> then` does not parse, deliberately).
+  `CollectionFilter` and `CountValue` are plain values. Keywords `count` and `none` added
+  (`allKeywords` 177); `contains` already existed.
+  **Three parser facts, each found by a failing test:** the quantifier must be tried in `value`
+  BEFORE `emptyValue`, because `none` is `empty`'s synonym and `emptyValue` CUTS on it; every
+  keyword-led form is `NoCut` on its keyword pair (24 corpus fields are named `count`); and
+  `count of` takes an **atom**, not an `additive` — with `additive` it swallowed the rest of an
+  arithmetic expression (`count of xs + 1` meant `count of (xs + 1)`).
+  **`format` parenthesizes an INFIX operand** (`AST.CollectionValues.needsParens`, copied by
+  `RiddlFileEmitter.emitCollectionOperand`): without it `count of (xs as i where p) > 0`
+  re-parsed as `count of xs as i where (p > 0)` — the same TEXT, a different tree, and a
+  round-trip test that compares only text passes while the trees diverge. The suite compares
+  trees.
+  Typing: `validateOverCollection` requires `isCollectionType`, binds the element into
+  `elements` for the predicate only, and requires the predicate boolean; a count is `Whole`; a
+  filter is its collection's type; membership type-checks against `collectionElementType`.
+  BAST value tags 18-21, `FORMAT_REVISION` 30. **`map` is out by ruling** — a lambda is general
+  computation; see the CM.
+
 - **B2 — repository storage statements and the `query` value (landed 2026-09-22).**
   `StoreStatement`/`UpsertStatement`/`UpdateStatement`/`DeleteStatement` (repository-only, gated
   in the PARSER like `put`/`return` with `Fail.opaque`), and `QueryValue(table, one, where)` as

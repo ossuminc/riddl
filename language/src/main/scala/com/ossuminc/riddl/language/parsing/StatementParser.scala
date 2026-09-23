@@ -666,6 +666,37 @@ private[parsing] trait StatementParser {
     }
   }
 
+  /** B5 (2026-09-23): `all of <coll> as <e> where <pred>` and its `any`/`none` siblings.
+    *
+    * **The whole keyword prefix is `NoCut`**: `none` is also the `empty` synonym and `count` is
+    * a field name in 24 corpus records, so committing on the first keyword would turn a bare
+    * `none`/`count` reference into a parse error. Same idiom as `queryValue`.
+    */
+  private def collectionPredicate[u: P]: P[CollectionPredicate] = {
+    P(
+      Index ~ NoCut(
+        (Keywords.all.map(_ => CollectionQuantifier.All) |
+          Keywords.any.map(_ => CollectionQuantifier.Any) |
+          Keywords.none.map(_ => CollectionQuantifier.None_)) ~ of
+      ) ~/ additive ~ as ~/ identifier ~ Keywords.where ~/ booleanExpr ~ Index
+    ).map { case (start, q, coll, element, pred, end) =>
+      CollectionPredicate(at(start, end), q, coll, element, pred)
+    }
+  }
+
+  /** B5: `count of <coll>` -- `NoCut` for the same reason (24 corpus fields are named `count`).
+    *
+    * **The operand is an ATOM, not an `additive`**: with `additive` the form swallowed the rest
+    * of an arithmetic expression, so `count of xs + 1` meant `count of (xs + 1)` -- found by a
+    * typing probe, not by reading. `count of` binds tighter than arithmetic; a filter or any
+    * other infix operand is parenthesized, which `format` and the emitter also emit.
+    */
+  private def countValue[u: P]: P[CountValue] = {
+    P(Index ~ NoCut(Keywords.count ~ of) ~/ arithAtom ~ Index).map { case (start, coll, end) =>
+      CountValue(at(start, end), coll)
+    }
+  }
+
   /** The expression ladder, for the positions that want a condition: `update`/`delete`'s
     * `where` and `query`'s. Any value may stand there; validation requires it to be boolean.
     */
@@ -681,6 +712,11 @@ private[parsing] trait StatementParser {
         queryValue.map(qv => qv: Value) |
         constructor.map(c => c: Value) |
         getValue.map(gv => gv: Value) |
+        // B5: BEFORE `emptyValue`, because `none` is also `empty`'s synonym and `emptyValue`
+        // CUTS on it -- `none of xs as e where p` would be read as an empty literal with a
+        // dangling ascription. The predicate's own keyword prefix is `NoCut`, so a bare `none`
+        // backtracks here and `emptyValue` still takes it.
+        collectionPredicate.map(cp => cp: Value) |
         // BEFORE `booleanExpr`: its atom accepts a bare path, which would swallow `empty` as a
         // ValueRef and leave any ascription dangling.
         emptyValue.map(ev => ev: Value) |
@@ -756,10 +792,35 @@ private[parsing] trait StatementParser {
   // parsed with no operator following is returned unchanged as the bare atom (never wrapped),
   // which is what keeps `true`, `(a and b)`, a bare ref and a bare literal valid standalone.
   private def comparison[u: P]: P[Value] = {
-    P(Index ~ additive ~ (comparisonOperator ~/ additive).? ~ Index).map {
+    P(Index ~ postfix ~ (comparisonOperator ~/ postfix).? ~ Index).map {
       case (_, left, None, _)                => left
       case (start, left, Some((op, right)), end) =>
         ComparisonExpression(at(start, end), op, left, right): Value
+    }
+  }
+
+  /** B5 (2026-09-23): the two INFIX collection forms, between comparison and additive --
+    * `<coll> as <e> where <pred>` (the filter) and `<coll> contains <value>` (membership).
+    *
+    * Both are `NoCut` on their keyword: `as` leads an ascription in several other positions and
+    * `contains` must not commit before it is certain, or an expression that merely ENDS where an
+    * enclosing rule wants `as` becomes a parse error rather than a backtrack. **`contains` is
+    * collection-first deliberately** -- `x in xs` would have eaten the `in` of B2's
+    * `store <value> in <table>` (Reid, 2026-09-23).
+    */
+  private def postfix[u: P]: P[Value] = {
+    P(
+      Index ~ additive ~ (
+        NoCut(as ~ identifier ~ Keywords.where) ~/ booleanExpr |
+          NoCut(Keywords.contains) ~/ additive.map(v => (v: Value))
+      ).? ~ Index
+    ).map {
+      case (_, left, None, _) => left
+      case (start, left, Some(rest), end) =>
+        rest match
+          case (element: Identifier, pred: Value) =>
+            CollectionFilter(at(start, end), left, element, pred): Value
+          case other: Value => MembershipValue(at(start, end), left, other): Value
     }
   }
 
@@ -809,7 +870,10 @@ private[parsing] trait StatementParser {
     */
   private def arithAtom[u: P]: P[Value] = {
     P(
-      durationLiteral.map(dl => dl: Value) |
+      // B5: keyword-led collection forms, before the literals and the bare-path atom
+      collectionPredicate.map(cp => cp: Value) |
+        countValue.map(cv => cv: Value) |
+        durationLiteral.map(dl => dl: Value) |
         // `NoCut` is load-bearing: `literalString` cuts after its opening quote, and
         // `booleanExprOnly` FILTERS the ladder's result -- so `when "prose"` would parse the
         // string here, fail the filter behind the cut, and never reach the deprecated-string arm.

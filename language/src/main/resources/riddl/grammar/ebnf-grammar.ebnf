@@ -454,10 +454,20 @@ not_expression = ("not" | "!") not_expression | comparison ;
    < multiplicative < atom. `*` and `/` bind tighter than `+` and `-`; all four fold left. A `/`
    is never the start of a `//` comment because comments are stripped first. What may be
    combined or compared is validation's question, not the grammar's. *)
-comparison = additive_expression [ comparison_operator additive_expression ] ;
+comparison = postfix_expression [ comparison_operator postfix_expression ] ;
+(* B5 (2026-09-23): the two INFIX collection forms. `contains` is collection-FIRST because
+   `x in xs` would consume the `in` of B2's `store <value> in <table>`. *)
+postfix_expression = additive_expression [ "as" identifier "where" value
+                                         | "contains" additive_expression ] ;
 additive_expression = multiplicative_expression { ("+" | "-") multiplicative_expression } ;
 multiplicative_expression = arithmetic_atom { ("*" | "/") arithmetic_atom } ;
-arithmetic_atom = duration_literal | literal_string | constant_ref | numeric_literal | boolean_atom ;
+arithmetic_atom = collection_predicate | count_value | duration_literal | literal_string
+                | constant_ref | numeric_literal | boolean_atom ;
+(* B5: `all of xs as e where p` and its `any`/`none` siblings -- a boolean; the element binding
+   is explicit and scoped to the predicate. `count of xs` is a Whole. *)
+collection_predicate = ("all" | "any" | "none") "of" additive_expression "as" identifier
+                       "where" value ;
+count_value = "count" "of" additive_expression ;
 (* `30 days`, `1 hour`: a numeric literal and a unit word, singular or plural. The abbreviated and
    ISO-8601 spellings stay in the STRING duration used by `on quiescence` and `times out after`. *)
 duration_literal = numeric_literal duration_unit ;

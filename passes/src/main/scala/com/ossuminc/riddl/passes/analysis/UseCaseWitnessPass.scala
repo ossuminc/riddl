@@ -227,6 +227,10 @@ case class UseCaseWitnessPass(
       case ne: NotExpression         => getInputRefsIn(ne.expr)
       case ae: ArithmeticExpression  => getInputRefsIn(ae.left) ++ getInputRefsIn(ae.right)
       case qv: QueryValue            => qv.where.toSeq.flatMap(getInputRefsIn) // B2
+      case cp: CollectionPredicate   => getInputRefsIn(cp.collection) ++ getInputRefsIn(cp.predicate)
+      case cf: CollectionFilter      => getInputRefsIn(cf.collection) ++ getInputRefsIn(cf.predicate)
+      case cv: CountValue            => getInputRefsIn(cv.collection)
+      case mv: MembershipValue       => getInputRefsIn(mv.collection) ++ getInputRefsIn(mv.element)
       case _                         => Seq.empty
 
   // ============================================================

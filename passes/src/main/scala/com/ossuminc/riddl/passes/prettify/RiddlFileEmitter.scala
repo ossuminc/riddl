@@ -373,6 +373,24 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         emitValue(left)
         add(s" ${op.symbol} ")
         emitValue(right)
+      // B5 (2026-09-23): the collection forms. Operands route through `emitValue` for the usual
+      // A20 reason (a nested `prompt(...) as T`).
+      case cp: CollectionPredicate =>
+        add(s"${cp.quantifier.keyword} of ")
+        emitCollectionOperand(cp.collection)
+        add(s" as ${cp.element.format} where ")
+        emitValue(cp.predicate)
+      case cf: CollectionFilter =>
+        emitCollectionOperand(cf.collection)
+        add(s" as ${cf.element.format} where ")
+        emitValue(cf.predicate)
+      case cv: CountValue =>
+        add("count of ")
+        emitCollectionOperand(cv.collection)
+      case mv: MembershipValue =>
+        emitCollectionOperand(mv.collection)
+        add(" contains ")
+        emitCollectionOperand(mv.element)
       case qv: QueryValue => // B2
         add(if qv.one then "query one " else "query ")
         add(qv.table.format)
@@ -387,6 +405,18 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         emitArithmeticOperand(ae, ae.right, isRight = true)
       case other => add(other.format)
   end emitValue
+
+  /** B5: a collection operand is parenthesized when it is INFIX -- the same rule as
+    * `AST.CollectionValues.needsParens`, written a second time because this emitter cannot call
+    * into `AST`'s object from `passes`. Keep them in step by hand; `CollectionPredicateRoundTripTest`
+    * compares TREES, not only text, which is what catches a divergence.
+    */
+  private def emitCollectionOperand(v: Value): this.type =
+    v match
+      case _: CollectionFilter | _: MembershipValue | _: ComparisonExpression |
+          _: LogicalExpression | _: ArithmeticExpression =>
+        add("(").emitValue(v).add(")")
+      case _ => emitValue(v)
 
   /** B4: an arithmetic operand is parenthesized when it is an arithmetic expression of LOWER
     * precedence, or of the same precedence on the RIGHT of `-`/`/` (`a - (b - c)`), or a logical

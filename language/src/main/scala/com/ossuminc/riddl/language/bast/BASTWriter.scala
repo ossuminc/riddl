@@ -1648,6 +1648,29 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeU8(16)
         writeLocation(cr.loc)
         writePathIdentifierInline(cr.pathId)
+      // B5 (revision 30): the four collection kinds -- value tags 18-21
+      case cp: CollectionPredicate =>
+        writer.writeU8(18)
+        writeLocation(cp.loc)
+        writer.writeU8(cp.quantifier.ordinal)
+        writeValue(cp.collection)
+        writeIdentifierInline(cp.element)
+        writeValue(cp.predicate)
+      case cf: CollectionFilter =>
+        writer.writeU8(19)
+        writeLocation(cf.loc)
+        writeValue(cf.collection)
+        writeIdentifierInline(cf.element)
+        writeValue(cf.predicate)
+      case cv: CountValue =>
+        writer.writeU8(20)
+        writeLocation(cv.loc)
+        writeValue(cv.collection)
+      case mv: MembershipValue =>
+        writer.writeU8(21)
+        writeLocation(mv.loc)
+        writeValue(mv.collection)
+        writeValue(mv.element)
       // B2 (revision 29): `query [one] <table> [where …]` -- value tag 17
       case qv: QueryValue =>
         writer.writeU8(17)

@@ -870,7 +870,8 @@ object AST:
     StringAttachment | ULIDAttachment | Meta | Statement | Constructor | ConstructorArg | ValueRef |
     GetValue | PromptValue | BooleanExpression | Call | Ask | SelfValue | SystemValue | Initiate |
     NumericLiteral | LookupValue | EmptyValue | ArithmeticExpression | DurationLiteral |
-    QueryValue | TableRef | Requires | Returns | InvariantBlock
+    QueryValue | TableRef | CollectionPredicate | CollectionFilter | CountValue |
+    MembershipValue | Requires | Returns | InvariantBlock
 
   /** Type of definitions that occur in a [[Root]] without [[Include]]. [[Root]] deliberately stays
     * narrow: it is the file parse-root, not the reuse unit. [[Module]] is the reuse unit and is
@@ -3259,12 +3260,13 @@ object AST:
     * B4 (2026-09-21) adds [[ArithmeticExpression]] and [[DurationLiteral]], and promotes
     * [[ConstantRef]] from a comparison-only operand to a value in its own right, because a
     * comparison's operands are now full Values (see [[ComparisonExpression]]). B2 (2026-09-22)
-    * adds [[QueryValue]], the eighteenth.
+    * adds [[QueryValue]], the eighteenth; B5 the four collection kinds, making twenty-two.
     */
   type Value =
     LiteralString | PromptValue | Constructor | ValueRef | GetValue | BooleanExpression | Call |
       Ask | SelfValue | SystemValue | Initiate | NumericLiteral | LookupValue | EmptyValue |
-      ArithmeticExpression | DurationLiteral | ConstantRef | QueryValue
+      ArithmeticExpression | DurationLiteral | ConstantRef | QueryValue | CollectionPredicate |
+      CollectionFilter | CountValue | MembershipValue
 
   /** A54: a single argument supplied to a [[Constructor]]. Positional when `name` is `None`; named
     * (`id = value`) when `name` is `Some`. Validation requires positional arguments to precede
@@ -4188,6 +4190,92 @@ object AST:
   /** `append <value> to field F` -- adds the value at the END of the collection. Ordering is
     * meaning for a sequence, so "at the end" is part of the contract.
     */
+  /** B5 (2026-09-22): which elements must satisfy a collection predicate. */
+  enum CollectionQuantifier(val keyword: String):
+    case All extends CollectionQuantifier("all")
+    case Any extends CollectionQuantifier("any")
+    case None_ extends CollectionQuantifier("none")
+  end CollectionQuantifier
+
+  /** B5: `all of <coll> as <e> where <pred>` and its `any`/`none` siblings -- a BOOLEAN.
+    *
+    * `all of` an EMPTY collection is TRUE (vacuous truth, the universal quantifier's meaning);
+    * `any of` an empty collection is false, and `none of` is the negation of `any of`. The
+    * element is bound EXPLICITLY (Reid, 2026-09-22): no shadowing question, and the predicate
+    * reads like the `foreach` it resembles. The binding is scoped to the predicate alone.
+    */
+  @JSExportTopLevel("CollectionPredicate")
+  case class CollectionPredicate(
+    loc: At,
+    quantifier: CollectionQuantifier,
+    collection: Value,
+    element: Identifier,
+    predicate: Value
+  ) extends BooleanExpression:
+    // A quantifier over a collection IS a boolean expression, which is what makes it legal in a
+    // `when`/`require`/invariant condition: those positions filter the ladder's result to
+    // `BooleanExpression` (`booleanExprOnly`), so a plain RiddlValue would not be accepted there.
+    override def kind: String = "Collection Predicate"
+    def format: String =
+      s"${quantifier.keyword} of ${CollectionValues.parenthesized(collection)} as " +
+        s"${element.format} where ${predicate.format}"
+  end CollectionPredicate
+
+  /** B5: `<coll> as <e> where <pred>` -- the elements that satisfy the predicate, as a collection
+    * of the same shape. NOT a boolean: `when <filter> then` is a type error, and `count of` is
+    * how a filter becomes a number.
+    */
+  @JSExportTopLevel("CollectionFilter")
+  case class CollectionFilter(loc: At, collection: Value, element: Identifier, predicate: Value)
+      extends RiddlValue:
+    override def kind: String = "Collection Filter"
+    def format: String =
+      s"${CollectionValues.parenthesized(collection)} as ${element.format} where ${predicate.format}"
+  end CollectionFilter
+
+  /** B5: `count of <coll>` -- how many elements, a `Whole` (never negative).
+    *
+    * **The operand is parenthesized when it is INFIX**, because `count of` takes an `additive`
+    * and the filter/`contains`/comparison levels sit above it: without the parens
+    * `count of (xs as i where p) > 0` re-parses as `count of xs as i where (p > 0)` -- the same
+    * TEXT, a different tree. Found by a round-trip test that compared formats and passed while
+    * the trees diverged. `RiddlFileEmitter` keeps the same rule by hand.
+    */
+  @JSExportTopLevel("CountValue")
+  case class CountValue(loc: At, collection: Value) extends RiddlValue:
+    override def kind: String = "Count Value"
+    def format: String = s"count of ${CollectionValues.parenthesized(collection)}"
+  end CountValue
+
+  /** B5: the shared parenthesizing rule for a collection operand. An INFIX operand (a filter, a
+    * membership test, a comparison, a logical or an arithmetic expression) binds looser than the
+    * `additive` these forms take, so it must be parenthesized to re-parse as the same tree.
+    */
+  object CollectionValues:
+    def needsParens(v: Value): Boolean = v match
+      case _: CollectionFilter | _: MembershipValue | _: ComparisonExpression |
+          _: LogicalExpression | _: ArithmeticExpression =>
+        true
+      case _ => false
+    def parenthesized(v: Value): String = if needsParens(v) then s"(${v.format})" else v.format
+  end CollectionValues
+
+  /** B5: `<coll> contains <value>` -- membership, by value equality of the element type.
+    *
+    * **Collection-FIRST, and `in` was rejected for a concrete reason** (Reid, 2026-09-23): `x in
+    * xs` on the expression ladder would consume the `in` of B2's `store <value> in <table>` --
+    * for a non-constructor value the ladder reaches the postfix first, and the statement then
+    * fails at its own `in` behind a cut, a hard parse error rather than a backtrack. `contains`
+    * also reads left-to-right like `count of` and `all of`.
+    */
+  @JSExportTopLevel("MembershipValue")
+  case class MembershipValue(loc: At, collection: Value, element: Value) extends BooleanExpression:
+    override def kind: String = "Membership Value"
+    def format: String =
+      s"${CollectionValues.parenthesized(collection)} contains " +
+        s"${CollectionValues.parenthesized(element)}"
+  end MembershipValue
+
   /** B2 (2026-09-22): the table a repository statement reads or writes -- `Schema.table`, or a
     * bare `table` meaning the enclosing repository's single schema. NOT a `Reference[?]`: a data
     * entry is an `Identifier` KEY in `Schema.data`, not a Definition, so there is nothing for the
