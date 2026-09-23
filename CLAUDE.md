@@ -1142,6 +1142,21 @@ validates clean and means something else.
   killed the stack — latent until a caller reached a cyclic alias. When fixing a
   defect of this class, grep for the shape.
 
+**A HAND-TOTAL match in a `--no-warnings` module has NO compiler behind it, and
+`ProjectionPass.addStatementFacts` is the one that bit.** `commands` compiles with
+`--no-warnings` (build.sbt), so its deliberately-wildcard-free match over `Statement` reported
+nothing when B7's `log` and B2's four storage statements landed: `riddlc dump --json` threw a
+`MatchError` and emitted a ZERO-BYTE document while `riddlc validate` on the same model was
+clean, for two days, until riddl-models found it. **The statements' own JSON test passed the
+whole time** — `JsonifierPass` is a SECOND writer and it did get its arms, which is the
+"a dispatch written twice tells you nothing about its other copy" trap in its purest form.
+The guard is now `DumpProjectionFixturesTest`, which sweeps every `**/input/**/*.riddl` fixture
+through the projection: the reflectivity rule already requires a fixture per construct, so the
+next missing arm reddens in `commands` instead of reaching a consumer. Canary-checked by removing
+the five arms (it names the two fixtures). **A pipeline hides the exit code**: `riddlc dump
+--json | wc -c` reports `wc`'s status, which is how a `[severe]` plus an empty document read as
+success in riddl-models' census — `riddlc` itself exits 8.
+
 **A field-drop defect has no natural blast radius, and `Finder` is where it
 lives.** `Finder.recursiveFindByType` walked `contents` only, so **27 field-held
 sites were unreachable** — `MatchStatement`'s cases and guards,
@@ -1750,6 +1765,21 @@ resolution and type-checking — in `checkStatementScopes`.
   followable. `UnrelatedDomainTellTest` pins the related case with the remedy
   actually applied, validating at 0 errors — a negative control proving the
   advice works, not merely that the error stops.
+
+- **ORIGINATION is about what a processor RECEIVES, not about having no inbound edge** (Reid,
+  2026-09-23; `StreamingValidation.originates`). *"Origination is denoted by having outlets that
+  send commands or queries. Having inlets that ONLY receive events or results isn't an indication
+  of origination, just receipt of a reply … any processor that uses the reply or yield statements
+  is an originator of the reply, so when the application gets that reply, it is not the originator
+  but the receiver."* So: **has an outlet AND no dataflow inlet admitting a command or query**. A
+  processor with no inlets satisfies it vacuously, which SUBSUMES the old `isGraphHead`.
+  **Both directions moved**: an `application context … as merge` consumes results, so it could
+  never be a head and no pure sink below one could ever be reached (reactive-bbq's ticket display,
+  104 ancestors, zero heads — and the only fix was to give the display an outlet, the very defect
+  riddl-generator had asked to remove); and a processor that RECEIVES a command while nothing feeds
+  it is no longer an origin, so a sink below it now reports. Corpus: 2 completeness warnings → 1,
+  zero new findings across 191 entry points. Pinned by `SinkReachedFromApplicationTest`, which
+  asserts BOTH directions — a rule that only loosened would have passed on one case.
 
 - **A stream chain ENDS where its message is CONSUMED, never at a `sink` SHAPE —
   and a chain may not loop** (Reid, 2026-09-04; CM §8.1). Check 2 used to ask

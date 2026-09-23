@@ -391,6 +391,27 @@ case class ProjectionPass(
         case id: Identifier => ujson.Obj("value" -> ujson.Str(id.value))
     case w: WhenStatement =>
       obj("condition") = ujson.Obj("value" -> ujson.Str(w.condition.format))
+    // B7 (2026-09-21) and B2 (2026-09-22). **These were MISSING for two days**, and the way the
+    // match is written is why: it is total by hand with no wildcard, `commands` compiles with
+    // `--no-warnings`, and the JSON writer this pass duplicates (`JsonifierPass`) DID get its
+    // arms -- so the new statements' own JSON test passed while `dump --json` threw a MatchError
+    // and emitted nothing. riddl-models found it. Two lessons, both already in CLAUDE.md: a
+    // dispatch written twice tells you nothing about its other copy, and a hand-maintained
+    // total match in a `--no-warnings` module has no compiler behind it.
+    case l: LogStatement => obj("value") = valueOperand(l.value, parents)
+    case st: StoreStatement =>
+      obj("target") = ujson.Str(st.table.format)
+      obj("value") = valueOperand(st.value, parents)
+    case us: UpsertStatement =>
+      obj("target") = ujson.Str(us.table.format)
+      obj("value") = valueOperand(us.value, parents)
+    case up: UpdateStatement =>
+      obj("target") = ujson.Str(up.table.format)
+      obj("fields") = ujson.Arr.from(up.assignments.map(a => ujson.Str(a._1.value)))
+      obj("condition") = ujson.Obj("value" -> ujson.Str(up.where.format))
+    case dl: DeleteStatement =>
+      obj("target") = ujson.Str(dl.table.format)
+      obj("condition") = ujson.Obj("value" -> ujson.Str(dl.where.format))
     case ms: MatchStatement =>
       // The subject IS a `match`'s value operand, so omitting it leaves the record saying a match
       // happened without saying on what. `cases` is deliberately NOT expanded: each case's own
