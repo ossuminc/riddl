@@ -368,12 +368,54 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
       // qualifies (no inlets, so never an edge target) and is kept explicitly for the predefined
       // `ForeverEmpty`, which satisfies reachability for what it feeds without being reported on.
       def hasOutlet(p: Processor[?]): Boolean = p.outlets.nonEmpty
-      def isGraphHead(n: Node): Boolean =
-        hasOutlet(n.value) && !reverseAdjacency.contains(n)
+
+      /** **ORIGINATION IS ABOUT WHAT A PROCESSOR RECEIVES, NOT ABOUT HAVING NO INBOUND EDGE**
+        * (Reid, 2026-09-23, on riddl-models' report).
+        *
+        * "Origination is denoted by having outlets that send commands or queries. Having inlets
+        * that ONLY receive events or results isn't an indication of origination, just receipt of a
+        * reply to the originating command or query. So, just denoting origination by the absence
+        * of inlets is incorrect. The rule then is that it a) sends commands, results, or events
+        * AND b) ONLY receives events or results. Another way to think of it is that any processor
+        * that uses the reply or yield statements is an originator of the reply (a result or
+        * event), so when the application gets that reply, it is not the originator but the
+        * receiver."
+        *
+        * So the outlet side is "sends anything" -- a `yield`/`reply` sender originates that reply
+        * -- and the discriminator is the INLET side: receiving a command or a query makes a
+        * processor a responder, never an origin. A processor with no inlets satisfies (b)
+        * vacuously, which subsumes the old `isGraphHead` (outlet + no inbound edge) entirely.
+        *
+        * **What was wrong before:** an `application context X as merge` sends commands on its
+        * outlets and consumes RESULTS on its inlets, so it always had an inbound edge and could
+        * never be a head -- and a model whose commands all originate in its application could
+        * therefore never put a pure sink on that path. reactive-bbq's `TicketDisplaySink` reported
+        * `stream-sink-reached-by-no-source` with 104 ancestors and zero heads, and the only way to
+        * silence it was to give the display an outlet, which is the defect riddl-generator had
+        * just asked riddl-models to remove. The rule was wrong, not the model -- the same shape as
+        * the 2026-08-14 ruling recorded above, one level deeper.
+        */
+      def receivesCommandOrQuery(p: Processor[?]): Boolean =
+        p.dataflowInlets.exists { inlet =>
+          resolution.refMap
+            .definitionOf[Type](inlet.type_.pathId)
+            .toSeq
+            .flatMap(typeMembers)
+            .exists { member =>
+              member.typEx match
+                case auc: AggregateUseCaseTypeExpression =>
+                  auc.usecase == AggregateUseCase.CommandCase ||
+                    auc.usecase == AggregateUseCase.QueryCase
+                case ate: AliasedTypeExpression =>
+                  ate.keyword == "command" || ate.keyword == "query"
+                case _ => false
+            }
+        }
+
       def originates(n: Node): Boolean =
         sourceNodes.contains(n) ||
           (isPredefined(n.value) && n.value.effectiveShape.isInstanceOf[Source]) ||
-          isGraphHead(n)
+          (hasOutlet(n.value) && !receivesCommandOrQuery(n.value))
 
       sources.foreach { source =>
         val start = node(source)

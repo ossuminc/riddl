@@ -83,7 +83,10 @@ the consumer-bump task files are CANCELLED until the next release. **B4 landed 2
 (entry below; [2.18] closed, [2.19] filed for the duration windows); **B6, B8, B7 and B3 landed the
 same day** ([2.11], [2.12], [2.13], [2.15] closed); Reid ruled B2 IN (all four statements plus
 `upsert`) and B5 "plan it now". Restage `../bin/riddlc` + ivy after each batch (last at
-`2.2.0-7-5f57d5e0`, before B3). **B2 landed 2026-09-22** ([2.17] closed). Next: [2.16] B5, the last of riddlg's eight. `../bin/riddlc` and ivy were restaged together at the
+`2.2.0-7-5f57d5e0`, before B3). **B2 landed 2026-09-22 and B5 2026-09-23** ([2.17], [2.16] closed) — riddlg's eight are all
+decided and built. Two riddl-models reports handled the same day (the `dump --json` MatchError
+and the origination rule). Remaining in § 2: [2.19], duration literals in the two string-duration
+windows. Restage `../bin/riddlc` + ivy after each batch. `../bin/riddlc` and ivy were restaged together at the
 end of the session — confirm the version from the binary.
 
 ### Traps a fresh session would hit
@@ -112,6 +115,68 @@ JVM `utils` 148, `language` 76/760, `passes` 269/1828, `testkit` 2, `riddlLib` (
 `riddlLib`/`riddlc` on Native (CI covers them; the corpus row will be red there too).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-09-23 (later) — two reports from riddl-models, and the dispatch I did not know I had
+
+**`dump --json` threw a MatchError on five statements for two days.** `ProjectionPass.
+addStatementFacts` is total BY HAND with no wildcard, `commands` compiles with `--no-warnings`,
+and the JSON writer I DID update (`JsonifierPass`) is a second copy — so B7's `log` and B2's four
+storage statements projected as an exception while `riddlc validate` was clean and their own JSON
+round-trip test passed. Every tool in riddl-models reads `dump --json`; the scripts doing the B2
+migration were the ones blocked.
+
+The lesson is not "add five arms". It is that **a hand-total match in a `--no-warnings` module
+has no compiler behind it**, and that my JSON test proved nothing about the other writer. The
+guard is now `DumpProjectionFixturesTest`, sweeping all 148 `**/input/**` fixtures through the
+projection (105 parse, 2945 records): the reflectivity rule already forces a fixture per
+construct, so the next missing arm reddens here. Canary-checked — it names the two fixtures.
+
+One claim in their report was false and worth correcting: `dump` exits **8**, not 0. Their
+`riddlc … | wc -c` took `wc`'s status. A `[severe]` plus an empty document read as success
+because of the pipe, not because of the exit code — `set -o pipefail` is the fix on their side.
+
+**Origination is about what a processor RECEIVES.** Their second report: a pure sink below an
+application always drew `stream-sink-reached-by-no-source`, because `originates` required no
+inbound edge and an `application … as merge` consumes results. Reid's ruling sharpened their
+proposal: *a yield/reply sender originates that reply, so the application receiving it is the
+receiver, not the originator* — hence **an outlet AND no inlet admitting a command or query**,
+which subsumes the old graph-head case vacuously.
+
+**It moved in both directions**, and I nearly shipped a test that could only see one: a
+processor receiving a command with nothing feeding it is no longer an origin, so a sink below it
+now reports. Corpus: reactive-bbq 2 completeness warnings → 1 (their finding gone), zero new
+findings across 191 entry points — calibrated on a known positive first, because a rule that only
+loosens is indistinguishable from a rule that stopped running.
+
+## 2026-09-23 — B5: collection predicates, and the line where the language stops
+
+`all of xs as e where p`, its `any`/`none` siblings, the filter `xs as e where p`, `count of xs`
+and `xs contains x`. riddlg's kitchen guard — the prompt its AI got wrong twice — is now
+`when all of TicketData.items as item where item.ready then`. **`map` is out by Reid's ruling**:
+it takes a per-element expression, i.e. a lambda, and a lambda is general computation. The four
+forms ASK QUESTIONS about a collection; they do not build one. That is the same line B4 drew at
+power and roots, and the CM states it as a boundary rather than an omission.
+
+**`x in xs` became `xs contains x`**, and the reason is worth keeping: `in` on the expression
+ladder would have consumed the `in` of B2's `store <value> in <table>`, which landed the day
+before — for a non-constructor value the ladder reaches the postfix first and the statement then
+fails at its own `in` behind a cut. I found it while wiring the parser, stopped, and asked; Reid
+chose `contains`. **A feature landing can narrow the next feature's spelling**, and the cheapest
+time to discover that is before the syntax is public.
+
+Four things the tests found that reading did not:
+- A form legal in a CONDITION must extend `BooleanExpression` — `when` filters the ladder to
+  that trait, so a plain value is a PARSE error there. (It is also why `when <filter> then` does
+  not parse, which is the right answer.)
+- The quantifier must be tried before `emptyValue`: `none` is `empty`'s synonym and that rule CUTS.
+- `count of` taking an `additive` made `count of xs + 1` mean `count of (xs + 1)`. Found by a
+  typing probe whose message named the wrong operand type; its operand is an atom now.
+- **A round trip comparing TEXT passed while the TREES diverged**: `count of (filter) > 0`
+  formatted without its parentheses and re-parsed as `count of xs as i where (p > 0)` — same
+  text, different program. `format` parenthesizes an infix operand now and the suite compares
+  trees. The sharpest instance yet of "prettify is the oracle": the oracle has to be the TREE.
+
+riddl-generator's eight features are all decided and built: B1, B2, B3, B4, B5, B6, B7, B8.
 
 ## 2026-09-22 — B2: the repository says what it DOES with its storage
 
