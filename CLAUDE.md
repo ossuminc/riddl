@@ -1815,6 +1815,24 @@ resolution and type-checking — in `checkStatementScopes`.
   `StreamingValidation`**, because the helpers it needs (`handlerClausesOf`,
   `alternationMembers`, `operandType`, `walkStatements`) are private there; do
   not grow a second copy in the trait.
+
+- **A SINK THAT DOES WORK IS TERMINAL — `handler-streamlet-foreign-message` asks
+  whether the sink SAID what it does, not whether it told an entity** (Reid,
+  2026-09-25). The rule had been narrowed twice by exempting KINDS — the routing
+  shapes, then Repository and Projector at rc.16 — and riddl-models' kitchen
+  display was the third boundary that is not an entity (a screen). **Enumerating
+  exempt kinds was the wrong SHAPE of rule**: "a sink dispatches into entities"
+  is a fact about one USE of sinks, so every new boundary arrives as a false
+  positive in a model that is already correct. What fires now is a sink whose
+  clauses hold only prose or nothing.
+  **`isExecutableStatement` is the ONE enumeration of "real work"**, extracted
+  out of `classifyHandlers` so the two cannot drift; `DoStatement` is
+  deliberately NOT work (prose is a hole the author left).
+  **The MESSAGE moved with the rule**, and `CompletenessTest` filters on a
+  message SUBSTRING to assert the warning's ABSENCE in four negatives — leaving
+  the old text there would have made all four vacuously true. When you change a
+  diagnostic's words, grep the tests for them. Pinned by
+  `TerminalSinkDoesWorkTest`.
   **`stream-graph-cycle` forbids an INFINITE MESSAGE LOOP, not a connector ring**
   (Reid, re-ruled 2026-09-07; `checkMessageLoops`, an abstract hook like
   `isStreamTail`). An `on X` clause transmits X, the message travels the

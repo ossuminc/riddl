@@ -6983,12 +6983,36 @@ case class ValidationPass(
             if messageClauses.nonEmpty then {
               val finder = Finder(handler)
               val tells = finder.recursiveFindByType[TellStatement]
-              if tells.isEmpty then {
+              // **A sink that DOES something but tells nothing is TERMINAL** (Reid, 2026-09-25,
+              // on riddl-models' report about a kitchen display).
+              //
+              // This rule's own comments above record it being narrowed twice for one reason --
+              // split/merge/flow, then Repository/Projector at rc.16 -- each time because the
+              // processor in question is a boundary into something OTHER than entities and the
+              // event it received was emitted BY an entity, so telling that entity back would
+              // invert the flow. A display screen is that argument a third time: reactive-bbq's
+              // `TicketDisplaySink` logs the event and renders it, has no entity to dispatch to,
+              // and was told to invent one -- the very round trip riddl-generator had just asked
+              // to have removed. Rather than name a fourth exempt kind, the question the rule asks
+              // is narrowed to the one it can answer honestly: a sink whose clauses do REAL WORK
+              // (`isExecutableStatement` -- a log, a put, a write, a refusal) has said what it
+              // does with what it receives, whether or not that involves an entity. What still
+              // draws the warning is a sink whose clauses are prose or empty, which genuinely has
+              // not said.
+              val doesWork = handler.clauses.exists { clause =>
+                var found = false
+                walkStatements(clause.contents) { stmt =>
+                  if isExecutableStatement(stmt) then found = true
+                }
+                found
+              }
+              if tells.isEmpty && !doesWork then {
                 messages.addCompleteness(
                   handler.errorLoc,
-                  s"${handler.identify} in ${streamlet.identify} handles messages but does not dispatch to any entity via 'tell'",
-                  suggestion =
-                    "Add 'tell' statements so the streamlet handler dispatches incoming messages to an entity.",
+                  s"${handler.identify} in ${streamlet.identify} handles messages but does not say what it does with them",
+                  suggestion = "Say what the sink does with each message it handles: 'tell' it to an " +
+                    "entity, 'log' it, 'put' it to an output, or give a code block. Prose alone leaves " +
+                    "the behaviour unstated.",
                   ruleId = Some(RuleId.StreamletForeignMessage)
                 )
               }
@@ -12240,41 +12264,49 @@ case class ValidationPass(
     *   - PromptOnly: has only prompt statements
     *   - Empty: has no statements or only uses ???
     */
+  /** Does this statement DO something -- an effect, a transmission, a refusal, a write, a log?
+    *
+    * The ONE enumeration of "executable work", extracted 2026-09-25 so the sink-dispatch check
+    * and `classifyHandlers` cannot drift apart: both asked the same question and a second copy is
+    * how `reply` came to produce 27 false warnings after the 2.0 yield/reply split.
+    *
+    * ENUMERATED, not a catch-all: the statements that are neither work nor prose -- control flow,
+    * binding, `require`, and `return` (function bodies only) -- are listed so a NEW statement kind
+    * breaks this build rather than silently counting as neither.
+    */
+  private def isExecutableStatement(s: Statement): Boolean = s match
+    // A45: `put` publishes to a UI output -- an executable effect. A70/instance-identity:
+    // `terminate` ends an instance -- as executable an effect as `tell`. B7: `log` is
+    // deterministic work, so `on other is { log m }` is not a prompt-only handler. B2's four
+    // storage statements write to the repository's own store.
+    case _: TellStatement | _: SendStatement | _: ForwardStatement | _: YieldStatement |
+        _: ReplyStatement | _: MorphStatement | _: SetStatement | _: CollectionStatement |
+        _: BecomeStatement | _: ErrorStatement | _: CodeStatement | _: PutStatement |
+        _: TerminateStatement | _: LogStatement | _: StoreStatement | _: UpsertStatement |
+        _: UpdateStatement | _: DeleteStatement =>
+      true
+    case _: DoStatement => false // prose: a hole, not work
+    case _: WhenStatement | _: MatchStatement | _: ForeachStatement | _: LetStatement |
+        _: RequireStatement | _: ReturnStatement =>
+      false
+
   private def classifyHandlers(): Seq[HandlerCompleteness] = {
     handlerParents.toSeq.map { case (handler, parent) =>
       var executableCount = 0
       var promptCount = 0
 
       handler.clauses.foreach { clause =>
-        walkStatements(clause.contents) {
+        walkStatements(clause.contents) { stmt =>
           // `reply` is as executable as `yield`: it answers a query with its declared result,
           // which is exactly the work a query handler exists to do. Omitting it after the 2.0
-          // yield/reply split produced 27 false warnings across 22 riddl-models models -- in two
-          // flavours the arithmetic predicts exactly: a `do`+`reply` handler counted as
-          // PromptOnly, a `reply`-only handler as Empty. The Empty branch's own suggestion
-          // already names `reply` as a fix, so a user could follow the advice and still be warned.
-          case _: TellStatement | _: SendStatement | _: ForwardStatement | _: YieldStatement |
-              _: ReplyStatement | _: MorphStatement | _: SetStatement | _: CollectionStatement |
-              _: BecomeStatement | _: ErrorStatement | _: CodeStatement | _: PutStatement |
-              _: TerminateStatement | _: LogStatement | _: StoreStatement | _: UpsertStatement |
-              _: UpdateStatement | _: DeleteStatement =>
-            // A45: `put` publishes to a UI output — an executable effect. A70/instance-identity:
-            // `terminate` ends an instance -- as executable an effect as `tell`. (ReturnStatement
-            // is not added here: it only occurs in function bodies, which are classified by
-            // validateFunction's statement-non-empty check, not classifyHandlers.) B7: `log` is
-            // deterministic work, so `on other is { log m }` is not a prompt-only handler.
-            executableCount += 1
-          case _: DoStatement =>
-            promptCount += 1
-          // ENUMERATED, not a catch-all. These are the statements that are neither an effect nor
-          // a prompt: control flow, binding, refusal, and `return` (function bodies only, checked
-          // by validateFunction instead). Listing them means a NEW statement kind breaks this
-          // build under -Werror rather than silently counting as neither -- which is exactly how
-          // `reply` produced 27 false warnings after the 2.0 yield/reply split. `Statement` is
-          // sealed, so the compiler can hold this promise.
-          case _: WhenStatement | _: MatchStatement | _: ForeachStatement | _: LetStatement |
-              _: RequireStatement | _: ReturnStatement =>
-            ()
+          // yield/reply split produced 27 false warnings across 22 riddl-models models. The
+          // enumeration itself now lives in `isExecutableStatement`, shared with the
+          // sink-dispatch check so the two cannot answer differently.
+          if isExecutableStatement(stmt) then executableCount += 1
+          else
+            stmt match
+              case _: DoStatement => promptCount += 1
+              case _              => () // control flow, binding, require, return
         }
       }
 

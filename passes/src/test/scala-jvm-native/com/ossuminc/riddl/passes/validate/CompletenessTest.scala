@@ -51,7 +51,10 @@ class CompletenessTest extends AbstractValidatingTest {
        |}
        |""".stripMargin
 
-  private val noDispatch = "does not dispatch to any entity via 'tell'"
+  // The rule narrowed 2026-09-25 (a sink that DOES work is terminal) and its message went with
+  // it, so this substring had to move too -- a filter matching the OLD text would have made every
+  // absence assertion below vacuously true. See TerminalSinkDoesWorkTest.
+  private val noDispatch = "handles messages but does not say what it does with them"
 
   "Completeness 4b (streamlet dispatch)" should {
 

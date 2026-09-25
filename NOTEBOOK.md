@@ -116,6 +116,37 @@ JVM `utils` 148, `language` 76/760, `passes` 269/1828, `testkit` 2, `riddlLib` (
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-09-25 — the third boundary that is not an entity
+
+riddl-models' last open report: reactive-bbq's `TicketDisplaySink` — a kitchen display, made a
+real sink on Reid's own ruling that a monitor must not send — drew
+`handler-streamlet-foreign-message`, *"handles messages but does not dispatch to any entity via
+'tell'"*. There is no entity to tell; telling the ticket back to the entity that yielded it is
+the round trip riddl-generator had just had removed.
+
+**The rule's own comments recorded it being narrowed twice, and both narrowings had the same
+shape: exempt a KIND.** First the routing shapes (`split`/`merge`/`flow`), then Repository and
+Projector at rc.16 (25 false positives in riddl-examples, 3 here), each on the reasoning that
+the processor is a boundary into something other than entities and the event it received came
+FROM an entity. A screen is that argument a third time.
+
+**The lesson is about the shape of the rule, not the count of exemptions.** "A sink dispatches
+into entities" was never a fact about sinks — it is a fact about one USE of them, the intake
+sink. So every new boundary (storage, a projection, a display) arrives as a false positive in a
+model that is already correct, and the fix each time is to name one more kind. Reid approved
+narrowing the QUESTION instead: has the sink SAID what it does with what it receives? Work says
+yes — a `tell`, a `log`, a `put`, a write, a refusal, a code block; prose says no, which is the
+reading `do` gets everywhere else in the language. `isExecutableStatement` was extracted out of
+`classifyHandlers` so there is ONE enumeration of "real work" rather than two that can drift.
+
+**What nearly went wrong: the message moved with the rule.** `CompletenessTest` asserts this
+warning's ABSENCE in four negatives by filtering on a message SUBSTRING. Had the constant kept
+the old words, every one of those four would have become vacuously true — the same false-green
+family as an abstract spec or a `TestData` lambda on a plain base, arriving through a diagnostic
+reword rather than a test edit. Changed together, and `TerminalSinkDoesWorkTest` was canaried by
+reverting the condition: exactly the two new positives redden, the prose negative control and
+the tell case stay green.
+
 ## 2026-09-23 (later) — two reports from riddl-models, and the dispatch I did not know I had
 
 **`dump --json` threw a MatchError on five statements for two days.** `ProjectionPass.
