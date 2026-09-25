@@ -139,6 +139,11 @@ yes — a `tell`, a `log`, a `put`, a write, a refusal, a code block; prose says
 reading `do` gets everywhere else in the language. `isExecutableStatement` was extracted out of
 `classifyHandlers` so there is ONE enumeration of "real work" rather than two that can drift.
 
+**Shipped as 2.3.1 and verified against the corpus**: the single finding went 1 -> 0 across 191
+entry points with 0 errors, and the instrument was calibrated first on the same shape with the
+`log` removed (which must, and does, still report). `task/done/2026-09-23-a-display-sink-has-no-
+entity-to-tell.md` carries the numbers.
+
 **What nearly went wrong: the message moved with the rule.** `CompletenessTest` asserts this
 warning's ABSENCE in four negatives by filtering on a message SUBSTRING. Had the constant kept
 the old words, every one of those four would have become vacuously true — the same false-green
