@@ -399,6 +399,9 @@ object RiddlAPI {
       validationMessages = js.Dynamic.literal(
         errors = formatMessagesAsArray(vr.errors, noANSIMessages),
         warnings = formatMessagesAsArray(vr.warnings, noANSIMessages),
+        // Advisories are in no other bucket: not warnings (`isWarning` is false, by design) and
+        // not info (severity 1, not 0). Before 2026-09-28 a JS caller could see them only in `all`.
+        advisories = formatMessagesAsArray(vr.advisories, noANSIMessages),
         info = formatMessagesAsArray(vr.info, noANSIMessages),
         all = formatMessagesAsArray(vr.all, noANSIMessages)
       )
@@ -427,6 +430,9 @@ object RiddlAPI {
       validationMessages = js.Dynamic.literal(
         errors = formatMessagesAsArray(vr.errors, noANSIMessages),
         warnings = formatMessagesAsArray(vr.warnings, noANSIMessages),
+        // Advisories are in no other bucket: not warnings (`isWarning` is false, by design) and
+        // not info (severity 1, not 0). Before 2026-09-28 a JS caller could see them only in `all`.
+        advisories = formatMessagesAsArray(vr.advisories, noANSIMessages),
         info = formatMessagesAsArray(vr.info, noANSIMessages),
         all = formatMessagesAsArray(vr.all, noANSIMessages)
       )
@@ -596,9 +602,10 @@ object RiddlAPI {
     js.Dynamic.literal(
       tips = formatMessagesAsArray(msgs.filter(_.suggestion.nonEmpty)),
       errors = formatMessagesAsArray(msgs.justErrors),
-      warnings = formatMessagesAsArray(
-        msgs.justWarnings.filterNot(m => m.isInfo)
-      ),
+      // `justWarnings` asks `isWarning` as of 2026-09-28, so it no longer sweeps in advisories and
+      // the `filterNot(isInfo)` it used to need is gone with the severity band.
+      warnings = formatMessagesAsArray(msgs.justWarnings),
+      advisories = formatMessagesAsArray(msgs.justAdvisories),
       all = formatMessagesAsArray(msgs)
     )
   end tipsToJsObject

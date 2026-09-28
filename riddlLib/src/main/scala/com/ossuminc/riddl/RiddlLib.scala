@@ -592,13 +592,21 @@ end RiddlLib
 object RiddlLib extends RiddlLib:
 
   /** Result from full validation pipeline. */
+  /** @param advisories
+    *   The [[Messages.Advisory]] messages, which belong in NO other bucket here and had reached a
+    *   consumer only through `all` until 2026-09-28. An advisory is not a warning (`isWarning` is
+    *   false, so `warnings` correctly excludes it) and its severity is 1, so `info` -- severity 0
+    *   -- excludes it too. Trailing and defaulted so existing positional construction still
+    *   compiles.
+    */
   case class ValidateResult(
     succeeded: Boolean,
     parseErrors: Messages,
     errors: Messages,
     warnings: Messages,
     info: Messages,
-    all: Messages
+    all: Messages,
+    advisories: Messages = List.empty
   )
 
   /** Convert an origin string to a URL for RiddlParserInput.
@@ -757,13 +765,15 @@ object RiddlLib extends RiddlLib:
     val errs = messages.filter(_.isError).distinct
     val warns = messages.filter(_.isWarning).distinct
     val infos = messages.filter(_.kind.severity == 0).distinct
+    val advisories = messages.justAdvisories.distinct
     ValidateResult(
       succeeded = !messages.hasErrors,
       parseErrors = List.empty,
       errors = errs,
       warnings = warns,
       info = infos,
-      all = messages
+      all = messages,
+      advisories = advisories
     )
   end summarize
 

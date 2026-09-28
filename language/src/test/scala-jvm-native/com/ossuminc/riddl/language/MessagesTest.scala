@@ -142,6 +142,7 @@ class MessagesTest extends AbstractTestingBasis {
   private val e = Messages.error("error")
   private val s = Messages.severe("severe")
   private val dep = Message(At.empty, "deprecated thing", Deprecation)
+  private val adv = Message(At.empty, "advisory", Advisory)
 
   "Message" should {
     "know their kind" in {
@@ -157,9 +158,35 @@ class MessagesTest extends AbstractTestingBasis {
 
   val mix: Messages = List(i, sty, m, u, w, e, s)
 
+  /** `mix` plus an advisory. Kept separate so the assertions above keep their exact expectations,
+    * and so the advisory cases below cannot pass by accident on a list that never had one -- which
+    * is why the defect this pins survived: `mix` contained no advisory, so nothing here could see
+    * that `justWarnings` was sweeping them in.
+    */
+  val mixWithAdvisory: Messages = List(i, sty, adv, m, u, w, e, s)
+
   "Messages" should {
     "filter for Warnings" in {
       mix.justWarnings mustBe Seq(sty, m, u, w)
+    }
+    "EXCLUDE advisories from justWarnings -- an advisory is not a warning" in {
+      // Reported by riddl-models 2026-09-25: `justWarnings` filtered on the severity band
+      // (`kind < Error && kind > Info`), and Advisory's severity is 1, tied with StyleWarning by
+      // design -- so "just the warnings" returned messages whose own `isWarning` is false.
+      adv.isAdvisory mustBe true
+      adv.isWarning mustBe false
+      mixWithAdvisory.justWarnings mustBe Seq(sty, m, u, w)
+      mixWithAdvisory.justWarnings.exists(_.isAdvisory) mustBe false
+    }
+    "still return advisories from justAdvisories" in {
+      mixWithAdvisory.justAdvisories mustBe Seq(adv)
+    }
+    "put an advisory in NO other bucket -- it is neither a warning nor info" in {
+      // The reason the JS facade and RiddlLib.ValidateResult needed an `advisories` bucket of
+      // their own rather than relying on an existing one.
+      mixWithAdvisory.justInfo.exists(_.isAdvisory) mustBe false
+      mixWithAdvisory.justErrors.exists(_.isAdvisory) mustBe false
+      mixWithAdvisory.justStyle.exists(_.isAdvisory) mustBe false
     }
     "filter for Errors" in {
       mix.justErrors mustBe Seq(e, s)

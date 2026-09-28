@@ -1630,7 +1630,29 @@ resolution and type-checking — in `checkStatementScopes`.
   matches had to grow an arm (`logMessage`, `logMessagesByGroup`, the accumulator gate —
   the memory file's warning holds) plus `Logging.count`/`highlight`. **`Accumulator.empty`
   is a shared MUTABLE singleton** — a test that adds to it leaks into the next; use `new
-  Accumulator()`. The kind exists because `adaptor-direction-advisory` was a plain
+  Accumulator()`.
+  **A NEW KIND ALSO HAS TO BE AUDITED AGAINST EVERY SEVERITY-BANDED FILTER, and `justWarnings`
+  was one** (riddl-models, 2026-09-25; fixed 2026-09-28). It read
+  `kind < Error && kind > Info` — a band, not a predicate — so it swept in `Advisory`, whose
+  severity is 1 by design and whose `isWarning` is FALSE: *"just the warnings"* handed back
+  messages that say they are not warnings. **The blocking path was never wrong** — `--fail-on`
+  (`ValidateCommand.severityRank`) and the summary line both ask `isWarning`, so the documented
+  "never trips on one" guarantee held, and riddlc's CLI already printed *"0 errors, 0 warnings,
+  1 advisory"* for the very model whose library-side test was red. So the lesson is not "the
+  guarantee failed", it is that **a severity BAND and an `isWarning` PREDICATE stop agreeing the
+  moment a non-warning kind is given a warning-range severity** — and `Advisory` was designed to
+  be exactly that. `justWarnings` asks `_.isWarning` now. Grep for `kind <`/`kind >` before
+  adding a kind.
+  **An advisory belongs to NO other bucket, which is why two APIs needed a new one.**
+  `RiddlLib.ValidateResult` splits errors/warnings/info and `info` is `severity == 0`, so an
+  advisory fell through all three and reached a consumer only inside `all`; same for the JS
+  facade's tips/errors/warnings/all. Both gained an `advisories` bucket (`ValidateResult` as a
+  TRAILING defaulted field), plus `ValidationMessages.advisories` and
+  `TipAnalysisResult.advisories` in `riddlLib/js/types/index.d.ts` — a JS bucket nothing declares
+  is invisible to the consumer it was added for.
+  **The defect survived because `MessagesTest`'s `mix` had no advisory in it**, so every
+  `justWarnings` assertion was blind to the kind it mishandled; there is now a `mixWithAdvisory`
+  beside it. When you add a message kind, add it to that list. The kind exists because `adaptor-direction-advisory` was a plain
   `Warning` and BLOCKED `gen`; it is the first tenant, with the three event-sourcing
   advisories (`entity-event-sourced-unread-history`,
   `entity-crud-with-transitions-consumed`, `entity-event-sourced-snapshot-events`). The

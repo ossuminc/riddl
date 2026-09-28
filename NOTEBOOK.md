@@ -116,6 +116,34 @@ JVM `utils` 148, `language` 76/760, `passes` 269/1828, `testkit` 2, `riddlLib` (
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-09-28 — a severity band and a predicate stop agreeing when you add a kind
+
+riddl-models: `Messages.justWarnings` returned advisories, whose own `isWarning` is false. It
+filtered `kind < Error && kind > Info`; `Advisory` has severity 1, tied with `StyleWarning`
+deliberately, so it sat inside the band while reporting that it is not a warning. Their
+"zero errors and zero warnings" test had been red since the kind landed.
+
+**The interesting part is what was NOT broken.** The report's "why it matters" implied the kind's
+no-block guarantee was at risk. It was not: `--fail-on` decides through
+`ValidateCommand.severityRank`, which asks `isWarning`, and the summary line counts advisories
+apart — riddlc's CLI was printing *"0 errors, 0 warnings, 1 advisory"* for the exact model whose
+library-side test was failing. Verifying that before touching anything is what turned a
+"guarantee failed" report into its real shape: **one accessor disagreeing with the rest of the
+codebase.** The general form is worth keeping — a severity BAND and an `isWarning` PREDICATE agree
+only while every warning-range severity belongs to a warning kind, and `Advisory` was designed to
+violate exactly that. Audit `kind <`/`kind >` filters whenever a kind is added.
+
+**Why it survived a suite that tests this accessor four times over**: `MessagesTest`'s `mix` list
+contained no advisory, so nothing there could see the mishandling — the same vacuous shape as a
+fixture in a skipped file. A `mixWithAdvisory` sits beside it now, and the canary was to restore
+the band and watch exactly one new case redden.
+
+**Two APIs needed a bucket, not just a filter.** An advisory is in none of
+`RiddlLib.ValidateResult`'s errors/warnings/info (`info` is severity 0), so it reached consumers
+only via `all`; the JS facade had the same hole. Both gained `advisories`, and so did
+`index.d.ts` — a JS bucket nothing declares is invisible to the consumer it exists for. No CM
+change: this moves no conformance bar, it makes an accessor agree with one the CM already states.
+
 ## 2026-09-25 — the third boundary that is not an entity
 
 riddl-models' last open report: reactive-bbq's `TicketDisplaySink` — a kitchen display, made a

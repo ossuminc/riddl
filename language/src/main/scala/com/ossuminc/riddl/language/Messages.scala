@@ -509,8 +509,23 @@ object Messages {
     /** Return a filtered list of just the [[Deprecation]] messages. */
     @JSExport def justDeprecations: Messages = msgs.filter(_.isDeprecation)
 
-    /** Return a filtered list of just the [[Warning]] messages. */
-    @JSExport def justWarnings: Messages = msgs.filter(m => m.kind < Error && m.kind > Info)
+    /** Return a filtered list of every message that IS a warning, i.e. whose kind reports
+      * `isWarning` -- style, missing, usage, completeness, deprecation and the generic warning.
+      *
+      * **It asks `isWarning`, not a severity band, and the distinction is not cosmetic.** Until
+      * 2026-09-28 this filtered `kind < Error && kind > Info`, which swept in [[Advisory]]: an
+      * advisory has severity 1 (tied with [[StyleWarning]], deliberately) while its `isWarning` is
+      * false, so "just the warnings" handed back messages that say they are not warnings. The kind
+      * exists precisely so a structural observation can never block, and a caller counting
+      * warnings got the opposite. Reported by riddl-models, whose "zero errors and zero warnings"
+      * test had been red since the kind landed, on three prompts that are advisory by nature.
+      *
+      * The blocking path was never affected -- `--fail-on` and `validate`'s summary line both ask
+      * `isWarning` -- so this was the accessor disagreeing with the rest of the codebase, not a
+      * guarantee that failed. Advisories are [[justAdvisories]]; a caller that genuinely wants the
+      * severity band can write it, but it should not be spelled "warnings".
+      */
+    @JSExport def justWarnings: Messages = msgs.filter(_.isWarning)
 
     /** Return a filtered list of just the [[Error]] messages. */
     @JSExport def justErrors: Messages = msgs.filter(_.kind >= Error)

@@ -194,8 +194,15 @@ export interface TreeNode {
 export interface ValidationMessages {
   /** Error messages (validation failures) */
   errors: ErrorInfo[];
-  /** Warning messages */
+  /** Warning messages. Advisories are NOT here -- an advisory is deliberately not a warning. */
   warnings: ErrorInfo[];
+  /**
+   * Advisory messages: a structural observation consistent with the model as written and
+   * inconsistent with what such a declaration usually means. Never blocking, and the modeller may
+   * dismiss one by design. They appear in no other bucket -- not `warnings`, and not `info` -- so
+   * before 2.3.2 they reached a caller only inside `all`.
+   */
+  advisories: ErrorInfo[];
   /** Informational messages */
   info: ErrorInfo[];
   /** All messages combined */
@@ -1095,8 +1102,10 @@ export interface TipAnalysisResult {
   tips: ErrorInfo[];
   /** Error messages (passed through from validation) */
   errors: ErrorInfo[];
-  /** Warning messages (passed through from validation) */
+  /** Warning messages (passed through from validation). Advisories are not warnings. */
   warnings: ErrorInfo[];
+  /** Advisory messages (passed through from validation); see `ValidationMessages.advisories`. */
+  advisories: ErrorInfo[];
   /** All messages combined */
   all: ErrorInfo[];
 }
