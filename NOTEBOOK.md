@@ -138,6 +138,10 @@ contained no advisory, so nothing there could see the mishandling — the same v
 fixture in a skipped file. A `mixWithAdvisory` sits beside it now, and the canary was to restore
 the band and watch exactly one new case redden.
 
+Closed as `task/done/2026-09-25-justwarnings-includes-advisories-whose-iswarning-is-false.md`,
+with the report's own "the guarantee is at risk" framing corrected in its Results rather than left
+to mislead the next reader.
+
 **Two APIs needed a bucket, not just a filter.** An advisory is in none of
 `RiddlLib.ValidateResult`'s errors/warnings/info (`info` is severity 0), so it reached consumers
 only via `all`; the JS facade had the same hole. Both gained `advisories`, and so did
