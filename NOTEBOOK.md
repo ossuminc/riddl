@@ -142,6 +142,17 @@ Closed as `task/done/2026-09-25-justwarnings-includes-advisories-whose-iswarning
 with the report's own "the guarantee is at risk" framing corrected in its Results rather than left
 to mislead the next reader.
 
+**A filter after `Files.walk` is not a prune**, which is the second thing that session taught.
+`FindTypeVocabularyTest` walked `../riddl-models` and dropped `/target/` paths afterwards — but
+the walk STATS everything it descends past, so it traversed a sibling repo's whole build output,
+and a concurrent sbt run there deleted a cache file mid-walk: `NoSuchFileException` thrown from
+INSIDE the walk, where no downstream filter can reach. Now a recursion over `Files.list` that
+skips a `target` directory instead of descending it (`Files.walkFileTree` would also work, but
+its Scala Native support is not something to assume). The test's own `models.size must be >= 190`
+floor is what proves the prune kept the corpus rather than quietly shrinking it — the reason to
+put a floor on a corpus suite in the first place. Left out of CLAUDE.md deliberately: the trap is
+documented at the site, and CLAUDE.md is already past its size budget.
+
 **Two APIs needed a bucket, not just a filter.** An advisory is in none of
 `RiddlLib.ValidateResult`'s errors/warnings/info (`info` is severity 0), so it reached consumers
 only via `all`; the JS facade had the same hole. Both gained `advisories`, and so did

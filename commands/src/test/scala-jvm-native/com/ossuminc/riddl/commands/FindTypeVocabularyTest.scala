@@ -37,20 +37,45 @@ class FindTypeVocabularyTest extends AnyWordSpec with Matchers {
 
   private val corpora = Seq(Path.of("../riddl-models"), Path.of("../riddl-examples"))
 
+  /** The direct children of `dir`, or nothing if it cannot be read. A directory that vanishes
+    * between being listed and being descended is not this test's problem to report.
+    */
+  private def childrenOf(dir: Path): Seq[Path] =
+    try
+      val stream = Files.list(dir)
+      try stream.iterator().asScala.toSeq
+      finally stream.close()
+    catch case _: java.io.IOException => Nil
+
+  /** Entry points under `root`, PRUNING `target` during the traversal rather than filtering it out
+    * afterwards.
+    *
+    * **A filter after `Files.walk` looked equivalent to a prune and is not.** The walk STATS every
+    * entry it descends past, so `.filter(!_.toString.contains("/target/"))` still traversed a
+    * sibling repo's entire build output — and on 2026-09-28 a concurrent sbt run in riddl-models
+    * removed a file under `target/out/value` mid-walk, so the Native row failed with
+    * `NoSuchFileException` raised *inside* the walk, where no downstream filter can help. Pruning
+    * is also just cheaper: `riddl-models/target/out/value` alone held 783 cache files, none of
+    * which can ever be an entry point.
+    */
   private def entryPoints(root: Path): Seq[Path] =
     if !Files.isDirectory(root) then Nil
     else
-      Files
-        .walk(root)
-        .iterator()
-        .asScala
-        .filter(p => p.toString.endsWith(".conf") && !p.toString.contains("/target/"))
+      val confs = Seq.newBuilder[Path]
+      def descend(dir: Path): Unit =
+        childrenOf(dir).foreach { p =>
+          if Files.isDirectory(p) then
+            if p.getFileName.toString != "target" then descend(p)
+          else if p.toString.endsWith(".conf") then confs += p
+        }
+      descend(root)
+      confs
+        .result()
         .flatMap { conf =>
           val base = conf.getFileName.toString.stripSuffix(".conf")
           val src = conf.getParent.resolve(s"$base.riddl")
           if Files.isRegularFile(src) then Some(src) else None
         }
-        .toSeq
 
   private def kindsIn(model: Path): Set[String] =
     given scala.concurrent.ExecutionContext = pc.ec
