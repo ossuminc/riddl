@@ -366,8 +366,8 @@ of § 1 is now the active to-do list. The detailed entries stay in their origina
 positions below — they are cross-referenced from code comments and other repos'
 task files, so they were NOT physically reshuffled; this index carries the order.
 
-- ~~**[1.26]** **Every value is typed, by a type NAME.**~~ — **DONE 2026-10-07** (2.3.2 +
-  2.4.0). Alias-transparent cardinality; every typed position checks a bare `empty`; the
+- ~~**[1.26]** **Every value is typed, by a type NAME.**~~ — **DONE 2026-10-07** (ships in
+  2.4.0 -- Reid folded the planned 2.3.2 patch into it, 2026-10-07). Alias-transparent cardinality; every typed position checks a bare `empty`; the
   ascription guard is a category; `typeRef` on `EmptyValue`/`PromptValue`; three new Errors;
   CM §0.3 ruling 6. Corpus census 0 -> 0 errors over 191 entry points. What it taught is in
   NOTEBOOK 2026-10-07. Outstanding outside this repo: ossum.tech's language reference

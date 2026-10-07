@@ -10369,7 +10369,7 @@ case class ValidationPass(
     * answer false rather than falling through a catch-all.
     *
     * **It reads THROUGH a type name** (BACKLOG [1.26]): every value is typed by a type NAME, so
-    * `empty MaybeNote` with `type MaybeNote is String?` is the rule's own spelling. Until 2.3.2
+    * `empty MaybeNote` with `type MaybeNote is String?` is the rule's own spelling. Until 2.4.0
     * this matched the alias itself, whose own cardinality is absent, and refused it -- along with
     * a bare `empty` for any alias-typed constructor field. `aliasFreeTypeExpr` follows aliases
     * only, never cardinality, and carries the `eq` visited list a cyclic alias needs.

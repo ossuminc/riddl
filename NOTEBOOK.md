@@ -118,6 +118,13 @@ JVM `utils` 148, `language` 76/760, `passes` 269/1828, `testkit` 2, `riddlLib` (
 
 ## 2026-10-07 (later) — [1.26] Phases 2–5: every value is typed, by a type NAME
 
+**Reid confirmed the six judgement calls made while he was away (2026-10-07):** ship everything
+as ONE 2.4.0 rather than a 2.3.2 patch first (2.3.2 would have carried the unreleased
+`ValidateResult.advisories` addition); `x == empty` as new syntax; a `constant` is not an
+`empty` position; a bare predefined type (`Real`) is a type NAME and a parameterized one is not;
+`typeRef` derived on read rather than stored on the BAST/JSON wire; `log empty` and `empty ==
+empty` are untyped Errors.
+
 **What landed.**
 - **Phase 2.** A bare `empty` is checked at every position that supplies a type, through one
   helper (`checkEmptyFits`) that works on the type AS DECLARED. Inline fields are checkable now.
@@ -166,7 +173,8 @@ that it would not.
 
 riddl-generator's task asked riddl to restore "every value is typed, by a type
 NAME" (BACKLOG [1.26]). Reid settled eight design questions first. Phase 1 is
-the piece riddlg is blocked on, and it ships alone as 2.3.2. On 2.3.1, `empty
+the piece riddlg is blocked on. It was planned to ship alone as 2.3.2; Reid later folded it
+into 2.4.0, since 2.3.2 would also have carried an unreleased API addition. On 2.3.1, `empty
 MaybeNote` (with `type MaybeNote is String?`) was refused, because `admitsEmpty`
 matched the alias node itself and an alias has no cardinality of its own. The
 same defect gave every alias-typed constructor field a false
