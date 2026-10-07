@@ -417,3 +417,6 @@ stmt-update-field-not-in-row
 value-query-outside-repository
 value-not-a-collection
 value-membership-type-mismatch
+value-ascription-not-a-name
+value-empty-untyped
+value-empty-ascription-contradicts

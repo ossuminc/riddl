@@ -3484,7 +3484,7 @@ case class ValidationPass(
           case ev: EmptyValue => // BACKLOG [1.26]: `requires` is the position's type
             resolution.refMap.definitionOf[Type](tr.pathId).foreach { t =>
               checkEmptyFits(ev, t.typEx, s"${inv.identify}'s 'requires ${tr.format}'",
-                RuleId.EmptyNotAllowed)
+                RuleId.EmptyNotAllowed, Some(AliasedTypeExpression(At.empty, "type", tr.pathId)))
             }
           case _ => ()
         }
@@ -3781,7 +3781,9 @@ case class ValidationPass(
       // it. `c.typeEx` is ALWAYS present for a Constant (unlike `let`, which may be unascribed),
       // so a Constant never draws the seam CompletenessWarning -- the constant itself supplies
       // the type, per the ruling's table.
-      case pv: PromptValue => checkPromptAscription(pv, Some(c.typeEx))
+      case pv: PromptValue =>
+        checkAscriptionIsName(pv)
+        checkPromptAscription(pv, Some(c.typeEx))
       // B4 (2026-09-21): a constant may be an expression -- of literals, durations and OTHER
       // constants only. Operands resolve and type like any value; then the operand walk refuses
       // anything that is not constant, and the result type is held to the declaration.
@@ -10395,8 +10397,26 @@ case class ValidationPass(
     ev: EmptyValue,
     expected: TypeExpression,
     subject: String,
-    rule: RuleId
+    rule: RuleId,
+    declared: Option[TypeExpression] = None
   ): Unit =
+    // Q4 (Reid): an ascription RESTATES the position's declared type, compared SYNTACTICALLY like
+    // `checkPromptAscription` -- so an inline-typed field takes only a bare `empty`, and `empty
+    // MaybeNote` is right only where the position itself is declared `MaybeNote`. `declared` is the
+    // type as WRITTEN where `expected` had to be resolved (a `let`'s or an output's named Type).
+    val written = declared.getOrElse(expected)
+    ev.typeRef.foreach { tr =>
+      val ascribed = AliasedTypeExpression(tr.loc, tr.keyword, tr.pathId)
+      if typeAscriptionName(ascribed) != typeAscriptionName(written) then
+        messages.addError(
+          ev.loc,
+          s"'empty ${tr.pathId.format}' contradicts $subject, which is declared " +
+            s"'${written.format}'; an ascription restates the position's type and never " +
+            "overrides it",
+          suggestion = s"Write a bare 'empty' here -- $subject already supplies its type.",
+          ruleId = Some(RuleId.EmptyAscriptionContradicts)
+        )
+    }
     // A name that does not resolve leaves `aliasFreeTypeExpr` holding the alias. That type is
     // UNKNOWN, not "exactly one", and its resolution failure is already reported -- reasoning from
     // it here would be a second, false diagnostic.
@@ -10411,6 +10431,41 @@ case class ValidationPass(
         ruleId = Some(rule)
       )
   end checkEmptyFits
+
+  /** A value's type ascription is a type NAME (BACKLOG [1.26], Reid's Q2/Q3). `empty String?` and
+    * `prompt(…) as Recipe*` were admitted by mistake in 2.0; they still PARSE -- so this Error
+    * names the fix rather than a parse failure hiding every other diagnostic -- and are an Error,
+    * not a deprecation, because they contradicted a rule the language always had.
+    */
+  private def checkAscriptionIsName(v: Value): Unit =
+    val (expr, what) = v match
+      case ev: EmptyValue  => (ev.expressionAscription, "empty")
+      case pv: PromptValue => (pv.expressionAscription, "prompt(…) as")
+      case _               => (None, "")
+    expr.foreach { te =>
+      messages.addError(
+        te.loc,
+        s"'$what ${te.format}' ascribes a type EXPRESSION; a value is typed by a type NAME",
+        suggestion = s"Name the type -- 'type MaybeX is ${te.format}' -- and write '$what " +
+          "MaybeX'. Where the position already supplies the type, write no ascription at all.",
+        ruleId = Some(RuleId.AscriptionNotAName)
+      )
+    }
+  end checkAscriptionIsName
+
+  /** A bare `empty` where NOTHING supplies a type (BACKLOG [1.26]): every value is typed, and this
+    * one carries no type in its spelling and none from its position.
+    */
+  private def reportUntypedEmpty(v: Value, where: String): Unit = v match
+    case ev: EmptyValue if ev.ascribedType.isEmpty =>
+      messages.addError(
+        ev.loc,
+        s"'empty' in $where has no type: nothing here supplies one, and it names none",
+        suggestion = "Name the type it is empty OF -- 'empty MaybeX', with 'type MaybeX is X?' " +
+          "or 'X*' -- or give the position a type.",
+        ruleId = Some(RuleId.EmptyUntyped)
+      )
+    case _ => ()
 
   private def valueTypeExpr(
     v: Value,
@@ -10565,10 +10620,11 @@ case class ValidationPass(
         validateValue(lv.collection, parents, lets, elements)
         lv.indices.foreach(i => validateValue(i, parents, lets, elements))
         validateLookup(lv, parents, lets, elements)
+      case ev: EmptyValue if ev.expressionAscription.nonEmpty => checkAscriptionIsName(ev)
       case ev: EmptyValue =>
         // The ascribed form is checkable with no context at all: whatever type it names must be one
         // that HAS an empty inhabitant. The bare form is checked where an expected type is wired --
-        // see `checkValueType`.
+        // see `checkEmptyFits`.
         ev.ascribedType.foreach { te =>
           if !admitsEmpty(te) then
             messages.addError(
@@ -10581,7 +10637,7 @@ case class ValidationPass(
             )
           end if
         }
-      case _: PromptValue => () // literal AI prompt, nothing to resolve
+      case pv: PromptValue => checkAscriptionIsName(pv) // the prose itself resolves nothing
       case c: Constructor => validateConstructor(c, parents, lets, elements)
       case call: Call     => validateCall(call, parents, lets, elements)
       case ask: Ask       => validateAsk(ask, parents)
@@ -10878,6 +10934,10 @@ case class ValidationPass(
       case _ => ()
     emptyAgainst(ce.left, ce.right)
     emptyAgainst(ce.right, ce.left)
+    // Two bare `empty`s type each other with nothing: the comparison supplies no type at all.
+    (ce.left, ce.right) match
+      case (_: EmptyValue, r: EmptyValue) => reportUntypedEmpty(r, "this comparison")
+      case _                              => ()
     ce.op match
       case ComparisonOperator.EQ | ComparisonOperator.NE =>
         (lc, rc) match
@@ -11117,7 +11177,9 @@ case class ValidationPass(
       // A BARE `empty` takes its type from the position, so this is the only place its
       // minimum-cardinality rule can be enforced. The ASCRIBED form is checked context-free in
       // `validateValue`; checking it again here would double-report, so it is skipped.
-      case (ev: EmptyValue, Some(e)) => checkEmptyFits(ev, e.typEx, e.identify, RuleId.EmptyNotAllowed)
+      case (ev: EmptyValue, Some(e)) =>
+        checkEmptyFits(ev, e.typEx, e.identify, RuleId.EmptyNotAllowed,
+          Some(selfNamedTypeExpression(e)))
       // A20: `let`/`set` are the two carriers `checkValueType` serves, and both wire the
       // restate/contradict check for free by living here rather than being duplicated at each
       // call site. `expected` is already the RESOLVED Type the position declares, so it is
@@ -11205,7 +11267,7 @@ case class ValidationPass(
     * to anything else; it is its own distinct [[PredefinedType]].)
     */
   private def checkPromptAscription(pv: PromptValue, expected: Option[TypeExpression]): Unit =
-    (pv.ascribedType, expected) match
+    (pv.typeRef.flatMap(_ => pv.ascribedType), expected) match
       case (Some(ascribed), Some(exp)) if typeAscriptionName(ascribed) != typeAscriptionName(exp) =>
         messages.addError(
           ascribed.loc,
@@ -11359,7 +11421,7 @@ case class ValidationPass(
           case None     => fields.lift(idx) // positional; arity is reported separately
         c.args.zipWithIndex.foreach { case (arg, idx) =>
           arg.value match
-            case ev: EmptyValue if ev.ascribedType.isEmpty => ()
+            case _: EmptyValue => ()
             // Every OTHER argument is type-checked against the field it supplies (riddl-generator,
             // 2026-08-24). Until now a constructor argument was checked for arity, duplication,
             // ordering, name validity and `empty` cardinality -- but never for TYPE, so
@@ -11555,7 +11617,9 @@ case class ValidationPass(
       ps.value match
         case pv: PromptValue => checkPromptAscription(pv, expected.map(selfNamedTypeExpression))
         case ev: EmptyValue => // BACKLOG [1.26]: the output's type is the position's type
-          expected.foreach(e => checkEmptyFits(ev, e.typEx, output.identify, RuleId.EmptyNotAllowed))
+          expected.foreach(e =>
+            checkEmptyFits(ev, e.typEx, output.identify, RuleId.EmptyNotAllowed,
+              Some(selfNamedTypeExpression(e))))
         case _ => ()
       val actual = valueType(ps.value, parents, lets, elements)
       (expected, actual) match
@@ -11603,7 +11667,7 @@ case class ValidationPass(
         case ev: EmptyValue => // BACKLOG [1.26]: `returns` is the position's type
           expected.foreach(e =>
             checkEmptyFits(ev, e.typEx, s"function '${fn.id.value}''s 'returns'",
-              RuleId.EmptyNotAllowed))
+              RuleId.EmptyNotAllowed, Some(selfNamedTypeExpression(e))))
         case _ => ()
       val actual = valueType(rs.value, parents, lets, elements)
       (expected, actual) match
@@ -11902,11 +11966,12 @@ case class ValidationPass(
             case _ => ()
           // `operandTypeExpr`, not `valueTypeExpr`: the latter deliberately has no arm for a bare
           // numeric literal (B4), and `set size = 5` is exactly that.
-          operandTypeExpr(v, parents, lets, elements).foreach { actual =>
-            checkAssignable(
-              f.typeEx, actual, Some(recordType), parents, v.loc, s"Field '${field.value}'"
-            )
-          }
+          if !v.isInstanceOf[EmptyValue] then
+            operandTypeExpr(v, parents, lets, elements).foreach { actual =>
+              checkAssignable(
+                f.typeEx, actual, Some(recordType), parents, v.loc, s"Field '${field.value}'"
+              )
+            }
     }
 
   /** B2: a `query` reads the repository's OWN storage, so it is legal only inside one; its table
@@ -12055,6 +12120,7 @@ case class ValidationPass(
           // …) stays silent: "we have not wired this position" is not the same fact as "the
           // language cannot type it", and this is the single position the corpus measurement (0 of
           // 288 uses) showed was actually unascribed in the wild.
+          if ls.typeRef.isEmpty then reportUntypedEmpty(ls.expression, s"'let ${ls.identifier.value}'")
           if ls.typeRef.isEmpty then
             ls.expression match
               case pv: PromptValue if pv.ascribedType.isEmpty =>
@@ -12103,7 +12169,9 @@ case class ValidationPass(
                 checkEmptyFits(ev, f.typeEx, f.identify, RuleId.EmptyNotAllowed)
               }
             case _ => ()
-        case ls: LogStatement => validateValue(ls.value, parents, lets, elements) // B7
+        case ls: LogStatement =>
+          validateValue(ls.value, parents, lets, elements) // B7
+          reportUntypedEmpty(ls.value, "'log'") // [1.26]: `log` supplies no type
         // B2 (2026-09-22): the storage statements. The value is checked against the table's
         // stored record; a `where`/`set` is evaluated in the ROW scope -- the table record's
         // fields, threaded through `elements` exactly as a `foreach` element is, so a row field
@@ -12270,7 +12338,9 @@ case class ValidationPass(
             // the corpus -- stays silent with or without this arm; what this arm buys is
             // CONTRADICTION detection: `when prompt(…) as Score` would otherwise fall to the
             // catch-all below and silently accept an ascription that can never be a legal condition.
-            case pv: PromptValue => checkPromptAscription(pv, Some(Bool(At.empty)))
+            case pv: PromptValue =>
+              checkAscriptionIsName(pv)
+              checkPromptAscription(pv, Some(Bool(At.empty)))
             case _               => ()
           checkStatementScopes(
             ws.thenStatements.toSeq.collect { case s: Statement => s },
@@ -12296,6 +12366,7 @@ case class ValidationPass(
           // said so. Checked HERE rather than in `validateStatement` because `valueTypeExpr` needs
           // the in-scope `let`s and `foreach` elements, which only this walk carries.
           checkRequireArgumentType(rs, parents, lets, elements)
+          rs.argument.foreach(checkAscriptionIsName) // [1.26]: never reaches `validateValue`
         case ms: MatchStatement =>
           validateMatch(
             ms,

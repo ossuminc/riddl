@@ -517,6 +517,12 @@ enum RuleId(
   case PatternIncomparable extends RuleId("value-pattern-incomparable")
   case PatternOrderingNumeric extends RuleId("value-pattern-ordering-numeric")
   case EmptyNotAllowed extends RuleId("value-empty-not-allowed")
+  // BACKLOG [1.26] (Reid, 2026-10-04..06): every value is typed, by a type NAME. A value's
+  // ascription is a name, a bare `empty` needs a position that types it, and an ascription must
+  // restate the position's declared type syntactically.
+  case AscriptionNotAName extends RuleId("value-ascription-not-a-name")
+  case EmptyUntyped extends RuleId("value-empty-untyped")
+  case EmptyAscriptionContradicts extends RuleId("value-empty-ascription-contradicts")
   case ValueTypeMismatch extends RuleId("value-type-mismatch")
   // B4 (2026-09-21): arithmetic. Which categories may be combined by which operator is the table
   // in `ValidationPass.checkArithmetic`; anything off the table is this Error, never a coercion.

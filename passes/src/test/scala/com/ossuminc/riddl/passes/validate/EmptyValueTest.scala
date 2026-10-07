@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.Messages.Messages
+import com.ossuminc.riddl.language.RuleId
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.utils.{CommonOptions, pc}
 import org.scalatest.TestData
@@ -95,26 +96,40 @@ class EmptyValueTest extends AbstractValidatingTest {
   }
 
   "the ascribed form" should {
-    "carry its own type, so it needs no expected type from the position" in { (td: TestData) =>
-      val msgs = messagesFor(model("""            let e = empty String(1,20)*
-                                     |            do "used"""".stripMargin), td)
-      withClue(msgs.map(_.message).mkString("\n")) { errs(msgs) mustBe empty }
+    "carry its own type NAME, so it needs no expected type from the position" in {
+      (td: TestData) =>
+        val msgs = messagesFor(model("""            let e = empty Items
+                                       |            do "used"""".stripMargin), td)
+        withClue(msgs.map(_.message).mkString("\n")) { errs(msgs) mustBe empty }
     }
 
-    "be an Error when the ascribed type requires at least one value" in { (td: TestData) =>
-      val msgs = messagesFor(model("""            set field Data.note to empty String(1,20)+"""), td)
+    "be an Error when the named type requires at least one value" in { (td: TestData) =>
+      val msgs = messagesFor(model("""            set field Data.tags to empty Tags"""), td)
       val found = errs(msgs).filter(_.message.contains("minimum cardinality is zero"))
       withClue(msgs.map(_.message).mkString("\n")) { found must not be empty }
     }
 
-    "be an Error on a bare type, which always has exactly one value" in { (td: TestData) =>
-      val msgs = messagesFor(model("""            set field Data.note to empty String(1,20)"""), td)
-      val found = errs(msgs).filter(_.message.contains("minimum cardinality is zero"))
-      withClue(msgs.map(_.message).mkString("\n")) { found must not be empty }
+    "be an Error on a bare predefined type, which always has exactly one value" in {
+      (td: TestData) =>
+        val msgs = messagesFor(model("""            let e = empty String
+                                       |            do "used"""".stripMargin), td)
+        val found = errs(msgs).filter(_.message.contains("minimum cardinality is zero"))
+        withClue(msgs.map(_.message).mkString("\n")) { found must not be empty }
+    }
+
+    "be an Error when it is a type EXPRESSION rather than a name (BACKLOG [1.26])" in {
+      (td: TestData) =>
+        val msgs = messagesFor(model("""            let e = empty String(1,20)*
+                                       |            do "used"""".stripMargin), td)
+        val found = errs(msgs).filter(_.ruleId.contains(RuleId.AscriptionNotAName))
+        withClue(msgs.map(_.message).mkString("\n")) {
+          found must have size 1
+          found.head.suggestion must include("type MaybeX is")
+        }
     }
 
     "resolve its type reference, so a nonexistent one is reported" in { (td: TestData) =>
-      val msgs = messagesFor(model("""            set field Data.note to empty Nonexistent*"""), td)
+      val msgs = messagesFor(model("""            set field Data.note to empty Nonexistent"""), td)
       withClue(msgs.map(_.message).mkString("\n")) {
         errs(msgs).filter(_.message.contains("Nonexistent")) must not be empty
       }

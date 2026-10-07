@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.passes.validate
 
-import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.language.{Messages, RuleId}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.utils.{CommonOptions, pc}
 import org.scalatest.TestData
@@ -220,15 +220,16 @@ class TypedHoleValidationTest extends AbstractValidatingTest {
       ) mustBe empty
     }
 
-    "be silent on a 'let' whose declared type matches a Cardinality-wrapped ascription (review" +
-      " finding 1)" in { (td: TestData) =>
-        // Before the fix, `typeAscriptionName` named `Optional(AliasedTypeExpression(Score))` by
-        // its Scala class ("Optional") rather than recursing to "Score", so this compared
-        // "Optional" against "Score" and reported a false contradiction on legal code.
-        errorsFor(
-          entityModel("""let x: Score = prompt("d") as Score?"""),
-          "let-restate-optional"
-        ) mustBe empty
+    "report a Cardinality-wrapped ascription as not a NAME, and nothing else (review finding 1," +
+      " [1.26])" in { (td: TestData) =>
+        // Review finding 1 (2026-08-15) was a false CONTRADICTION here: `typeAscriptionName` named
+        // `Optional(Score)` "Optional". Since BACKLOG [1.26] the ascription is itself an Error --
+        // `Score?` is a type expression, and a value is typed by a type NAME -- so the one
+        // diagnostic must be that, still with no contradiction piled on top of it.
+        val errs = errorsFor(entityModel("""let x: Score = prompt("d") as Score?"""), td.name)
+        withClue(errs.map(_.format).mkString("\n")) {
+          errs.map(_.ruleId) mustBe Seq(Some(RuleId.AscriptionNotAName))
+        }
       }
 
     "be silent on a 'let' whose qualified ascription restates its qualified declared type" +

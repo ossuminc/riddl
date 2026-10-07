@@ -1,7 +1,8 @@
 // `empty` / `none` -- the minimum-cardinality inhabitant of a type.
 // `none` is a SYNONYM: both spellings produce the identical AST and prettify converges to `empty`.
-// Legal exactly where the minimum cardinality is zero, and the ascribed form carries its own type
-// so it can be written where the position supplies none.
+// Legal exactly where the minimum cardinality is zero. A bare `empty` takes its position's type;
+// where nothing supplies one it names a type -- a type NAME, never an expression (BACKLOG [1.26]).
+// An ascription must restate the position's declared type, so here it names `Notes`/`Items`.
 domain EmptyValues is {
   context Ctx is {
     type Notes is String(1,30)? with { briefly "an optional" }
@@ -17,9 +18,9 @@ domain EmptyValues is {
           on event Ctx.Cleared is {
             set field Data.note to none
             set field Data.items to empty
-            set field Data.note to empty String(1,30)?
-            set field Data.items to empty String(1,30)*
-            let e = empty String(1,30)*
+            set field Data.note to empty Notes
+            set field Data.items to empty Items
+            let e = empty Items
             do "released"
           }
         } with { briefly "clears both" }
