@@ -98,7 +98,7 @@ class TypedHoleBASTRoundTripTest extends AbstractValidatingTest {
     "decode with typeEx = None through a BAST round trip" in { (td: TestData) =>
       val root = roundTrip(src, "unascribed-let")
       letExpression(root, "plain") match
-        case pv: PromptValue => pv.typeEx mustBe None
+        case pv: PromptValue => pv.ascribedType mustBe None
         case other           => fail(s"expected a PromptValue, got $other")
     }
   }
@@ -108,7 +108,7 @@ class TypedHoleBASTRoundTripTest extends AbstractValidatingTest {
       val root = roundTrip(src, "aliased-let")
       letExpression(root, "typed") match
         case pv: PromptValue =>
-          pv.typeEx.getOrElse(fail("typeEx was None")) match
+          pv.ascribedType.getOrElse(fail("typeEx was None")) match
             case ate: AliasedTypeExpression => ate.pathId.value.last mustBe "OrderId"
             case other => fail(s"expected an AliasedTypeExpression, got $other")
         case other => fail(s"expected a PromptValue, got $other")
@@ -118,7 +118,7 @@ class TypedHoleBASTRoundTripTest extends AbstractValidatingTest {
   "a predefined ascription (prompt(...) as Boolean) in a `when` condition" should {
     "decode as the SAME predefined type through a BAST round trip" in { (td: TestData) =>
       val root = roundTrip(src, "predefined-when")
-      whenConditionPromptValue(root).typeEx.getOrElse(fail("typeEx was None")) mustBe a[Bool]
+      whenConditionPromptValue(root).ascribedType.getOrElse(fail("typeEx was None")) mustBe a[Bool]
     }
   }
 

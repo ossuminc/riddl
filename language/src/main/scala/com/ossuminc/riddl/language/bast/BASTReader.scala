@@ -2657,11 +2657,11 @@ class BASTReader(
         // FORMAT_REVISION 23: a SEQUENCE, as for DoStatement.
         val what = readSeq(() => readLiteralString())
         val typeEx = readOption(readTypeExpression()) // A20: optional `as <type>` ascription
-        PromptValue(loc, what, typeEx)
+        PromptValue.ascribed(loc, what, typeEx)
       case 12 => // EmptyValue -- `empty` / `empty <type>` (FORMAT_REVISION 21)
         val loc = readLocation()
         val typeEx = readOption(readTypeExpression())
-        EmptyValue(loc, typeEx)
+        EmptyValue.ascribed(loc, typeEx)
       case 11 => // LookupValue -- `<collection> at <index>[, <index>…]`
         val loc = readLocation()
         val collLoc = readLocation()

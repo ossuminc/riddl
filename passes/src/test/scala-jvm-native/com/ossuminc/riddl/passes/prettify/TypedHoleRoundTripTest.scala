@@ -130,12 +130,12 @@ class TypedHoleRoundTripTest extends AbstractValidatingTest {
 
   private def ascribedWhenCondition(root: Root): PromptValue =
     whenConditionPromptValues(root)
-      .find(_.typeEx.isDefined)
+      .find(_.ascribedType.isDefined)
       .getOrElse(fail("no ascribed when condition found"))
 
   private def unascribedWhenCondition(root: Root): PromptValue =
     whenConditionPromptValues(root)
-      .find(_.typeEx.isEmpty)
+      .find(_.ascribedType.isEmpty)
       .getOrElse(fail("no unascribed when condition found"))
 
   "a typed hole (prompt(...) as <type>)" should {
@@ -144,14 +144,14 @@ class TypedHoleRoundTripTest extends AbstractValidatingTest {
       val original = parse(model, "orig")
       // Presence: absent before prettify too, so the assertion is meaningful.
       letExpression(original, "plain") match
-        case pv: PromptValue => pv.typeEx mustBe None
+        case pv: PromptValue => pv.ascribedType mustBe None
         case other           => fail(s"expected a PromptValue, got $other")
       letExpression(original, "typed") match
-        case pv: PromptValue => pv.typeEx.get mustBe a[Real]
+        case pv: PromptValue => pv.ascribedType.get mustBe a[Real]
         case other           => fail(s"expected a PromptValue, got $other")
       letExpression(original, "aliased") match
         case pv: PromptValue =>
-          pv.typeEx.get match
+          pv.ascribedType.get match
             case ate: AliasedTypeExpression => ate.pathId.value.last mustBe "OrderId"
             case other => fail(s"expected an AliasedTypeExpression, got $other")
         case other => fail(s"expected a PromptValue, got $other")
@@ -168,14 +168,14 @@ class TypedHoleRoundTripTest extends AbstractValidatingTest {
 
       val regen = parse(emitted, "regen")
       letExpression(regen, "plain") match
-        case pv: PromptValue => pv.typeEx mustBe None
+        case pv: PromptValue => pv.ascribedType mustBe None
         case other           => fail(s"expected a PromptValue, got $other")
       letExpression(regen, "typed") match
-        case pv: PromptValue => pv.typeEx.get mustBe a[Real]
+        case pv: PromptValue => pv.ascribedType.get mustBe a[Real]
         case other           => fail(s"expected a PromptValue, got $other")
       letExpression(regen, "aliased") match
         case pv: PromptValue =>
-          pv.typeEx.get match
+          pv.ascribedType.get match
             case ate: AliasedTypeExpression => ate.pathId.value.last mustBe "OrderId"
             case other => fail(s"expected an AliasedTypeExpression, got $other")
         case other => fail(s"expected a PromptValue, got $other")
@@ -184,10 +184,10 @@ class TypedHoleRoundTripTest extends AbstractValidatingTest {
     "survive a prettify round trip in a `constant`, ascribed and unascribed" in { (_: TestData) =>
       val original = parse(model, "orig")
       constantOf(original, "Plain").value match
-        case pv: PromptValue => pv.typeEx mustBe None
+        case pv: PromptValue => pv.ascribedType mustBe None
         case other           => fail(s"expected a PromptValue, got $other")
       constantOf(original, "Typed").value match
-        case pv: PromptValue => pv.typeEx.get mustBe a[Real]
+        case pv: PromptValue => pv.ascribedType.get mustBe a[Real]
         case other           => fail(s"expected a PromptValue, got $other")
 
       val emitted = prettify(original)
@@ -199,18 +199,18 @@ class TypedHoleRoundTripTest extends AbstractValidatingTest {
 
       val regen = parse(emitted, "regen")
       constantOf(regen, "Plain").value match
-        case pv: PromptValue => pv.typeEx mustBe None
+        case pv: PromptValue => pv.ascribedType mustBe None
         case other           => fail(s"expected a PromptValue, got $other")
       constantOf(regen, "Typed").value match
-        case pv: PromptValue => pv.typeEx.get mustBe a[Real]
+        case pv: PromptValue => pv.ascribedType.get mustBe a[Real]
         case other           => fail(s"expected a PromptValue, got $other")
     }
 
     "survive a prettify round trip as a constructor argument, ascribed and unascribed" in {
       (_: TestData) =>
         val original = parse(model, "orig")
-        constructorArgPromptValue(original, "sku").typeEx.get mustBe a[String_]
-        constructorArgPromptValue(original, "note").typeEx mustBe None
+        constructorArgPromptValue(original, "sku").ascribedType.get mustBe a[String_]
+        constructorArgPromptValue(original, "note").ascribedType mustBe None
 
         val emitted = prettify(original)
         withClue(s"emitted source was:\n$emitted\n") {
@@ -220,15 +220,15 @@ class TypedHoleRoundTripTest extends AbstractValidatingTest {
         }
 
         val regen = parse(emitted, "regen")
-        constructorArgPromptValue(regen, "sku").typeEx.get mustBe a[String_]
-        constructorArgPromptValue(regen, "note").typeEx mustBe None
+        constructorArgPromptValue(regen, "sku").ascribedType.get mustBe a[String_]
+        constructorArgPromptValue(regen, "note").ascribedType mustBe None
     }
 
     "survive a prettify round trip as a `when` condition, ascribed and unascribed" in {
       (_: TestData) =>
         val original = parse(model, "orig")
-        ascribedWhenCondition(original).typeEx.get mustBe a[Bool]
-        unascribedWhenCondition(original).typeEx mustBe None
+        ascribedWhenCondition(original).ascribedType.get mustBe a[Bool]
+        unascribedWhenCondition(original).ascribedType mustBe None
 
         val emitted = prettify(original)
         withClue(s"emitted source was:\n$emitted\n") {
@@ -239,8 +239,8 @@ class TypedHoleRoundTripTest extends AbstractValidatingTest {
         }
 
         val regen = parse(emitted, "regen")
-        ascribedWhenCondition(regen).typeEx.get mustBe a[Bool]
-        unascribedWhenCondition(regen).typeEx mustBe None
+        ascribedWhenCondition(regen).ascribedType.get mustBe a[Bool]
+        unascribedWhenCondition(regen).ascribedType mustBe None
     }
 
     "survive a prettify round trip through a Cardinality wrapper on an aliased ascription" in {
@@ -248,13 +248,13 @@ class TypedHoleRoundTripTest extends AbstractValidatingTest {
         val original = parse(model, "orig")
         letExpression(original, "optional") match
           case pv: PromptValue =>
-            pv.typeEx.get match
+            pv.ascribedType.get match
               case Optional(_, ate: AliasedTypeExpression) => ate.pathId.value.last mustBe "OrderId"
               case other => fail(s"expected Optional(AliasedTypeExpression), got $other")
           case other => fail(s"expected a PromptValue, got $other")
         letExpression(original, "repeated") match
           case pv: PromptValue =>
-            pv.typeEx.get match
+            pv.ascribedType.get match
               case ZeroOrMore(_, ate: AliasedTypeExpression) =>
                 ate.pathId.value.last mustBe "OrderId"
               case other => fail(s"expected ZeroOrMore(AliasedTypeExpression), got $other")
@@ -273,13 +273,13 @@ class TypedHoleRoundTripTest extends AbstractValidatingTest {
         val regen = parse(emitted, "regen")
         letExpression(regen, "optional") match
           case pv: PromptValue =>
-            pv.typeEx.get match
+            pv.ascribedType.get match
               case Optional(_, ate: AliasedTypeExpression) => ate.pathId.value.last mustBe "OrderId"
               case other => fail(s"expected Optional(AliasedTypeExpression), got $other")
           case other => fail(s"expected a PromptValue, got $other")
         letExpression(regen, "repeated") match
           case pv: PromptValue =>
-            pv.typeEx.get match
+            pv.ascribedType.get match
               case ZeroOrMore(_, ate: AliasedTypeExpression) =>
                 ate.pathId.value.last mustBe "OrderId"
               case other => fail(s"expected ZeroOrMore(AliasedTypeExpression), got $other")

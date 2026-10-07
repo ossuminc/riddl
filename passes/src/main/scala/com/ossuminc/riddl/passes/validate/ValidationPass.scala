@@ -10401,7 +10401,7 @@ case class ValidationPass(
     // UNKNOWN, not "exactly one", and its resolution failure is already reported -- reasoning from
     // it here would be a second, false diagnostic.
     val unknown = aliasFreeTypeExpr(expected).isInstanceOf[AliasedTypeExpression]
-    if ev.typeEx.isEmpty && !unknown && !admitsEmpty(expected) then
+    if ev.ascribedType.isEmpty && !unknown && !admitsEmpty(expected) then
       messages.addError(
         ev.loc,
         s"'empty' is not a value of $subject: '${expected.format}' requires at least one value",
@@ -10421,7 +10421,7 @@ case class ValidationPass(
     v match
       // `let e = empty T*` infers `T*` -- the ascription IS the type, which is the whole point of
       // the ascribed form. A bare `empty` has no type of its own; the position supplies it.
-      case ev: EmptyValue => ev.typeEx
+      case ev: EmptyValue => ev.ascribedType
       // [1.13]: a LITERAL denotes its own type, and until 2026-08-26 none of them did -- so every
       // position built on this helper (constructor arguments, `put`, `return`, `require … with`)
       // silently skipped an argument written as a literal. `require inv with "text"` where the
@@ -10467,7 +10467,7 @@ case class ValidationPass(
       // rule is untouched: the silence belongs to the form that says nothing, not to every
       // `prompt(...)`. Note this reports the type the author WROTE; whether that ascription agrees
       // with the position's own expected type is `checkPromptAscription`'s separate question.
-      case pv: PromptValue => pv.typeEx
+      case pv: PromptValue => pv.ascribedType
       // What indexing yields. Needed HERE rather than only in `valueType` because an element type
       // is often written directly (`to Integer`) and so has no named Type to return.
       case lv: LookupValue =>
@@ -10569,7 +10569,7 @@ case class ValidationPass(
         // The ascribed form is checkable with no context at all: whatever type it names must be one
         // that HAS an empty inhabitant. The bare form is checked where an expected type is wired --
         // see `checkValueType`.
-        ev.typeEx.foreach { te =>
+        ev.ascribedType.foreach { te =>
           if !admitsEmpty(te) then
             messages.addError(
               ev.loc,
@@ -11205,7 +11205,7 @@ case class ValidationPass(
     * to anything else; it is its own distinct [[PredefinedType]].)
     */
   private def checkPromptAscription(pv: PromptValue, expected: Option[TypeExpression]): Unit =
-    (pv.typeEx, expected) match
+    (pv.ascribedType, expected) match
       case (Some(ascribed), Some(exp)) if typeAscriptionName(ascribed) != typeAscriptionName(exp) =>
         messages.addError(
           ascribed.loc,
@@ -11359,7 +11359,7 @@ case class ValidationPass(
           case None     => fields.lift(idx) // positional; arity is reported separately
         c.args.zipWithIndex.foreach { case (arg, idx) =>
           arg.value match
-            case ev: EmptyValue if ev.typeEx.isEmpty => ()
+            case ev: EmptyValue if ev.ascribedType.isEmpty => ()
             // Every OTHER argument is type-checked against the field it supplies (riddl-generator,
             // 2026-08-24). Until now a constructor argument was checked for arity, duplication,
             // ordering, name validity and `empty` cardinality -- but never for TYPE, so
@@ -12057,7 +12057,7 @@ case class ValidationPass(
           // 288 uses) showed was actually unascribed in the wild.
           if ls.typeRef.isEmpty then
             ls.expression match
-              case pv: PromptValue if pv.typeEx.isEmpty =>
+              case pv: PromptValue if pv.ascribedType.isEmpty =>
                 messages.addCompleteness(
                   pv.loc,
                   s"'let ${ls.identifier.value}' binds an untyped 'prompt(…)' with no type anywhere " +

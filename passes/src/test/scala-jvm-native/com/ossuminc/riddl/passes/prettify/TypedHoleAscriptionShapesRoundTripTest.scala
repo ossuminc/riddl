@@ -83,7 +83,7 @@ class TypedHoleAscriptionShapesRoundTripTest extends AbstractValidatingTest {
     "survive a prettify round trip when ascribed to an Enumeration" in { (_: TestData) =>
       val original = parse(model, "orig")
       letExpression(original, "enumAsc") match
-        case pv: PromptValue => pv.typeEx.get mustBe an[Enumeration]
+        case pv: PromptValue => pv.ascribedType.get mustBe an[Enumeration]
         case other           => fail(s"expected a PromptValue, got $other")
 
       val emitted = prettify(original)
@@ -91,7 +91,7 @@ class TypedHoleAscriptionShapesRoundTripTest extends AbstractValidatingTest {
       withClue(s"emitted source was:\n$emitted\n") {
         letExpression(regen, "enumAsc") match
           case pv: PromptValue =>
-            pv.typeEx.get match
+            pv.ascribedType.get match
               case e: Enumeration =>
                 e.enumerators.toSeq.map(_.id.value) mustBe Seq("Red", "Green")
               case other => fail(s"expected an Enumeration, got $other")
@@ -102,7 +102,7 @@ class TypedHoleAscriptionShapesRoundTripTest extends AbstractValidatingTest {
     "survive a prettify round trip when ascribed to a Table" in { (_: TestData) =>
       val original = parse(model, "orig")
       letExpression(original, "tableAsc") match
-        case pv: PromptValue => pv.typeEx.get mustBe a[Table]
+        case pv: PromptValue => pv.ascribedType.get mustBe a[Table]
         case other           => fail(s"expected a PromptValue, got $other")
 
       val emitted = prettify(original)
@@ -110,7 +110,7 @@ class TypedHoleAscriptionShapesRoundTripTest extends AbstractValidatingTest {
       withClue(s"emitted source was:\n$emitted\n") {
         letExpression(regen, "tableAsc") match
           case pv: PromptValue =>
-            pv.typeEx.get match
+            pv.ascribedType.get match
               case t: Table => t.dimensions mustBe Seq(3L, 3L)
               case other    => fail(s"expected a Table, got $other")
           case other => fail(s"expected a PromptValue, got $other")
@@ -124,7 +124,7 @@ class TypedHoleAscriptionShapesRoundTripTest extends AbstractValidatingTest {
       (_: TestData) =>
         val original = parse(model, "orig")
         letExpression(original, "refAsc") match
-          case pv: PromptValue => pv.typeEx.get mustBe an[UniqueId]
+          case pv: PromptValue => pv.ascribedType.get mustBe an[UniqueId]
           case other           => fail(s"expected a PromptValue, got $other")
 
         val emitted = prettify(original)
@@ -132,7 +132,7 @@ class TypedHoleAscriptionShapesRoundTripTest extends AbstractValidatingTest {
         withClue(s"emitted source was:\n$emitted\n") {
           letExpression(regen, "refAsc") match
             case pv: PromptValue =>
-              pv.typeEx.get match
+              pv.ascribedType.get match
                 case uid: UniqueId =>
                   uid.entityPath.value.last mustBe "Target"
                   uid.kindKeyword mustBe Some("entity")
@@ -144,7 +144,7 @@ class TypedHoleAscriptionShapesRoundTripTest extends AbstractValidatingTest {
     "survive a prettify round trip when ascribed to a Currency" in { (_: TestData) =>
       val original = parse(model, "orig")
       letExpression(original, "currencyAsc") match
-        case pv: PromptValue => pv.typeEx.get mustBe a[Currency]
+        case pv: PromptValue => pv.ascribedType.get mustBe a[Currency]
         case other           => fail(s"expected a PromptValue, got $other")
 
       val emitted = prettify(original)
@@ -152,7 +152,7 @@ class TypedHoleAscriptionShapesRoundTripTest extends AbstractValidatingTest {
       withClue(s"emitted source was:\n$emitted\n") {
         letExpression(regen, "currencyAsc") match
           case pv: PromptValue =>
-            pv.typeEx.get match
+            pv.ascribedType.get match
               case c: Currency => c.country mustBe "USD"
               case other       => fail(s"expected a Currency, got $other")
           case other => fail(s"expected a PromptValue, got $other")
@@ -163,7 +163,7 @@ class TypedHoleAscriptionShapesRoundTripTest extends AbstractValidatingTest {
       " keyword" in { (_: TestData) =>
         val original = parse(model, "orig")
         letExpression(original, "seqAsc") match
-          case pv: PromptValue => pv.typeEx.get mustBe a[Sequence]
+          case pv: PromptValue => pv.ascribedType.get mustBe a[Sequence]
           case other           => fail(s"expected a PromptValue, got $other")
 
         val emitted = prettify(original)
@@ -175,7 +175,7 @@ class TypedHoleAscriptionShapesRoundTripTest extends AbstractValidatingTest {
         val regen = parse(emitted, "regen")
         letExpression(regen, "seqAsc") match
           case pv: PromptValue =>
-            pv.typeEx.get match
+            pv.ascribedType.get match
               case s: Sequence =>
                 s.of match
                   case ate: AliasedTypeExpression => ate.pathId.value.last mustBe "OrderId"

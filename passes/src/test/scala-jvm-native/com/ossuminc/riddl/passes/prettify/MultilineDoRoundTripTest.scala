@@ -117,7 +117,7 @@ class MultilineDoRoundTripTest extends AbstractValidatingTest {
     "keep its ascription" in { (_: TestData) =>
       val pv = prompts(parse(model("""let x = prompt({ "one" "two" }) as Real"""), "asc.riddl")).head
       pv.prompt.map(_.s) mustBe Seq("one", "two")
-      pv.typeEx mustBe defined
+      pv.ascribedType mustBe defined
     }
 
     "leave the single-line form unchanged" in { (_: TestData) =>

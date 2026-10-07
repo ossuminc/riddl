@@ -150,7 +150,7 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
     case ae: ArithmeticExpression => Seq(ae.left, ae.right)
     case dl: DurationLiteral      => Seq(dl.amount)
     case lv: LookupValue          => lv.collection +: lv.indices
-    case ev: EmptyValue           => ev.typeEx.toSeq
+    case ev: EmptyValue           => ev.ascribedType.toSeq
     case c: Constant              => Seq(c.value)
 
     // Review round 1, fix 1: `PromptValue` (A20's `prompt("…") as T` typed hole) was the ONLY
@@ -162,7 +162,7 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
     // ascription's `TypeExpression` is surfaced here too (an `AliasedTypeExpression` — a NAMED
     // type ascription — recurses one further level into its `PathIdentifier`, so `prompt("…") as
     // SomeType` makes both the ascription node AND the path it names reachable).
-    case pv: PromptValue            => pv.prompt ++ pv.typeEx.toSeq
+    case pv: PromptValue            => pv.prompt ++ pv.ascribedType.toSeq
     case ate: AliasedTypeExpression => Seq(ate.pathId)
 
     case _ => Seq.empty

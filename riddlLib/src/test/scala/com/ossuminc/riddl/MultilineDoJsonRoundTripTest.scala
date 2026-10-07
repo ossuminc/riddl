@@ -83,7 +83,7 @@ class MultilineDoJsonRoundTripTest extends AnyWordSpec with Matchers {
       val (root, _) = roundTripped(model("""let x = prompt({ "one" "two" }) as Real"""))
       val pv = prompts(root).head
       pv.prompt.map(_.s) mustBe Seq("one", "two")
-      pv.typeEx mustBe defined
+      pv.ascribedType mustBe defined
     }
   }
 }

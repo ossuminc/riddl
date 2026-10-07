@@ -71,20 +71,20 @@ class EmptyValueRoundTripTest extends AbstractValidatingTest {
   "a bare `empty`" should {
     "round-trip through prettify" in { (td: TestData) =>
       val original = parse(src("set field Data.note to empty"), "src")
-      emptyIn(original).typeEx mustBe None
+      emptyIn(original).ascribedType mustBe None
 
       val pretty = prettify(original)
       pretty must include("to empty")
 
       val regen = parse(pretty, "regen")
-      emptyIn(regen).typeEx mustBe None
+      emptyIn(regen).ascribedType mustBe None
     }
   }
 
   "`none`" should {
     "converge to `empty`, because they are ONE node with no spelling flag" in { (td: TestData) =>
       val original = parse(src("set field Data.note to none"), "src")
-      emptyIn(original).typeEx mustBe None
+      emptyIn(original).ascribedType mustBe None
 
       val pretty = prettify(original)
       pretty must include("to empty")
@@ -94,20 +94,20 @@ class EmptyValueRoundTripTest extends AbstractValidatingTest {
       // two spellings were never distinguishable in the AST to begin with.
       val regen = parse(pretty, "regen")
       emptyIn(regen) mustBe a[EmptyValue]
-      emptyIn(regen).typeEx mustBe None
+      emptyIn(regen).ascribedType mustBe None
     }
   }
 
   "an ascribed `empty`" should {
     "keep its type through prettify" in { (td: TestData) =>
       val original = parse(src("set field Data.note to empty String(1,20)?"), "src")
-      emptyIn(original).typeEx must not be empty
+      emptyIn(original).ascribedType must not be empty
 
       val pretty = prettify(original)
       pretty must include("empty String(1,20)?")
 
       val regen = parse(pretty, "regen")
-      emptyIn(regen).typeEx.map(_.format) mustBe emptyIn(original).typeEx.map(_.format)
+      emptyIn(regen).ascribedType.map(_.format) mustBe emptyIn(original).ascribedType.map(_.format)
     }
   }
 }

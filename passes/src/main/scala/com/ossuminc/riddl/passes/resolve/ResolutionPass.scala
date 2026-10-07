@@ -537,7 +537,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         // Same lesson the PromptValue arm below records: an ascription carries a real
         // TypeExpression whose PathIdentifier must RESOLVE, or `empty Nonexistent*` validates clean
         // while naming a type that need not exist.
-        ev.typeEx.foreach(te => resolveTypeExpression(parents.head, te, parents))
+        ev.ascribedType.foreach(te => resolveTypeExpression(parents.head, te, parents))
       case pv: PromptValue =>
         // A20: the prompt TEXT is literal (nothing to resolve), but an optional `as <type>`
         // ascription carries a real TypeExpression that may hold a PathIdentifier -- e.g.
@@ -551,7 +551,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         // for free (`prompt("x") as OrderId?`) and registers the resolved Type in `usedBy` via its
         // own `associateUsage` call -- a Type named ONLY by an ascription is therefore NOT
         // wrongly flagged unused by `UsageResolution.checkUnused`.
-        pv.typeEx.foreach(te => resolveTypeExpression(parents.head, te, parents))
+        pv.ascribedType.foreach(te => resolveTypeExpression(parents.head, te, parents))
       case c: Constructor =>
         associateUsage[Type](parents.head, resolveARef[Type](c.ref, parents))
         c.args.foreach(arg => resolveValue(arg.value, parents))

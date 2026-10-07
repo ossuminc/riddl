@@ -3639,7 +3639,6 @@ object AST:
   // TRAILING (no `contents`/`metadata` field follows it), so the `@JSExportTopLevel` rule that
   // bit A55/A57 does not apply here, and the default keeps existing `PromptValue(loc, str)`
   // call sites source-compatible.
-  @JSExportTopLevel("PromptValue")
   /** The minimum-cardinality inhabitant of a type: `empty`, or `empty <type>` when ascribed.
     *
     * **One literal, and `none` is a SYNONYM for it, not a second node** (Reid, 2026-08-23). Both
@@ -3652,29 +3651,86 @@ object AST:
     * collection: they are the same inhabitant under different upper bounds. It is an Error on `T+`,
     * on `T{1,n}` and on a bare `T`, all of which require at least one element.
     *
-    * **The ascription is load-bearing, not sugar.** Bare `empty` needs the position to supply an
-    * expected type, and only `let`/`constant`/`set` wire one today -- notably NOT a constructor
-    * argument, which is the very position riddl-models asked for this from (`record Data(items =
-    * empty)`). The ascribed form is the one that works everywhere; the bare form is the convenience
-    * for positions that happen to be wired.
+    * **Every value is typed, by a type NAME** (Reid, 2026-10-04, BACKLOG [1.26]). A bare `empty`
+    * takes the type of its POSITION -- the field it is assigned to or supplies, a `let`'s declared
+    * type, a function's `returns`, the operand opposite it in a comparison. Where nothing supplies
+    * one, write `empty T`, and `T` is a type NAME (`type MaybeNote is String?`), never a type
+    * expression: `empty String?` was admitted by mistake and is a validation Error.
     *
     * @param typeEx
-    *   The ascribed type, or `None` when the position supplies it. Trailing and defaulted because
-    *   `@JSExportTopLevel` requires defaulted params last -- the same constraint that forced A55's
-    *   and A57's fields to go undefaulted.
+    *   DEPRECATED -- the ascription as written, kept so existing readers see no change. For a name
+    *   it mirrors [[typeRef]]; for a retired expression ascription it is the only record of what
+    *   was written, which validation reports. Read [[ascribedType]] or [[typeRef]] instead.
+    * @param typeRef
+    *   The ascribed type NAME, or `None` when the position supplies the type (or the ascription is
+    *   a retired expression). Trailing and defaulted because `@JSExportTopLevel` requires defaulted
+    *   params last.
     */
   @JSExportTopLevel("EmptyValue")
   case class EmptyValue(
     loc: At,
-    typeEx: Option[TypeExpression] = None
+    @deprecated("Read typeRef (the type NAME) or ascribedType", "2.4.0")
+    typeEx: Option[TypeExpression] = None,
+    typeRef: Option[TypeRef] = None
   ) extends RiddlValue:
     override def kind: String = "Empty Value"
+
+    /** The ascription as a [[TypeExpression]]: the name, else a retired expression, else `None`. */
+    def ascribedType: Option[TypeExpression] = ValueAscription.ascribedType(typeRef, typeEx)
+
+    /** A retired EXPRESSION ascription (`empty String?`), which validation reports. */
+    def expressionAscription: Option[TypeExpression] = ValueAscription.expressionOnly(typeRef, typeEx)
+
     // `TypeExpression.format` is safe here where `PromptValue` needed `ascriptionFormat`: an
     // `AliasedTypeExpression` renders as `type Foo`, and `empty type Foo` re-parses to an IDENTICAL
     // node because `aliasedTypeExpression` defaults an omitted keyword to `type`. Prettify still
     // routes through `emitTypeExpression` for the exotic shapes.
-    def format: String = typeEx.map(t => s"empty ${t.format}").getOrElse("empty")
+    def format: String = ascribedType.map(t => s"empty ${t.format}").getOrElse("empty")
   end EmptyValue
+
+  /** Companion for [[EmptyValue]]. */
+  object EmptyValue:
+    /** Build from the ascription AS PARSED: a type name fills [[EmptyValue.typeRef]] and is
+      * mirrored into the deprecated `typeEx`; an expression fills `typeEx` alone. The parser, the
+      * BAST reader and the JSON reader all build through here, so the three agree by construction.
+      */
+    def ascribed(loc: At, written: Option[TypeExpression]): EmptyValue =
+      EmptyValue(loc, written, written.flatMap(ValueAscription.nameOf))
+  end EmptyValue
+
+  /** The shared rules for a value's optional type ascription (`empty T`, `prompt(…) as T`). */
+  object ValueAscription:
+    /** The type NAME an ascription is, when it is one: a declared type's path, or a predefined
+      * type written as a bare word (`Real`, `Boolean`, `TimeStamp`, `String`). The latter parses
+      * to a [[PredefinedType]] node rather than an alias -- predefined types are never in the
+      * symbol table -- but it is spelled as a name and `let x: Real` already treats it as one. A
+      * PARAMETERIZED predefined type (`String(1,30)`, `Currency(USD)`) is not a name.
+      */
+    def nameOf(te: TypeExpression): Option[TypeRef] = te match
+      case AliasedTypeExpression(loc, keyword, pathId) => Some(TypeRef(loc, keyword, pathId))
+      // Not "formats as one word": `Currency(USD)` formats as `Currency`. The test is that the
+      // bare word rebuilds THIS node, which is exactly what a name can carry.
+      case p: PredefinedType
+          if parsing.PredefTypes.typeExpressionFor(p.format, p.loc).contains(p) =>
+        Some(TypeRef(p.loc, "type", PathIdentifier(p.loc, Seq(p.format))))
+      case _ => None
+
+    /** The written form wins, so a predefined name keeps its own node (`Real`, not an alias named
+      * "Real" that would resolve to nothing); a `typeRef` built through the API with no mirrored
+      * `typeEx` still yields its alias.
+      */
+    private[AST] def ascribedType(
+      typeRef: Option[TypeRef],
+      typeEx: Option[TypeExpression]
+    ): Option[TypeExpression] =
+      typeEx.orElse(typeRef.map(tr => AliasedTypeExpression(tr.loc, tr.keyword, tr.pathId)))
+
+    private[AST] def expressionOnly(
+      typeRef: Option[TypeRef],
+      typeEx: Option[TypeExpression]
+    ): Option[TypeExpression] =
+      if typeRef.isDefined then None else typeEx.filter(te => nameOf(te).isEmpty)
+  end ValueAscription
 
   /** An AI-computed value: `prompt("...")`, optionally ASCRIBED a type with `as <type>` (A20).
     *
@@ -3691,21 +3747,34 @@ object AST:
     * A `constant` with a prompt value needs NO ascription — the constant already declares the
     * type. The ascription does real work only where nothing else states one.
     *
-    * `typeEx` may be defaulted here ONLY because it is trailing; `@JSExportTopLevel` forbids a
-    * non-trailing default, which is why A55's and A57's fields had to go undefaulted.
+    * **When written, the ascription is a type NAME** (Reid, 2026-10-04, BACKLOG [1.26]); it stays
+    * optional. `prompt(…) as T*` -- an expression -- is a validation Error naming the fix.
+    *
+    * `typeEx` is DEPRECATED (read [[typeRef]] or [[ascribedType]]); see [[EmptyValue]] for the
+    * mirroring rule. Both are trailing and defaulted, which `@JSExportTopLevel` requires.
     */
+  @JSExportTopLevel("PromptValue")
   case class PromptValue(
     loc: At,
     prompt: Seq[LiteralString],
-    typeEx: Option[TypeExpression] = None
+    @deprecated("Read typeRef (the type NAME) or ascribedType", "2.4.0")
+    typeEx: Option[TypeExpression] = None,
+    typeRef: Option[TypeRef] = None
   ) extends RiddlValue:
     override def kind: String = "Prompt Value"
 
     /** The prose as a generator wants it. See [[DoStatement.text]]. */
     def text: String = prompt.map(_.s).mkString("\n")
 
+    /** The ascription as a [[TypeExpression]]: the name, else a retired expression, else `None`. */
+    def ascribedType: Option[TypeExpression] = ValueAscription.ascribedType(typeRef, typeEx)
+
+    /** A retired EXPRESSION ascription (`as T*`), which validation reports. */
+    def expressionAscription: Option[TypeExpression] = ValueAscription.expressionOnly(typeRef, typeEx)
+
     def format: String =
-      val ascription = typeEx.map(t => s" as ${PromptValue.ascriptionFormat(t)}").getOrElse("")
+      val ascription =
+        ascribedType.map(t => s" as ${PromptValue.ascriptionFormat(t)}").getOrElse("")
       s"prompt(${LiteralString.blockFormat(prompt)})$ascription"
   end PromptValue
 
@@ -3719,6 +3788,10 @@ object AST:
     * hand — which is precisely why this class of bug keeps recurring here.
     */
   object PromptValue:
+    /** Build from the ascription AS PARSED; see [[EmptyValue.ascribed]]. */
+    def ascribed(loc: At, prompt: Seq[LiteralString], written: Option[TypeExpression]): PromptValue =
+      PromptValue(loc, prompt, written, written.flatMap(ValueAscription.nameOf))
+
     // The `as <type>` ascription is a bare type NAME, as the author writes it -- `as OrderId`,
     // never `as type OrderId`. `AliasedTypeExpression.format` always includes its `keyword` field
     // (used elsewhere, e.g. as an Alternation member's own surface form), so calling it directly

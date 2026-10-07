@@ -324,6 +324,26 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     * never reaches `PromptValue.ascriptionFormat` anywhere — it serves `.format`-based
     * error-message rendering only.
     */
+  /** A value's type ascription (BACKLOG [1.26]). A NAME is a [[TypeRef]] and keeps a written
+    * `record`/`event`/… prefix, as every other TypeRef does: `emitTypeExpression` drops an alias's
+    * keyword (that is BACKLOG [1.10]'s open question for aliases), and here it turned `empty record
+    * R` into `empty R`, which re-parses with a different keyword. A retired EXPRESSION ascription
+    * still routes through the total `emitTypeExpression`, so it round-trips for validation to report.
+    */
+  private def emitAscription(
+    lead: String,
+    typeRef: Option[TypeRef],
+    ascribed: Option[TypeExpression]
+  ): this.type =
+    typeRef match
+      case Some(tr) =>
+        add(lead)
+        if tr.keyword != "type" then add(s"${tr.keyword} ")
+        add(tr.pathId.format)
+      case None =>
+        ascribed.foreach { te => add(lead); emitTypeExpression(te); trimTrailingSpace() }
+        this
+
   def emitValue(v: Value): this.type =
     v match
       // `empty` is CANONICAL: `none` is a synonym and converges here, the same way `!` converges
@@ -332,16 +352,10 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
       // that produced source riddlc could not re-parse for four TypeExpression shapes.
       case ev: EmptyValue =>
         add("empty")
-        ev.typeEx.foreach { te =>
-          add(" "); emitTypeExpression(te); trimTrailingSpace()
-        }
-        this
+        emitAscription(" ", ev.typeRef, ev.ascribedType)
       case pv: PromptValue =>
         add(s"prompt(${LiteralString.blockFormat(pv.prompt)})")
-        pv.typeEx.foreach { te =>
-          add(" as "); emitTypeExpression(te); trimTrailingSpace()
-        }
-        this
+        emitAscription(" as ", pv.typeRef, pv.ascribedType)
       case Constructor(_, ref, args) =>
         add(s"${ref.format}(")
         emitConstructorArgs(args)

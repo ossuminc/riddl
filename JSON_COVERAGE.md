@@ -194,7 +194,7 @@ message operands of `send`/`tell`/`yield`/`morph`, and constructor args via
 |---|---|---|
 | LiteralString (value) | ✅ A54 | `{ "value": "literal", "text": ... }` |
 | NumericLiteral | ✅ numeric-literals (2026-08-15) | `{ "value": "numeric", "text": ... }` — `text` is the literal AS WRITTEN (`5`, `007`, `1.50`, `2E+8`), always a JSON string, never `ujson.Num`: a Double would turn `1.50` into `1.5` and drop the precision of a large integer, exactly the loss the AST node stores text to avoid. Also serves as a `Comparand` (A28, widened) |
-| PromptValue | ✅ A54 / A20 typed holes (2026-08-15) | `{ "value": "prompt", "prompt": ..., "type"?: <typeExpr> }` — AI-computed value; optional `type` is the `as <type>` ascription (A20), omitted when unascribed so an untyped prompt's JSON is unchanged |
+| PromptValue | ✅ A54 / A20 typed holes (2026-08-15) | `{ "value": "prompt", "prompt": ..., "type"?: <typeExpr> }` — AI-computed value; optional `type` is the `as <type>` ascription (A20), omitted when unascribed so an untyped prompt's JSON is unchanged. `typeRef` (2.4.0, [1.26]) is NOT a key: the reader derives it from a name in `type` through `PromptValue.ascribed`, the parser's own constructor |
 | Constructor / ConstructorArg | ✅ A54 | refKind command/event/query/result/record; positional + named args |
 | Call | ✅ A24 | `{ "value": "call", "function": "<path>", "args": [<arg>] }` — call a pure function to get a result |
 | Ask | ✅ 2.0 | `{ "value": "ask", "query": "<path>", "processor": "<path>", "processorKind": "<kind>" }` — a query correlated with the processor asked. No answer type is carried: it is the query's declared `replies result X`, so storing it would be a second place for the same fact to drift |
@@ -207,7 +207,7 @@ message operands of `send`/`tell`/`yield`/`morph`, and constructor args via
 | ConstantRef (value) | ✅ A28 / B4 | `{ "value": "constantRef", "path": ... }` — `buildValue` builds a `ConstantRef` since B4; it DEGRADED to a `ValueRef` before, which formatted the same and lost the node |
 | LookupValue | ✅ 2.0 | `{ "value": "lookup", "collection": "<path>", "indices": [<value>] }` (row added 2026-09-21; the code was there) |
 | SystemValue | ✅ 2.0 | `{ "value": "system", "field"?: "now"\|"random" }` (row added 2026-09-21) |
-| EmptyValue | ✅ 2.0 | `{ "value": "empty", "type"?: <typeExpr> }` (row added 2026-09-21) |
+| EmptyValue | ✅ 2.0 | `{ "value": "empty", "type"?: <typeExpr> }` (row added 2026-09-21). `typeRef` (2.4.0, [1.26]) is derived on read from a name in `type` via `EmptyValue.ascribed`, so pre-2.4.0 JSON loads to the AST the parser builds |
 | InvariantCondition | ✅ A17 | `{ "value": "invariantCondition", "invariant": "<path>", "argument"?: <value> }` (row added 2026-09-21) |
 | LogicalExpression | ✅ A28 | `{ "value": "logical", "op": "and"\|"or", "left": <value>, "right": <value> }` |
 | NotExpression | ✅ A28 | `{ "value": "not", "expr": <value> }` |

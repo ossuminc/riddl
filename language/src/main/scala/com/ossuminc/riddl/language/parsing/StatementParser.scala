@@ -591,7 +591,7 @@ private[parsing] trait StatementParser {
     P(
       Index ~ (Keywords.keyword("empty") | Keywords.keyword("none")) ~/
         (!ascriptionStop ~ typeExpression).? ~~ Index
-    )./.map { case (start, typeEx, end) => EmptyValue(at(start, end), typeEx) }
+    )./.map { case (start, typeEx, end) => EmptyValue.ascribed(at(start, end), typeEx) }
   }
 
   /** What may NOT begin `empty`'s optional ascription (BACKLOG [1.26], Reid's Q7).
@@ -643,7 +643,7 @@ private[parsing] trait StatementParser {
     P(
       Index ~ Keywords.prompt ~ Punctuation.roundOpen ~/ literalStringBlock ~
         Punctuation.roundClose ~ (Keywords.keyword("as") ~/ typeExpression).? ~/ Index
-    )./.map { case (start, str, typeEx, end) => PromptValue(at(start, end), str, typeEx) }
+    )./.map { case (start, str, typeEx, end) => PromptValue.ascribed(at(start, end), str, typeEx) }
   }
 
   /** A numeric literal — `[+-]? digits [ . digits ] [ (e|E) [+-] digits ]`.

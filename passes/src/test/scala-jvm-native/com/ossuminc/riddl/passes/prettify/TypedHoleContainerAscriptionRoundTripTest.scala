@@ -112,7 +112,7 @@ class TypedHoleContainerAscriptionRoundTripTest extends AbstractValidatingTest {
         letExpression(original, "viaConstructor") match
           case c: Constructor =>
             c.args.find(_.name.exists(_.value == "color")).map(_.value) match
-              case Some(pv: PromptValue) => pv.typeEx.get mustBe an[Enumeration]
+              case Some(pv: PromptValue) => pv.ascribedType.get mustBe an[Enumeration]
               case other                 => fail(s"expected a PromptValue 'color' arg, got $other")
           case other => fail(s"expected a Constructor, got $other")
 
@@ -130,7 +130,7 @@ class TypedHoleContainerAscriptionRoundTripTest extends AbstractValidatingTest {
           case c: Constructor =>
             c.args.find(_.name.exists(_.value == "color")).map(_.value) match
               case Some(pv: PromptValue) =>
-                pv.typeEx.get match
+                pv.ascribedType.get match
                   case e: Enumeration =>
                     e.enumerators.toSeq.map(_.id.value) mustBe Seq("Red", "Green")
                   case other => fail(s"expected an Enumeration, got $other")
@@ -147,7 +147,7 @@ class TypedHoleContainerAscriptionRoundTripTest extends AbstractValidatingTest {
         letExpression(original, "viaCall") match
           case c: Call =>
             c.args.find(_.name.exists(_.value == "amt")).map(_.value) match
-              case Some(pv: PromptValue) => pv.typeEx.get mustBe a[Currency]
+              case Some(pv: PromptValue) => pv.ascribedType.get mustBe a[Currency]
               case other                 => fail(s"expected a PromptValue 'amt' arg, got $other")
           case other => fail(s"expected a Call, got $other")
 
@@ -165,7 +165,7 @@ class TypedHoleContainerAscriptionRoundTripTest extends AbstractValidatingTest {
           case c: Call =>
             c.args.find(_.name.exists(_.value == "amt")).map(_.value) match
               case Some(pv: PromptValue) =>
-                pv.typeEx.get match
+                pv.ascribedType.get match
                   case cur: Currency => cur.country mustBe "USD"
                   case other         => fail(s"expected a Currency, got $other")
               case other => fail(s"expected a PromptValue 'amt' arg, got $other")
@@ -200,7 +200,7 @@ class TypedHoleContainerAscriptionRoundTripTest extends AbstractValidatingTest {
           // spellings of an entity-instance reference build the one node. The SUBJECT of this
           // case is unchanged: a PromptValue ascription nested inside a LogicalExpression must
           // survive the round trip with its parenthesization intact.
-          refPromptOf(ws1.condition).typeEx.get mustBe an[UniqueId]
+          refPromptOf(ws1.condition).ascribedType.get mustBe an[UniqueId]
 
           val emitted = prettify(original)
           withClue(s"emitted source was:\n$emitted\n") {
@@ -222,7 +222,7 @@ class TypedHoleContainerAscriptionRoundTripTest extends AbstractValidatingTest {
             .find(_.condition.isInstanceOf[LogicalExpression])
             .getOrElse(fail("no LogicalExpression when-condition found after re-parse"))
           val pv2 = refPromptOf(ws2.condition)
-          pv2.typeEx.get match
+          pv2.ascribedType.get match
             case uid: UniqueId =>
               uid.entityPath.value.last mustBe "Target"
               uid.kindKeyword mustBe Some("entity")
@@ -244,7 +244,7 @@ class TypedHoleContainerAscriptionRoundTripTest extends AbstractValidatingTest {
               case other                 => fail(s"expected a PromptValue IC argument, got $other")
           case other => fail(s"expected Not at the root, got $other")
 
-        tablePromptOf(ws1.condition).typeEx.get mustBe a[Table]
+        tablePromptOf(ws1.condition).ascribedType.get mustBe a[Table]
 
         val emitted = prettify(original)
         withClue(s"emitted source was:\n$emitted\n") {
@@ -262,7 +262,7 @@ class TypedHoleContainerAscriptionRoundTripTest extends AbstractValidatingTest {
           .recursiveFindByType[WhenStatement]
           .find(_.condition.isInstanceOf[NotExpression])
           .getOrElse(fail("no NotExpression when-condition found after re-parse"))
-        tablePromptOf(ws2.condition).typeEx.get match
+        tablePromptOf(ws2.condition).ascribedType.get match
           case t: Table => t.dimensions mustBe Seq(3L, 3L)
           case other    => fail(s"expected a Table, got $other")
     }
@@ -306,7 +306,7 @@ class TypedHoleContainerAscriptionRoundTripTest extends AbstractValidatingTest {
 
         val original = parse(src, "orig")
         predicateOf(original).argument match
-          case Some(pv: PromptValue) => pv.typeEx.get mustBe a[Currency]
+          case Some(pv: PromptValue) => pv.ascribedType.get mustBe a[Currency]
           case other                 => fail(s"expected a PromptValue argument, got $other")
 
         val emitted = prettify(original)
@@ -325,7 +325,7 @@ class TypedHoleContainerAscriptionRoundTripTest extends AbstractValidatingTest {
         val regen = parse(emitted, "regen")
         predicateOf(regen).argument match
           case Some(pv: PromptValue) =>
-            pv.typeEx.get match
+            pv.ascribedType.get match
               case c: Currency => c.country mustBe "USD"
               case other       => fail(s"expected a Currency, got $other")
           case other => fail(s"expected a PromptValue argument, got $other")
@@ -365,7 +365,7 @@ class TypedHoleContainerAscriptionRoundTripTest extends AbstractValidatingTest {
             case other => fail(s"expected a LetStatement with a PromptValue expression, got $other")
 
         val original = parse(src, "orig")
-        letAscriptionOf(original).typeEx.get mustBe an[Enumeration]
+        letAscriptionOf(original).ascribedType.get mustBe an[Enumeration]
 
         val emitted = prettify(original)
         withClue(s"emitted source was:\n$emitted\n") {
@@ -378,7 +378,7 @@ class TypedHoleContainerAscriptionRoundTripTest extends AbstractValidatingTest {
         }
 
         val regen = parse(emitted, "regen")
-        letAscriptionOf(regen).typeEx.get match
+        letAscriptionOf(regen).ascribedType.get match
           case e: Enumeration => e.enumerators.toSeq.map(_.id.value) mustBe Seq("Red", "Green")
           case other          => fail(s"expected an Enumeration, got $other")
       }

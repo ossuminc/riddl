@@ -1532,8 +1532,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
   // A54: AST Value -> ValueDto.
   private def serializeValue(v: Value): ValueDto = v match
     case ls: LiteralString => LiteralValueDto(ls.s)
-    case pv: PromptValue   => PromptValueDto(pv.prompt.map(_.s), pv.typeEx.map(serializeTypeExpr))
-    case ev: EmptyValue    => EmptyValueDto(ev.typeEx.map(serializeTypeExpr))
+    case pv: PromptValue   => PromptValueDto(pv.prompt.map(_.s), pv.ascribedType.map(serializeTypeExpr))
+    case ev: EmptyValue    => EmptyValueDto(ev.ascribedType.map(serializeTypeExpr))
     case sv: SystemValue   => SystemValueDto(sv.field.map(_.value))
     case vr: ValueRef      => ValueRefDto(path(vr.path))
     case lv: LookupValue => LookupValueDto(path(lv.collection.path), lv.indices.map(serializeValue))

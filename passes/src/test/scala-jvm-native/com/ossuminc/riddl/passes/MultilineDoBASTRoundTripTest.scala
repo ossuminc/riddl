@@ -70,7 +70,7 @@ class MultilineDoBASTRoundTripTest extends AbstractValidatingTest {
       val decoded = roundTrip(model("""let x = prompt({ "one" "two" }) as Real"""), "bast-pv")
       val pv = Finder(decoded).recursiveFindByType[PromptValue].toSeq.head
       pv.prompt.map(_.s) mustBe Seq("one", "two")
-      pv.typeEx mustBe defined
+      pv.ascribedType mustBe defined
     }
   }
 }
