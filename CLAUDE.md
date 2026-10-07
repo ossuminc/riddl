@@ -38,6 +38,16 @@ keywords→`as <shape>`, `state X is <record>`→`of`, `prompt`→`do`. Several 
 CONSUMED by the parser into the new form, which is what makes prettify converge
 and `autoFixable` honest. Follow those, not the GBNF removal.
 
+**The one exception: a spelling that was NEVER LEGAL is an Error, not a
+Deprecation** (Reid, 2026-10-04, BACKLOG [1.26]). The policy protects modellers
+who wrote valid RIDDL. It does not protect a spelling that broke a rule the
+language always had. The worked example is `empty`'s optional *expression*
+ascription (`empty T?`). It contradicted the founding rule that every value is
+typed by a type NAME, so it was approved by mistake. That makes it an Error
+naming the fix, not a deprecation kept forever. Do not "soften" it back. The
+test is whether the spelling contradicted a rule in force when it was admitted,
+not whether it is merely being replaced.
+
 ## Definition of Done, and what bounds 2.0
 
 **2.0 ships when the Computational Model is met** — not when the backlog hits
