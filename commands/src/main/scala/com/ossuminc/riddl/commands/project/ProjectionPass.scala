@@ -60,6 +60,16 @@ case class ProjectionPass(
   private lazy val symbols: SymbolsOutput =
     outputs.outputOf[SymbolsOutput](SymbolsPass.name).get
 
+  /** Follow type ALIASES only -- never cardinality -- with an `eq` visited list, because `type A is
+    * B` / `type B is A` is a real stack overflow. An unresolvable name is returned as it is.
+    */
+  private def aliasFree(te: TypeExpression, visited: Seq[Type] = Nil): TypeExpression = te match
+    case ate: AliasedTypeExpression =>
+      resolution.refMap.definitionOf[Type](ate.pathId) match
+        case Some(t) if !visited.exists(_ eq t) => aliasFree(t.typEx, visited :+ t)
+        case _                                  => te
+    case other => other
+
   private val nodes: mutable.ListBuffer[ProjectedNode] = mutable.ListBuffer.empty
 
   override def process(value: RiddlValue, parents: ParentStack): Unit = {
@@ -137,10 +147,14 @@ case class ProjectionPass(
 
     case f: Field =>
       obj("type") = ujson.Str(f.typeEx.format)
-      obj("cardinality") = ujson.Str(ProjectionPass.cardinalityOf(f.typeEx))
+      // Both read THROUGH a type name (BACKLOG [1.26]): `note: MaybeNote` with `type MaybeNote is
+      // String?` is optional, and reporting the alias's own absent cardinality said
+      // "exactly-one" and `acceptsEmpty = false` -- the defect `ValidationPass.admitsEmpty` had.
+      val underlying = aliasFree(f.typeEx)
+      obj("cardinality") = ujson.Str(ProjectionPass.cardinalityOf(underlying))
       // Called out explicitly by riddl-models: a script fixing the every-field constructor rule
       // needs to know which missing fields may be written `empty`.
-      obj("acceptsEmpty") = ujson.Bool(ProjectionPass.admitsEmpty(f.typeEx))
+      obj("acceptsEmpty") = ujson.Bool(ProjectionPass.admitsEmpty(underlying))
 
     case t: Type =>
       obj("type") = ujson.Str(t.typEx.format)
@@ -596,7 +610,9 @@ object ProjectionPass {
   }
 
   /** Whether a type admits an empty value — its MINIMUM cardinality is zero. Mirrors
-    * `ValidationPass.admitsEmpty`; kept in step by hand because the two modules cannot share it.
+    * `ValidationPass.admitsEmpty`, which is private to the pass. That one reads through aliases
+    * itself; this one is handed an already alias-free type by the instance's `aliasFree`, because
+    * the companion has no resolution output to follow a name with.
     */
   def admitsEmpty(te: TypeExpression): Boolean = te match {
     case _: Optional       => true

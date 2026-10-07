@@ -113,6 +113,19 @@ class DumpProjectionTest extends AbstractValidatingTest {
         field("lots")("acceptsEmpty").bool mustBe false
     }
 
+    "read field cardinality THROUGH a type name" in { (td: TestData) =>
+      // BACKLOG [1.26]: an alias has no cardinality of its own, so `note: MaybeNote` read as
+      // "exactly-one" and `acceptsEmpty = false` -- the defect `ValidationPass.admitsEmpty` had.
+      val aliased = src
+        .replace("record R is {", "type MaybeNote is String(1,9)?\n    record R is {")
+        .replace("note: String(1,9)?", "note: MaybeNote")
+      val fields = ofKind(project(aliased, td), "field")
+      val note = fields.find(_("id").str == "note").get
+      note("type").str mustBe "type MaybeNote" // the type as WRITTEN is unchanged
+      note("cardinality").str mustBe "optional"
+      note("acceptsEmpty").bool mustBe true
+    }
+
     "carry spans that locate a node in its source file" in { (td: TestData) =>
       val entity = ofKind(project(src, td), "entity").head
       entity.obj must contain key "span"
