@@ -421,6 +421,12 @@ decision.
   `PredefinedType`. Several early A20 examples used it and are wrong.
   **BAST/JSON**: rides `FORMAT_REVISION` 18 (the bump numeric literals already
   spent), not a new bump.
+  **When written, the ascription is a type NAME** (Reid, 2026-10-04, BACKLOG
+  [1.26]); it stays optional. `PromptValue.typeRef: Option[TypeRef]` (trailing)
+  carries the name; `typeEx` is `@deprecated` but still populated, mirroring a
+  name and solely recording a retired EXPRESSION ascription (`as T*`), which is
+  `value-ascription-not-a-name`. Read `ascribedType`, never `typeEx`: `passes`
+  and `riddlLib` compile under `-Werror`, so a `typeEx` read FAILS the build.
 
 ## Entities, processors and stream shapes
 
@@ -694,7 +700,9 @@ decision.
   migration tool will act on.
 
 - **`empty` — the minimum-cardinality inhabitant of a type (rc.23+).**
-  `EmptyValue(loc, typeEx: Option[TypeExpression])`. **`none` is a SYNONYM
+  `EmptyValue(loc, typeEx, typeRef)` — `typeRef: Option[TypeRef]` since 2.4.0,
+  with `typeEx` deprecated and mirrored (see "Every value is typed" below).
+  **`none` is a SYNONYM
   producing the identical node** — no flag records the spelling, the same choice
   `not`/`!` made, and prettify converges `none` to `empty`.
   **The rule is minimum cardinality ZERO**: legal for `T?`, `T*`, `T{0,n}`; an
@@ -702,12 +710,23 @@ decision.
   covers both the absent optional and the empty collection — same inhabitant,
   different upper bounds — and it makes `admitsEmpty` total over the four
   `Cardinality` wrappers instead of special-casing two.
-  **The ascribed form is load-bearing, not sugar.** A bare `empty` takes its type
-  from the position, and only `let`/`constant`/`set` wire an expected type — NOT
-  a constructor argument, which is the position this was requested from. **And
-  the expected-type machinery resolves only NAMED types**, so a field typed
-  INLINE (`note: String(1,20)+`) cannot be checked at all against a bare `empty`.
-  Pre-existing, shared with A20.
+  **Every value is typed, by a type NAME** (Reid, 2026-10-04..06, BACKLOG
+  [1.26]; CM §0.3 ruling 6). A bare `empty` takes the type of its POSITION, and
+  since 2.4.0 EVERY position that supplies one checks it through ONE helper,
+  `checkEmptyFits`, against the type AS DECLARED (so an inline `note:
+  String(1,20)?` is checkable — the old "resolves only NAMED types" limit is
+  gone): `set`, `append`/`remove`, `let` (named or predefined), constructor,
+  call, `initiate` and `terminate` arguments (all through
+  `checkArgumentTypes`), `put`, `return`, `require … with`, `store`/`upsert`,
+  `update … set`, and a comparison operand (the opposite operand's type). An
+  unresolvable position type is UNKNOWN and silent. **A `constant` is not a
+  position** — its value is narrowed at parse time and `empty` is not admitted.
+  Where nothing supplies a type, `empty T` is required (`value-empty-untyped`),
+  and `T` is a NAME: `empty String?` is `value-ascription-not-a-name`. An
+  ascription must be SYNTACTICALLY the position's declared type
+  (`value-empty-ascription-contradicts`), so an inline-typed field takes only a
+  bare `empty`. `admitsEmpty` reads THROUGH names (`aliasFreeTypeExpr`); so does
+  the projection's `acceptsEmpty`/`cardinality` (`ProjectionPass.aliasFree`).
   **Two traps, both worth re-reading before adding a `Value` arm:**
   1. **The four throw-terminated walks are INVISIBLE to `-Werror`**
      (`countValueFailPoints`, `stateReadsIn`, `initiatesIn`, `asksIn`) — the
@@ -718,13 +737,26 @@ decision.
   2. **An optional trailing TypeExpression SWALLOWS THE NEXT STATEMENT.** An
      aliased type is a bare path and RIDDL statements are whitespace-separated
      with no terminator, so `set x to empty` followed by `set y to …` parsed the
-     second statement as the first's ascription. Guarded by refusing
-     statement-leading keywords (`statementStart`), which is COMPLETE rather than
-     heuristic because a type can never be named a reserved word. The EBNF
-     carries the same guard — without it the two parsers disagree and TatSu
-     reddens.
+     second statement as the first's ascription. **The original guard was a
+     LIST of statement-leading words, and it was not complete**: `where`,
+     `to` and `in` follow values too, so `update T set f = empty where …`,
+     `put empty to …` and `store empty in …` all failed (riddl-generator,
+     2026-10-03). Since 2.4.0 the guard is by CATEGORY (`ascriptionStop`): a
+     statement start, a readability word (`anyReadability` — `to`/`in`/`at`/
+     `as`/`of`/`with` are NOT in `Keyword.allKeywords`), or any reserved word
+     except one that can begin a type expression (`typeExpressionStart`), so
+     the retired expression forms still parse for validation to report. The
+     EBNF carries the same rule (`ascription_stop`, `reserved_word`,
+     `readability_word`, `type_expression_start`), and
+     `EbnfReservedWordsTest` compares its lists with the Scala ones.
   BAST tag **12** at `FORMAT_REVISION` **21**; JSON `{"value":"empty"}` with an
-  optional `type`.
+  optional `type`. **`typeRef` is NOT on either wire**: it is fully determined
+  by a name ascription, so the BAST and JSON readers rebuild it through
+  `EmptyValue.ascribed` / `PromptValue.ascribed` — the parser's own
+  constructors — and the writers emit `ascribedType`. No revision bump, and
+  pre-2.4.0 files load to the AST the parser builds. `empty` is also an
+  arithmetic atom (`x == empty`), after `collectionPredicate` and before the
+  bare-path atom, wrapped in `NoCut`.
 
 - **`not` and `!` are SYNONYMOUS everywhere, as the inverse of a boolean
   expression** (ruled 2026-08-14, shipped 2026-08-15). `!` is legal in every
@@ -756,7 +788,7 @@ decision.
 `remove from field F where <key> == <value>`. `append`, `remove` and `where` were already
 reserved keywords, so taking them cost no model anything. The parser tries `from` first after
 `remove` — a `value` can never begin with a reserved word — so the two forms need no lookahead.
-`statement_start` (the guard on `empty`'s optional trailing type) lists both.
+`statement_start` (one category of the guard on `empty`'s optional trailing type) lists both.
 
 **Why.** Rule 3 (`entity-event-sourced-prose-folds`) drained riddl-models from 111 prose folds
 to 14; every one of the 14 was an append, a remove or arithmetic. Arithmetic then stayed a

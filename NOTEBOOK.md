@@ -116,6 +116,52 @@ JVM `utils` 148, `language` 76/760, `passes` 269/1828, `testkit` 2, `riddlLib` (
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-10-07 (later) — [1.26] Phases 2–5: every value is typed, by a type NAME
+
+**What landed.**
+- **Phase 2.** A bare `empty` is checked at every position that supplies a type, through one
+  helper (`checkEmptyFits`) that works on the type AS DECLARED. Inline fields are checkable now.
+  `empty` is an arithmetic atom, so `x == empty` compares.
+- **Phase 3.** `EmptyValue` and `PromptValue` carry `typeRef` (a name), and `typeEx` is
+  deprecated but mirrored. `typeRef` is derived on read, so it travels on neither the BAST nor
+  the JSON wire: no FORMAT_REVISION bump, and old files load to the parser's AST.
+- **Phase 4.** Three Errors: not-a-name, untyped, and a syntactic contradiction.
+- **Phase 5.** CM §0.3 gained ruling 6.
+
+Corpus census, run with `validate --json` on all 191 entry points and calibrated on a
+known-positive first: **0 errors on 2.3.1, 0 on the candidate.** The ~1000 bare `empty` uses
+are all in typed positions. Riddl-models needs no migration, and the rulings were chosen so
+that it would not.
+
+**What it taught.**
+- **The `where` bug was a LIST believed complete.** The ascription guard named the
+  statement-leading words and its comment called that "COMPLETE rather than heuristic". `where`,
+  `to` and `in` follow values too, and they are not even reserved: they're readability words,
+  absent from `Keyword.allKeywords`. Three positions failed the same way, found by writing the
+  per-position tests. A guard against "what may follow" has to be a category, because a list is
+  complete only for the constructs that existed when it was written. `EbnfReservedWordsTest` now
+  compares the EBNF's hand-kept lists with the Scala ones.
+- **"Formats as one word" is not "is a name".** The first cut at a bare-predefined-name test used
+  `p.format.matches("[A-Z][A-Za-z]*")`, and `Currency(USD)` formats as `Currency`, which turned
+  ten round-trip tests red. The right question is whether the bare word rebuilds the same node
+  (`PredefTypes.typeExpressionFor(p.format) == p`). A test written against the representation
+  passed on the data I imagined. The one written against the meaning passed on the data there
+  is.
+- **A dispatch written twice, again.** `ProjectionPass` held a second `admitsEmpty`, and it had
+  the alias defect Phase 1 removed from the first. `dump --json` told riddl-models that an
+  alias-typed optional field could not be `empty`. Found by grepping `typeEx` reads for Phase 3,
+  not by looking for it.
+- **A pre-existing reflectivity hole surfaced.** `emitTypeExpression` drops an alias's keyword
+  (BACKLOG [1.10]), so `empty record R` prettified to `empty R` and re-parsed with keyword
+  `type`. The name ascription is now emitted as the `TypeRef` it is. [1.10] itself is untouched.
+- **`@JSExportTopLevel("PromptValue")` was attached to `EmptyValue`.** It sat above EmptyValue's
+  scaladoc, so PromptValue had no JS export at all. This is the reattachment trap CLAUDE.md
+  already describes, and it was found by reading the node, not by any build.
+- **Deprecating a field under `-Werror`.** `passes` and `riddlLib` compile tests with `-Werror`,
+  so 61 test reads of `typeEx` failed the build until they moved to `ascribedType`. That pressure
+  is what makes the deprecation real. `language` compiles with `--no-warnings`, so the AST's own
+  accessors can read the field freely.
+
 ## 2026-10-07 — [1.26] Phase 1: the rule's own spelling could not validate
 
 riddl-generator's task asked riddl to restore "every value is typed, by a type

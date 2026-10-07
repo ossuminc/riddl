@@ -653,11 +653,9 @@ fact from that file that you had no reason to look for, it belongs back here.
   unchanged, for the one place the emitter cannot reach: `.format`-based
   error-message rendering. Pinned by `TypedHoleContainerAscriptionRoundTripTest`,
   whose six cases were each verified to fail before their fix via `git stash`.
-  **What is NOT fixed**: `checkPromptAscription` (validation) is still wired at
-  only those four positions, so an ascription CONTRADICTING its position's actual
-  expected type is silently accepted at `put`, `return`, `require … with`, and a
-  `Call`/`Constructor`/`Initiate`/`TerminateStatement` argument — a missing
-  check, not broken output. See BACKLOG § 1.
+  (`checkPromptAscription` was later wired at the other seven positions too —
+  `put`, `return`, `require … with` and the four argument kinds — in
+  `0fd7bb54e`; an older version of this paragraph said otherwise.)
 - **Inlet/outlet direction — the one people invert, Reid included (2026-08-16).**
   **An OUTLET is an exit and an INLET is an entrance.** A processor PLACES a
   message on its outlet; the connector carries it; the message ARRIVES at the
@@ -679,6 +677,14 @@ fact from that file that you had no reason to look for, it belongs back here.
 - **`empty` / `none`** — the rule is **minimum cardinality ZERO**: legal for
   `T?`, `T*`, `T{0,n}`; an Error for `T+`, `T{1,n}` and a bare `T`. That one rule
   is why ONE literal covers both the absent optional and the empty collection.
+  **Every value is typed, by a type NAME** (Reid, 2026-10-04, BACKLOG [1.26]):
+  a bare `empty` takes its POSITION's type, `empty T` is required where nothing
+  supplies one, and `T` is a NAME — `empty String?` is an Error, not a
+  deprecation. **Read `ascribedType`/`typeRef`, never the deprecated `typeEx`**:
+  `passes` and `riddlLib` compile with `-Werror`, so a `typeEx` read fails the
+  build. `admitsEmpty` reads THROUGH names; a cardinality question that does not
+  is the `admitsEmpty` bug of 2.3.1 again (and `ProjectionPass` had a second
+  copy of it). Details in `docs/claude/language-constructs.md`.
   Two traps worth re-reading before adding any `Value` arm:
   1. **The four throw-terminated walks are INVISIBLE to `-Werror`**
      (`countValueFailPoints`, `stateReadsIn`, `initiatesIn`, `asksIn`) — the
@@ -689,10 +695,14 @@ fact from that file that you had no reason to look for, it belongs back here.
   2. **An optional trailing TypeExpression SWALLOWS THE NEXT STATEMENT.** An
      aliased type is a bare path and RIDDL statements are whitespace-separated
      with no terminator, so `set x to empty` followed by `set y to …` parsed the
-     second as the first's ascription. Guarded by refusing statement-leading
-     keywords (`statementStart`) — COMPLETE rather than heuristic, because a type
-     can never be named a reserved word. The EBNF carries the same guard, or the
-     two parsers disagree and TatSu reddens.
+     second as the first's ascription. **The guard was a LIST of
+     statement-leading words, believed COMPLETE, and was not**: `where`, `to`
+     and `in` follow values too, and are not even reserved. It is now by
+     CATEGORY (`ascriptionStop`): statement start, readability word, or any
+     reserved word that cannot begin a type expression. **A guard against "what
+     may follow" must be a category; a list is only complete for the
+     constructs that existed when it was written.** The EBNF carries the same
+     rule, and `EbnfReservedWordsTest` keeps its word lists honest.
 
 - **`tell` addressing an INSTANCE** — **the instance is NEVER resolved and
   nothing needs it** (Reid, 2026-08-22: *"You CANNOT know the specific instance
