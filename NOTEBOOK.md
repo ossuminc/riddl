@@ -116,6 +116,28 @@ JVM `utils` 148, `language` 76/760, `passes` 269/1828, `testkit` 2, `riddlLib` (
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-10-07 — [1.26] Phase 1: the rule's own spelling could not validate
+
+riddl-generator's task asked riddl to restore "every value is typed, by a type
+NAME" (BACKLOG [1.26]). Reid settled eight design questions first. Phase 1 is
+the piece riddlg is blocked on, and it ships alone as 2.3.2. On 2.3.1, `empty
+MaybeNote` (with `type MaybeNote is String?`) was refused, because `admitsEmpty`
+matched the alias node itself and an alias has no cardinality of its own. The
+same defect gave every alias-typed constructor field a false
+`EmptyNotAllowedForField` for a bare `empty`. The corpus never hit it only
+because its optional fields are typed inline. The fix is one line:
+`admitsEmpty` now matches `aliasFreeTypeExpr(te)`, which already follows
+aliases (never cardinality) and already carries the `eq` visited list.
+
+**What it taught:** a helper that answers a TYPE question has to say whether it
+looks through names. `admitsEmpty` was written against the four cardinality
+wrappers and was "total" over them, which made it look finished, but its domain
+was every TypeExpression, and aliases are the commonest one. This is the
+"enumerate the domain of the FUNCTION, not of the nearest-looking type" trap
+again. Six new `EmptyValueTest` cases; four were red before the fix, and they
+went red for the predicted reason. Cold-cache certification: 19/19 module
+summaries green (JVM 7, JS 5, Native 7), throwaway cache 233M.
+
 ## 2026-09-28 — a severity band and a predicate stop agreeing when you add a kind
 
 riddl-models: `Messages.justWarnings` returned advisories, whose own `isWarning` is false. It

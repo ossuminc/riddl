@@ -201,4 +201,90 @@ class EmptyValueTest extends AbstractValidatingTest {
       withClue(msgs.map(_.message).mkString("\n")) { found.size mustBe 2 }
     }
   }
+
+  /** The cardinality rule reads THROUGH a type name to the type it stands for (BACKLOG [1.26],
+    * riddl-generator 2026-10-04). Every value is typed by a type NAME, so `empty MaybeNote` is the
+    * rule's own spelling. 2.3.1 refused it: `admitsEmpty` looked at the alias's own (absent)
+    * cardinality, so the name the language asks for could not validate.
+    */
+  private def aliasModel(body: String): String =
+    s"""domain Dom is {
+       |  context Ctx is {
+       |    event Cleared is { why: String(1,20) }
+       |    type MaybeNote is String(1,20)?
+       |    type MaybeNote2 is MaybeNote
+       |    type Notes is String(1,20)*
+       |    type Tags is String(1,20)+
+       |    type CycA is CycB
+       |    type CycB is CycA
+       |    record R is { note: MaybeNote  note2: MaybeNote2  notes: Notes  tags: Tags }
+       |    entity Ent is {
+       |      state S of record Ctx.R is {
+       |        handler H is {
+       |          on event Ctx.Cleared is {
+       |$body
+       |          }
+       |        }
+       |      }
+       |    }
+       |  }
+       |}
+       |""".stripMargin
+
+  private def cardinalityErrs(msgs: Messages): Messages =
+    errs(msgs).filter(m =>
+      m.message.contains("minimum cardinality is zero") ||
+        m.message.contains("requires at least one value") ||
+        m.message.contains("is not a value of field")
+    )
+
+  "an `empty` typed by a NAME" should {
+    "accept an ascription naming an optional alias" in { (td: TestData) =>
+      val msgs = messagesFor(aliasModel("""            set field R.note to empty MaybeNote"""), td)
+      withClue(msgs.map(_.message).mkString("\n")) { cardinalityErrs(msgs) mustBe empty }
+    }
+
+    "accept an ascription naming a collection alias" in { (td: TestData) =>
+      val msgs = messagesFor(aliasModel("""            set field R.notes to empty Notes"""), td)
+      withClue(msgs.map(_.message).mkString("\n")) { cardinalityErrs(msgs) mustBe empty }
+    }
+
+    "read through an alias CHAIN" in { (td: TestData) =>
+      val msgs = messagesFor(
+        aliasModel("""            set field R.note2 to empty MaybeNote2
+                     |            set field R.note2 to empty""".stripMargin),
+        td
+      )
+      withClue(msgs.map(_.message).mkString("\n")) { cardinalityErrs(msgs) mustBe empty }
+    }
+
+    "still be an Error when the alias requires at least one value" in { (td: TestData) =>
+      val msgs = messagesFor(aliasModel("""            set field R.tags to empty Tags"""), td)
+      withClue(msgs.map(_.message).mkString("\n")) { cardinalityErrs(msgs) must not be empty }
+    }
+
+    "accept a bare constructor argument for an alias-typed optional field" in { (td: TestData) =>
+      val msgs = messagesFor(
+        aliasModel(
+          """            set state S to record Ctx.R(note = empty, note2 = empty, notes = empty,
+            |              tags = empty)""".stripMargin
+        ),
+        td
+      )
+      withClue(msgs.map(_.message).mkString("\n")) {
+        // Only `tags` (String+) may be refused; the three zero-minimum aliases must pass.
+        val found = cardinalityErrs(msgs)
+        found.size mustBe 1
+        found.head.message must include("'tags'")
+      }
+    }
+
+    "not overflow the stack on a cyclic alias" in { (td: TestData) =>
+      val msgs = messagesFor(aliasModel("""            let e = empty CycA
+                                          |            do "used"""".stripMargin), td)
+      withClue(msgs.map(_.message).mkString("\n")) {
+        msgs.filter(_.message.contains("Exception")) mustBe empty
+      }
+    }
+  }
 }
