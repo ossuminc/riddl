@@ -116,6 +116,16 @@ JVM `utils` 148, `language` 76/760, `passes` 269/1828, `testkit` 2, `riddlLib` (
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-10-07 (evening) — 2.4.0 released
+
+The release came from `/ship 2.4.0` at `93c16cec2`
+(https://github.com/ossuminc/riddl/releases/tag/2.4.0).
+- `clean; tJVM; tJS; tNative; publish`: 19/19 module summaries, 8050 tests passed, 0 failed.
+- `publishLocal` done, including the npm tgz.
+- The native `riddlc` 2.4.0 is built at `target/out/native0.5/scala-3.9.0/riddlc/riddlc`.
+- The triage task moved to `task/done/`.
+- ossum.tech's language-reference task is waiting on a staged 2.4.0 binary.
+
 ## 2026-10-07 (later) — [1.26] Phases 2–5: every value is typed, by a type NAME
 
 **Reid confirmed the six judgement calls made while he was away (2026-10-07):** ship everything
