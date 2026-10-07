@@ -381,13 +381,46 @@ query_value = "query" ["one"] table_ref ["where" value] ;
    the minimum cardinality is zero -- `T?`, `T*`, `T{0,n}` -- and an error on `T+`, `T{1,n}` or a
    bare `T`. The ascription is what lets it be written where the position supplies no expected
    type, notably a constructor argument. *)
-empty_value = ( "empty" | "none" ) [ !statement_start type_expression ] ;
+empty_value = ( "empty" | "none" ) [ !ascription_stop type_expression ] ;
 
-(* The ascription is OPTIONAL and an aliased type expression is a bare path, while RIDDL statements
-   are whitespace-separated with no terminator -- so without this guard `set x to empty` followed by
-   `set y to ...` parses the second statement as the first's ascription. Every statement begins with
-   a reserved keyword, so refusing those is a complete fix rather than a heuristic: a type can never
-   be named one. Kept in step with `statementStart` in StatementParser.scala. *)
+(* BACKLOG [1.26] (Reid, Q7): what may NOT begin `empty`'s optional ascription. Any word that can
+   follow a value was read as a type -- `update T set f = empty where ...` read `where`, `put empty
+   to ...` read `to`, `store empty in ...` read `in` -- because the old guard was a LIST of
+   follow-words nobody extended. The guard is by CATEGORY: a statement start, a readability word
+   (not reserved, so listed separately), or any reserved word EXCEPT one that can begin a type
+   expression, which keeps the retired expression ascriptions parsing so validation can name the
+   fix. Kept in step with `ascriptionStop` in StatementParser.scala; `reserved_word` with
+   `Keyword.allKeywords` (checked by EbnfReservedWordsTest). *)
+ascription_stop = statement_start | readability_word | ( !type_expression_start reserved_word ) ;
+type_expression_start = "type" | "command" | "query" | "event" | "result" | "record" | "graph"
+                      | "table" | "many" | "optional" | "any" | "one" | "sequence" | "mapping"
+                      | "replica" | "range" | "reference" ;
+readability_word = "and" | "are" | "as" | "at" | "by" | "for" | "from" | "in" | "is" | "of" | "so"
+                 | "that" | "to" | "wants" | "with" ;
+reserved_word =
+    "acquires" | "activate" | "adaptor" | "after" | "all" | "any" | "append" | "ask" |
+    "attachment" | "author" | "become" | "benefit" | "body" | "brief" | "briefly" | "call" |
+    "capability" | "case" | "command" | "commands" | "condition" | "connector" | "constant" |
+    "container" | "contains" | "context" | "copyright" | "correlation" | "count" | "create" |
+    "default" | "delete" | "described" | "description" | "details" | "direct" | "do" | "domain" |
+    "else" | "email" | "end" | "entity" | "epic" | "error" | "event" | "example" | "execute" |
+    "explained" | "explanation" | "field" | "figma" | "file" | "final value" | "flow" | "focus" |
+    "for" | "foreach" | "form" | "forward" | "from" | "fully" | "function" | "get" | "graph" |
+    "group" | "handler" | "history" | "if" | "import" | "include" | "index" | "init" | "initial" |
+    "initiate" | "inlet" | "inlets" | "input" | "invariant" | "items" | "key" | "label" | "let" |
+    "link" | "log" | "many" | "mapping" | "match" | "merge" | "message" | "module" | "morph" |
+    "name" | "nebula" | "node" | "none" | "on" | "one" | "option" | "optional" | "options" |
+    "or" | "organization" | "other" | "out" | "outlet" | "outlets" | "output" | "parallel" |
+    "passivate" | "pipe" | "plant" | "presents" | "processor" | "projector" | "prompt" | "put" |
+    "query" | "quiescence" | "range" | "record" | "reference" | "refuses" | "relationship" |
+    "remove" | "replica" | "replies" | "reply" | "repository" | "require" | "required" |
+    "requires" | "result" | "results" | "return" | "returns" | "reverted" | "router" | "saga" |
+    "schema" | "selects" | "self" | "send" | "sequence" | "set" | "show" | "shown" | "sink" |
+    "source" | "split" | "state" | "step" | "stop" | "store" | "story" | "streamlet" | "system" |
+    "table" | "take" | "tell" | "term" | "terminate" | "then" | "times" | "title" | "type" |
+    "update" | "updates" | "upsert" | "url" | "user" | "version" | "void" | "when" | "where" |
+    "with" | "yield" | "yields" ;
+(* The statement-leading words. *)
 statement_start = ( "set" | "tell" | "send" | "forward" | "yield" | "reply" | "morph" | "become"
                   | "do" | "prompt" | "let" | "call" | "foreach" | "when" | "match" | "error"
                   | "require" | "put" | "return" | "terminate" | "code" | "focus" | "stop"
@@ -461,8 +494,10 @@ postfix_expression = additive_expression [ "as" identifier "where" value
                                          | "contains" additive_expression ] ;
 additive_expression = multiplicative_expression { ("+" | "-") multiplicative_expression } ;
 multiplicative_expression = arithmetic_atom { ("*" | "/") arithmetic_atom } ;
+(* BACKLOG [1.26]: `empty_value` is an atom so `x == empty` compares -- the opposite operand
+   supplies its type. Before boolean_atom, whose bare path would read `empty` as a reference. *)
 arithmetic_atom = collection_predicate | count_value | duration_literal | literal_string
-                | constant_ref | numeric_literal | boolean_atom ;
+                | constant_ref | numeric_literal | empty_value | boolean_atom ;
 (* B5: `all of xs as e where p` and its `any`/`none` siblings -- a boolean; the element binding
    is explicit and scoped to the predicate. `count of xs` is a Whole. *)
 collection_predicate = ("all" | "any" | "none") "of" additive_expression "as" identifier

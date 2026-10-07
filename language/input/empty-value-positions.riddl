@@ -1,0 +1,27 @@
+// A bare `empty` takes its type from its POSITION (BACKLOG [1.26]). Each statement below puts
+// `empty` before a word that the old guard read as a type name -- `where`, `to`, `in`, `or` --
+// and in the comparison operand position, where the operand opposite supplies the type.
+domain EmptyPositions is {
+  context Ctx is {
+    type MaybeNote is String(1,30)? with { briefly "an optional, by name" }
+    record Row is {
+      id: String(1,30) with { briefly "key" }
+      note: String(1,30)? with { briefly "an optional, typed inline" }
+    } with { briefly "a stored row" }
+    event Cleared is { id: String(1,30) } with { briefly "a trigger" }
+    repository Notes is {
+      schema S is relational
+        of rows as record Ctx.Row
+        key on field Ctx.Row.id
+      with { briefly "storage" }
+      handler H is {
+        on c: event Ctx.Cleared is {
+          update S.rows set note = empty where id == c.id
+          delete from rows where note == empty or id == c.id
+          let gone: MaybeNote = empty
+          log gone
+        }
+      } with { briefly "clears a note" }
+    } with { briefly "repository" }
+  } with { briefly "context" }
+} with { briefly "domain" }

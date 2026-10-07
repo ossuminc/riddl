@@ -590,16 +590,43 @@ private[parsing] trait StatementParser {
   private[parsing] def emptyValue[u: P]: P[EmptyValue] = {
     P(
       Index ~ (Keywords.keyword("empty") | Keywords.keyword("none")) ~/
-        (!statementStart ~ typeExpression).? ~~ Index
+        (!ascriptionStop ~ typeExpression).? ~~ Index
     )./.map { case (start, typeEx, end) => EmptyValue(at(start, end), typeEx) }
   }
 
-  /** Guards the OPTIONAL ascription after `empty` from swallowing the NEXT statement.
+  /** What may NOT begin `empty`'s optional ascription (BACKLOG [1.26], Reid's Q7).
     *
-    * An aliased type expression is a bare path, and RIDDL statements are whitespace-separated with
-    * no terminator, so `set x to empty` followed on the next line by `set y to …` parsed the second
-    * `set` as the first's ascription. Every statement begins with a reserved keyword, so refusing
-    * those here is a COMPLETE fix rather than a heuristic -- a type can never be named one.
+    * The ascription is optional and an aliased type is a bare path, while RIDDL statements and
+    * clauses are whitespace-separated -- so ANY word that can follow a value was read as a type:
+    * `update T set f = empty where …` read `where`, `put empty to output O` read `to`, `store empty
+    * in S.rows` read `in`. Guarding a LIST of follow-words is how that happened: each new construct
+    * that put a word after a value had to remember to extend it, and none did. So the guard is by
+    * CATEGORY, not by list: a statement start, a readability word (`to`, `in`, `at`, `as`, `of`,
+    * `with`, …, which are not in `Keyword.allKeywords`), or any reserved keyword EXCEPT one that can
+    * begin a type expression. That exception keeps `empty record Foo` and the retired expression
+    * forms (`empty many String`) parsing, so the latter reach validation's error rather than a
+    * parse failure that would hide every other diagnostic. The cost: a type named like one of these
+    * words cannot follow `empty` unquoted -- measured as no such type name in either corpus.
+    */
+  private def ascriptionStop[u: P]: P[Unit] = {
+    P(statementStart | anyReadability | (!typeExpressionStart ~ Keywords.anyKeyword))
+  }
+
+  /** The reserved words a type expression may begin with -- the aggregate use cases and the
+    * keyword-led type forms (`ebnf-grammar.ebnf` `type_expression`). Kept in step with
+    * `type_expression_start` there.
+    */
+  private def typeExpressionStart[u: P]: P[Unit] = {
+    P(
+      StringIn(
+        "type", "command", "query", "event", "result", "record", "graph", "table", "many",
+        "optional", "any", "one", "sequence", "mapping", "replica", "range", "reference"
+      ) ~~ &(Keywords.isNotKeywordChar)
+    )
+  }
+
+  /** The statement-leading words, one of [[ascriptionStop]]'s three categories. Listed because
+    * `code`, `read` and `write` are absent from `Keywords.anyKeyword`.
     */
   private def statementStart[u: P]: P[Unit] = {
     P(
@@ -880,6 +907,11 @@ private[parsing] trait StatementParser {
         NoCut(literalString).map(ls => ls: Value) |
         constantRef.map(cr => cr: Value) |
         numericLiteral.map(nl => nl: Value) |
+        // BACKLOG [1.26]: `x == empty` -- the operand opposite supplies the type (Reid, Q8). Before
+        // `booleanAtom`, whose bare-path arm would read `empty` as an unresolvable ValueRef; after
+        // `collectionPredicate`, because `none of …` is the quantifier. `NoCut` for the reason
+        // `literalString` has one: `emptyValue` cuts, and a filtering caller must still backtrack.
+        NoCut(emptyValue).map(ev => ev: Value) |
         booleanAtom
     )
   }
