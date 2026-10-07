@@ -366,31 +366,13 @@ of § 1 is now the active to-do list. The detailed entries stay in their origina
 positions below — they are cross-referenced from code comments and other repos'
 task files, so they were NOT physically reshuffled; this index carries the order.
 
-- **[1.26]** **Every value is typed, by a type NAME — restore the rule `empty`
-  broke.** From riddl-generator's `task/2026-10-03-empty-swallows-where.md`;
-  rulings by Reid 2026-10-04..06. Plan:
-  `~/.claude/plans/rustling-juggling-curry.md` (six phases).
-  **Rulings:** (Q1) a bare `empty` is legal wherever the POSITION supplies a
-  type, else `empty T`; (Q2) `prompt(…) as T` stays optional, but is a NAME when
-  written; (Q3) an expression ascription, or a bare `empty` where nothing
-  supplies a type, is an ERROR — "never legal" outranks "the old spelling
-  stays"; (Q4) an ascription must be SYNTACTICALLY the position's declared type
-  name, so an inline-typed field takes only a bare `empty`; (Q5) trailing
-  `typeRef: Option[TypeRef]` on `EmptyValue`/`PromptValue`, `typeEx` deprecated
-  but still populated; (Q7) the `where` fix is a keyword guard, not a list;
-  (Q8) a comparison operand types the `empty` opposite it. An expression
-  ascription PARSES and is a VALIDATION error. Release: Phase 1 as 2.3.2, the
-  rest as 2.4.0.
-  **Verified against 2.3.1 (2026-10-04):** bare `empty` validates in `set`;
-  `update … set f = empty where …` fails to parse (`where` read as a type);
-  `empty MaybeNote` (`type MaybeNote is String?`) is refused because
-  `admitsEmpty` (`ValidationPass.scala:10364`) never resolves an alias. Only
-  `let`/`set`/append-remove/constructor args check a bare `empty`; a `constant`
-  REJECTS it (`:3814`); put/return/require/call/initiate/store/update and
-  comparisons never check it. Only `empty` and `prompt` lack a type in their
-  own spelling — the rest of the `value` ladder is closed. Corpus: ~1020 bare
-  `empty`/`none` in 159 riddl-models models, nearly all constructor args (typed
-  positions); 8623 `prompt(…)`, none ascribed.
+- ~~**[1.26]** **Every value is typed, by a type NAME.**~~ — **DONE 2026-10-07** (2.3.2 +
+  2.4.0). Alias-transparent cardinality; every typed position checks a bare `empty`; the
+  ascription guard is a category; `typeRef` on `EmptyValue`/`PromptValue`; three new Errors;
+  CM §0.3 ruling 6. Corpus census 0 -> 0 errors over 191 entry points. What it taught is in
+  NOTEBOOK 2026-10-07. Outstanding outside this repo: ossum.tech's language reference
+  (`ossum.tech/task/riddl-every-value-typed-by-name.md`) and riddl-generator's fixture
+  migration (`riddl-generator/task/riddl-2.4.0-value-typed-by-name.md`).
 
 - **[1.23]** **`ask` is checked for a PATH but never for a TYPE, and riddl-models asked for
   the type check.** Their 2026-09-09 task asked for two things; only one landed on
