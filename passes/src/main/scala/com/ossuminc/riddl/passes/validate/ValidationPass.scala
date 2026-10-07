@@ -3481,6 +3481,11 @@ case class ValidationPass(
         argument.foreach {
           case pv: PromptValue =>
             checkPromptAscription(pv, Some(AliasedTypeExpression(At.empty, "type", tr.pathId)))
+          case ev: EmptyValue => // BACKLOG [1.26]: `requires` is the position's type
+            resolution.refMap.definitionOf[Type](tr.pathId).foreach { t =>
+              checkEmptyFits(ev, t.typEx, s"${inv.identify}'s 'requires ${tr.format}'",
+                RuleId.EmptyNotAllowed)
+            }
           case _ => ()
         }
       case _ if argument.nonEmpty =>
@@ -9286,7 +9291,7 @@ case class ValidationPass(
           val asFields: Seq[Field] = declared.map { a =>
             Field(a.loc, Identifier(a.loc, a.name), a.typeEx)
           }
-          checkArgumentTypes(args, asFields, "parameter", parents, lets, elements)
+          checkArgumentTypes(args, asFields, "parameter", p.identify, parents, lets, elements)
         end if
       end if
     }
@@ -10373,6 +10378,40 @@ case class ValidationPass(
     case sr: SpecificRange => sr.min == 0
     case _                 => false
 
+  /** The ONE check a bare `empty` gets at a position that supplies its type (BACKLOG [1.26]).
+    *
+    * Every value is typed: a bare `empty` takes the type of its POSITION -- the field it is
+    * assigned to or supplies, the declared type of a `let`/`constant`, a function's output, the
+    * operand opposite it in a comparison -- and is legal exactly where that type's minimum
+    * cardinality is zero. `expected` is the type AS DECLARED, so an inline `note: String?` is
+    * checkable; until 2.4.0 several positions could only consult a NAMED Type and fell silent for
+    * an inline one. The ASCRIBED form is skipped here: `validateValue` checks an ascription with no
+    * context, and reporting both would double up on one mistake.
+    *
+    * @param subject
+    *   what the value is being given to, e.g. "field 'note' in Record 'R'".
+    */
+  private def checkEmptyFits(
+    ev: EmptyValue,
+    expected: TypeExpression,
+    subject: String,
+    rule: RuleId
+  ): Unit =
+    // A name that does not resolve leaves `aliasFreeTypeExpr` holding the alias. That type is
+    // UNKNOWN, not "exactly one", and its resolution failure is already reported -- reasoning from
+    // it here would be a second, false diagnostic.
+    val unknown = aliasFreeTypeExpr(expected).isInstanceOf[AliasedTypeExpression]
+    if ev.typeEx.isEmpty && !unknown && !admitsEmpty(expected) then
+      messages.addError(
+        ev.loc,
+        s"'empty' is not a value of $subject: '${expected.format}' requires at least one value",
+        suggestion = "Only an optional ('T?'), a collection ('T*') or a range starting at zero " +
+          s"('T{0,n}') has an empty value. Supply a real value for $subject, or give it a type " +
+          "that can be empty.",
+        ruleId = Some(rule)
+      )
+  end checkEmptyFits
+
   private def valueTypeExpr(
     v: Value,
     parents: Parents,
@@ -10829,6 +10868,16 @@ case class ValidationPass(
   ): Unit =
     val lc = operandCategory(ce.left, parents, lets, elements)
     val rc = operandCategory(ce.right, parents, lets, elements)
+    // BACKLOG [1.26] (Reid, Q8): a bare `empty` takes its type from the operand OPPOSITE it, so
+    // `holdReason == empty` asks whether an optional is absent and is legal only where it could be.
+    def emptyAgainst(ev: Value, other: Value): Unit = ev match
+      case e: EmptyValue =>
+        operandTypeExpr(other, parents, lets, elements).foreach { te =>
+          checkEmptyFits(e, te, s"'${other.format}'", RuleId.EmptyNotAllowed)
+        }
+      case _ => ()
+    emptyAgainst(ce.left, ce.right)
+    emptyAgainst(ce.right, ce.left)
     ce.op match
       case ComparisonOperator.EQ | ComparisonOperator.NE =>
         (lc, rc) match
@@ -11068,18 +11117,7 @@ case class ValidationPass(
       // A BARE `empty` takes its type from the position, so this is the only place its
       // minimum-cardinality rule can be enforced. The ASCRIBED form is checked context-free in
       // `validateValue`; checking it again here would double-report, so it is skipped.
-      case (ev: EmptyValue, Some(e)) if ev.typeEx.isEmpty =>
-        if !admitsEmpty(e.typEx) then
-          messages.addError(
-            ev.loc,
-            s"'empty' is not a value of ${e.identify}: '${e.typEx.format}' requires at least one " +
-              "value",
-            suggestion = "Only an optional ('T?'), a collection ('T*') or a range starting at zero " +
-              s"('T{0,n}') has an empty value. Give ${e.identify} such a type, or supply a real " +
-              "value here.",
-            ruleId = Some(RuleId.EmptyNotAllowed)
-          )
-        end if
+      case (ev: EmptyValue, Some(e)) => checkEmptyFits(ev, e.typEx, e.identify, RuleId.EmptyNotAllowed)
       // A20: `let`/`set` are the two carriers `checkValueType` serves, and both wire the
       // restate/contradict check for free by living here rather than being duplicated at each
       // call site. `expected` is already the RESOLVED Type the position declares, so it is
@@ -11196,6 +11234,7 @@ case class ValidationPass(
     args: Seq[ConstructorArg],
     fields: Seq[Field],
     fieldNoun: String,
+    owner: String,
     parents: Parents,
     lets: Seq[LetStatement],
     elements: Map[String, TypeExpression]
@@ -11205,6 +11244,14 @@ case class ValidationPass(
         case Some(id) => fields.find(_.id.value == id.value)
         case None     => if idx < fields.size then Some(fields(idx)) else None
       fieldOpt.foreach { field =>
+        // A bare `empty` takes its type from the field it supplies (BACKLOG [1.26]) -- for a
+        // constructor, a call, an `initiate` and a `terminate` alike. This was constructor-only
+        // until 2.4.0, so `call function F(note = empty)` against a `String+` input went unchecked.
+        arg.value match
+          case ev: EmptyValue =>
+            checkEmptyFits(ev, field.typeEx, s"$fieldNoun '${field.id.value}' in $owner",
+              RuleId.EmptyNotAllowedForField)
+          case _ => ()
         // A20: the ONE wiring point for four of the seven ascription positions -- a constructor
         // argument, a call argument, and (through `checkLifecycleInvocation`, which adapts
         // `MethodArgument`s to `Field`s precisely so it can reuse this helper) an `initiate` and a
@@ -11302,35 +11349,17 @@ case class ValidationPass(
               )
           }
         }
-        // A bare `empty` argument must be checked against the FIELD's cardinality (riddl-models,
-        // 2026-08-24). This is the position models actually write `empty` in, and it was the one
-        // place the rc.23 check could not see: `checkValueType` takes an expected *named* Type, and
-        // a field typed `TimeStamp` or `OrderLine+` names none. But the field itself is right here
-        // -- `fields` is already resolved for the arity and name checks above -- so the cardinality
-        // is one lookup away, and an earlier claim that constructor arguments carry no expected
-        // type was too pessimistic: what they lack is a *named Type*, not the type.
-        //
-        // The ASCRIBED form is skipped: `validateConstructor` runs alongside `validateValue`, which
-        // checks an ascription context-free, and reporting both would double up on one mistake.
+        // A bare `empty` argument is checked against its FIELD's cardinality in
+        // `checkArgumentTypes`, which constructors share with calls, `initiate` and `terminate`
+        // (riddl-models 2026-08-24 found the constructor case; [1.26] generalized it). The field
+        // carries the type even when it names none -- `TimeStamp`, `OrderLine+` -- which is why
+        // an earlier claim that constructor arguments carry no expected type was too pessimistic.
         def fieldForArg(arg: ConstructorArg, idx: Int): Option[Field] = arg.name match
           case Some(id) => fields.find(_.id.value == id.value)
           case None     => fields.lift(idx) // positional; arity is reported separately
         c.args.zipWithIndex.foreach { case (arg, idx) =>
           arg.value match
-            case ev: EmptyValue if ev.typeEx.isEmpty =>
-              fieldForArg(arg, idx).foreach { f =>
-                if !admitsEmpty(f.typeEx) then
-                  messages.addError(
-                    ev.loc,
-                    s"'empty' is not a value of field '${f.id.value}' in ${typ.identify}: " +
-                      s"'${f.typeEx.format}' requires at least one value",
-                    suggestion = "Only an optional ('T?'), a collection ('T*') or a range starting " +
-                      s"at zero ('T{0,n}') has an empty value. Supply a real value for " +
-                      s"'${f.id.value}', or give it a type that can be empty.",
-                    ruleId = Some(RuleId.EmptyNotAllowedForField)
-                  )
-                end if
-              }
+            case ev: EmptyValue if ev.typeEx.isEmpty => ()
             // Every OTHER argument is type-checked against the field it supplies (riddl-generator,
             // 2026-08-24). Until now a constructor argument was checked for arity, duplication,
             // ordering, name validity and `empty` cardinality -- but never for TYPE, so
@@ -11414,7 +11443,7 @@ case class ValidationPass(
               "'<field> = empty'.",
             ruleId = Some(RuleId.ConstructorMissingFields)
           )
-        checkArgumentTypes(c.args, fields, "field", parents, lets, elements)
+        checkArgumentTypes(c.args, fields, "field", typ.identify, parents, lets, elements)
         // Recurse into argument values (nested constructors, value refs), CARRYING the foreach
         // elements: `send event Shipped(sku = line.sku)` is the shape the whole feature exists
         // for, and dropping them here left the element unresolvable exactly where it is used.
@@ -11438,12 +11467,11 @@ case class ValidationPass(
       case Some(fn) =>
         val fields: Seq[Field] = fn.input match
           case Some(tr: TypeRef) =>
+            // Through aliases, as `validateConstructor` does (BACKLOG [1.26]): `returns`/`requires`
+            // naming `type In is Args` used to yield NO fields, so every argument went unchecked.
             resolution.refMap.definitionOf[Type](tr.pathId) match
-              case Some(typ) =>
-                typ.typEx match
-                  case ate: AggregateTypeExpression => ate.fields
-                  case _                            => Seq.empty[Field]
-              case None => Seq.empty[Field]
+              case Some(typ) => aggregateFieldsOf(typ.typEx)
+              case None      => Seq.empty[Field]
           case Some(agg: Aggregation) => agg.fields
           case None                   => Seq.empty[Field]
         // A call is used to obtain a result; a function with no output cannot produce one.
@@ -11501,7 +11529,7 @@ case class ValidationPass(
               s"Supply exactly ${count(fields.size, "positional argument")}, or use named arguments for a subset.",
             ruleId = Some(RuleId.CallTooManyPositional)
           )
-        checkArgumentTypes(call.args, fields, "input", parents, lets, elements)
+        checkArgumentTypes(call.args, fields, "input", fn.identify, parents, lets, elements)
         // Recurse into argument values (nested constructors, calls, value refs).
         call.args.foreach(arg => validateValue(arg.value, parents, lets, elements))
       case None => () // unresolved function ref reported by ResolutionPass
@@ -11526,7 +11554,9 @@ case class ValidationPass(
       // the syntactic comparison a name on both sides -- the same adaptation `checkValueType` makes.
       ps.value match
         case pv: PromptValue => checkPromptAscription(pv, expected.map(selfNamedTypeExpression))
-        case _               => ()
+        case ev: EmptyValue => // BACKLOG [1.26]: the output's type is the position's type
+          expected.foreach(e => checkEmptyFits(ev, e.typEx, output.identify, RuleId.EmptyNotAllowed))
+        case _ => ()
       val actual = valueType(ps.value, parents, lets, elements)
       (expected, actual) match
         case (Some(e), Some(a)) if !(e eq a) =>
@@ -11570,7 +11600,11 @@ case class ValidationPass(
       // A20: as in `validatePut` -- a resolved Type re-wrapped as a self-named alias.
       rs.value match
         case pv: PromptValue => checkPromptAscription(pv, expected.map(selfNamedTypeExpression))
-        case _               => ()
+        case ev: EmptyValue => // BACKLOG [1.26]: `returns` is the position's type
+          expected.foreach(e =>
+            checkEmptyFits(ev, e.typEx, s"function '${fn.id.value}''s 'returns'",
+              RuleId.EmptyNotAllowed))
+        case _ => ()
       val actual = valueType(rs.value, parents, lets, elements)
       (expected, actual) match
         case (Some(e), Some(a)) if !(e eq a) =>
@@ -11800,6 +11834,10 @@ case class ValidationPass(
     elements: Map[String, TypeExpression]
   ): Unit =
     checkTable(table, parents).foreach { case (_, recordType) =>
+      v match // BACKLOG [1.26]: a row is one stored record, which has no empty inhabitant
+        case ev: EmptyValue =>
+          checkEmptyFits(ev, recordType.typEx, s"a row of '${table.format}'", RuleId.EmptyNotAllowed)
+        case _ => ()
       valueType(v, parents, lets, elements) match
         case Some(actual) if !(actual eq recordType) =>
           messages.addError(
@@ -11857,6 +11895,11 @@ case class ValidationPass(
             ruleId = Some(RuleId.UpdateFieldNotInRow)
           )
         case Some(f) =>
+          v match // BACKLOG [1.26]: the row field's declared type is the position's type
+            case ev: EmptyValue =>
+              checkEmptyFits(ev, f.typeEx, s"field '${field.value}' of '${recordType.id.value}'",
+                RuleId.EmptyNotAllowedForField)
+            case _ => ()
           // `operandTypeExpr`, not `valueTypeExpr`: the latter deliberately has no arm for a bare
           // numeric literal (B4), and `set size = 5` is exactly that.
           operandTypeExpr(v, parents, lets, elements).foreach { actual =>
@@ -11999,7 +12042,10 @@ case class ValidationPass(
                       ls.expression match
                         case nl: NumericLiteral => checkNumericLiteralConformance(nl, expectedTe)
                         case pv: PromptValue    => checkPromptAscription(pv, Some(expectedTe))
-                        case _                  => ()
+                        case ev: EmptyValue =>
+                          checkEmptyFits(ev, expectedTe, s"'let ${ls.identifier.value}'",
+                            RuleId.EmptyNotAllowed)
+                        case _ => ()
                   }
           }
           // A20: the ONE seam-CompletenessWarning site, per the ruling's conservative table. An
@@ -12048,6 +12094,15 @@ case class ValidationPass(
             ss.loc,
             s"'set ${ss.field.format}'"
           )
+          // A field typed INLINE (`note: String?`) names no Type, so `checkValueType` above had
+          // nothing to check a bare `empty` against; the field's own type expression is the
+          // position's type (BACKLOG [1.26]).
+          (ss.value, ss.field) match
+            case (ev: EmptyValue, fr: FieldRef) if expected.isEmpty =>
+              resolution.refMap.definitionOf[Field](fr.pathId).foreach { f =>
+                checkEmptyFits(ev, f.typeEx, f.identify, RuleId.EmptyNotAllowed)
+              }
+            case _ => ()
         case ls: LogStatement => validateValue(ls.value, parents, lets, elements) // B7
         // B2 (2026-09-22): the storage statements. The value is checked against the table's
         // stored record; a `where`/`set` is evaluated in the ROW scope -- the table record's
@@ -12101,6 +12156,20 @@ case class ValidationPass(
             case _: AppendStatement => s"'append ... to ${cs.field.format}'"
             case _: RemoveStatement => s"'remove ... from ${cs.field.format}'"
           checkValueType(expected, cs.value, parents, lets, elements, cs.loc, what)
+          // As for `set`: an element or key typed inline names no Type, so check a bare `empty`
+          // against the type expression itself (BACKLOG [1.26]).
+          cs.value match
+            case ev: EmptyValue if expected.isEmpty =>
+              resolution.refMap.definitionOf[Field](cs.field.pathId).foreach { f =>
+                collectionElementType(f.typeEx).foreach { elementTE =>
+                  val positionTE: Option[TypeExpression] = cs match
+                    case RemoveStatement(_, _, _, Some(key)) =>
+                      aggregateFieldsOf(elementTE).find(_.id.value == key.value).map(_.typeEx)
+                    case _ => Some(elementTE)
+                  positionTE.foreach(te => checkEmptyFits(ev, te, what, RuleId.EmptyNotAllowed))
+                }
+              }
+            case _ => ()
         case s: SendStatement =>
           s.msg match
             case c: Constructor => validateValue(c, parents, lets, elements)
