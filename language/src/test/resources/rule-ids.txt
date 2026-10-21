@@ -420,3 +420,6 @@ value-membership-type-mismatch
 value-ascription-not-a-name
 value-empty-untyped
 value-empty-ascription-contradicts
+msg-tell-route-ambiguous
+stmt-duplicate-send-same-outlet
+msg-tell-no-route-for-type

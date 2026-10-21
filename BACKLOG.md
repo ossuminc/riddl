@@ -30,6 +30,18 @@ is worse than no handle**, because it fails exactly when it is being relied on.
 
 ### 5. Post-2.0 — the 3.x line
 
+- **[5.9]** **DEFERRED — duplicate emissions that CONVERGE downstream through different
+  outlets** (Reid, 2026-10-16). Case 4 of riddl-generator's "incognito duplicate" task: one
+  clause's two emissions of the same value leave by DIFFERENT outlets whose connector paths meet at
+  one downstream inlet, so the receiver gets two copies with different message ids. Cases 1–3
+  (same outlet: two `send`s, `send` + `tell`, two `tell`s) shipped as
+  `stmt-duplicate-send-same-outlet`; this is the remainder. **Deferred, not 2.x work**: Reid
+  judged it unlikely and it does not block code generation (current goal: riddlg 1.0.0).
+  Mechanism when picked up: `ValidationPass.checkDuplicateEmissions` already builds per-outlet
+  reachability (`outletTargets` + `reachesFrom`); the extension is to compare the downstream INLET
+  sets of two emissions of one value rather than their outlets, and to decide whether a
+  converging fan-out through a `merge` is the same defect or a design.
+
 - **[5.8]** **Severity RANK review: `Missing` (2) sits BELOW `Usage` (3).** The ladder
   (`Messages.scala`: Style 1 < Missing 2 < Usage 3 < Completeness 4 …) makes a `???` body,
   an absent author and — since [1.25] — a processor missing a needed port "ignorable"

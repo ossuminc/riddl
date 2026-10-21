@@ -374,6 +374,7 @@ class TellAddressingTest extends AbstractValidatingTest {
           |    record R is { total: Integer } with { briefly "r" }
           |    entity Order is {
           |      inlet oin is command Ctx.DirectCmd with { briefly "oi" }
+          |      inlet oin2 is command Ctx.AliasCmd with { briefly "oi2" }
           |      state OS of record R is {
           |        handler OH is {
           |          on command DirectCmd { do "direct" }
@@ -383,6 +384,7 @@ class TellAddressingTest extends AbstractValidatingTest {
           |    } with { briefly "e" }
           |    entity Caller is {
           |      outlet cout is command Ctx.DirectCmd with { briefly "co" }
+          |      outlet cout2 is command Ctx.AliasCmd with { briefly "co2" }
           |      state CS of record R is {
           |        handler CH is {
           |          on command Go {
@@ -394,6 +396,8 @@ class TellAddressingTest extends AbstractValidatingTest {
           |    } with { briefly "ce" }
           |    connector Wire is { from outlet Ctx.Caller.cout to inlet Ctx.Order.oin }
           |      with { briefly "w" }
+          |    connector Wire2 is { from outlet Ctx.Caller.cout2 to inlet Ctx.Order.oin2 }
+          |      with { briefly "w2" }
           |  } with { briefly "c" }
           |} with { briefly "d" }
           |""".stripMargin

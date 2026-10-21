@@ -104,6 +104,25 @@ case class ValidationPass(
   private val collectedAsks: mutable.ListBuffer[(Ask, Processor[?], Option[Processor[?]])] =
     mutable.ListBuffer.empty
 
+  /** The OUTLET each `send`/`forward` statement publishes on, keyed by statement identity, for the
+    * duplicate-emission check (Reid, 2026-10-16). A statement node is a case class and two
+    * identical `send x to outlet O` lines compare EQUAL, which is precisely the pair this check
+    * exists to find -- so identity, never equality.
+    */
+  private val emissionOutlets = mutable.Map.empty[ByIdentity[Statement], Outlet]
+
+  /** Every statement LIST a handler clause or function body runs, with its parents -- each nested
+    * `when`/`match`/`foreach` body is its own list, because only statements on one path can BOTH
+    * run. Keyed by the list's first statement so a list visited twice is recorded once.
+    */
+  private val emissionLists = mutable.LinkedHashMap.empty[ByIdentity[Statement], (Seq[Statement], Parents)]
+
+  /** The message TYPE each `tell` carries, resolved where the clause is in scope (a binding or a
+    * `let` is only meaningful there). It is what makes a tell's route type-aware: a path carries
+    * the message only through processors that admit it and pass it on.
+    */
+  private val tellOperandTypes = mutable.Map.empty[ByIdentity[Statement], Type]
+
   /** Generate the output of this Pass. This will only be called after all the calls to process have
     * completed.
     *
@@ -149,6 +168,7 @@ case class ValidationPass(
     if mode == ValidationMode.Full then
       checkStreaming(root)
       checkTellReachability()
+      checkDuplicateEmissions()
       checkAskReachability()
       checkTellDeliverability()
       checkInletsAreReceived(root)
@@ -645,6 +665,178 @@ case class ValidationPass(
     * point, not a regression: those adaptors need their own outlets, which is what the
     * adaptor-addresses-a-context rule forces them to say.
     */
+  /** One handler clause putting the same VALUE onto the same OUTLET twice -- riddl-generator's
+    * "incognito duplicate" (Reid, 2026-10-16). Each transmission gets its own message identity at
+    * every at-least-once hop, so the copies differ in nothing but their ids and no downstream
+    * deduplication can recognise them as one message. reactive-bbq's `TableOrderEventSplit` sent
+    * each event to an outlet AND `tell`-ed it to the entity that outlet reaches, so one
+    * `OrderSubmitted` reached routing four times and the DineIn run created four kitchen tickets.
+    *
+    * A WARNING, and non-blocking (`RuleId.nonBlocking`): the author may intend it, and the
+    * generator honours the model as written by delivering both.
+    *
+    * **A `tell`'s outlet is DERIVED**: `tell` is a send on the sender's own outlet from which the
+    * target is reachable (CM §25.7 / A6). [[checkTellReachability]] asks only WHETHER the target is
+    * reachable, over a processor-level graph that never records which outlet a path leaves by, so
+    * this computes it per outlet. A target reachable from MORE than one of the sender's outlets
+    * leaves the channel unstated: that is its own diagnostic (`msg-tell-route-ambiguous`, Reid's
+    * ruling), and such a `tell` takes no part in duplicate counting, because which outlet it
+    * duplicates is exactly what is unknown.
+    *
+    * "Same value" is the same bound name or an identical constructor; the check is per statement
+    * LIST. Different branches of a `when` never both run, so they are never compared. Two emissions
+    * whose paths converge on one downstream inlet through DIFFERENT outlets are not detected --
+    * BACKLOG records that as deferred.
+    */
+  private def checkDuplicateEmissions(): Unit = {
+    if emissionLists.isEmpty then return
+
+    // A tell's route is TYPE-AWARE: the message leaves on one of the sender's outlets, arrives
+    // only where an inlet admits it, and continues only through a processor whose `on X` clause
+    // transmits X again -- the semantics `checkMessageLoops` walks, on the same graph. A path that
+    // merely EXISTS between processors is not a route: in a generated model nearly every outlet
+    // of a split reaches nearly every entity through context routing, which made 1,821 corpus
+    // tells look ambiguous under the type-blind graph, reactive-bbq's included.
+    val carriage = messageCarriage
+    def reachesFrom(outlet: Outlet, target: Processor[?], told: Type): Boolean =
+      typeMembers(told).exists { x =>
+        val goal = ByIdentity[Processor[?]](target)
+        val passesOn = carriage.edges.getOrElse(ByIdentity(x), Map.empty)
+        val seen = mutable.Set.empty[ByIdentity[Processor[?]]]
+        val queue = mutable.Queue.empty[ByIdentity[Processor[?]]]
+        carriage.leadsTo.getOrElse(ByIdentity(outlet), Seq.empty).foreach { case (q, gate) =>
+          if gate(x) then queue.enqueue(ByIdentity[Processor[?]](q))
+        }
+        var found = false
+        while queue.nonEmpty && !found do
+          val cur = queue.dequeue()
+          if cur == goal then found = true
+          else if seen.add(cur) then
+            passesOn.getOrElse(cur, Seq.empty).foreach(e => queue.enqueue(ByIdentity[Processor[?]](e._1)))
+          end if
+        end while
+        found
+      }
+    end reachesFrom
+    val connectedOutlets: Seq[Outlet] = carriage.leadsTo.keys.toSeq.map(_.value)
+
+    // `msg-tell-no-route-for-type` (Reid, 2026-10-21): connectors join the pair, so A6 is
+    // satisfied, yet no route CARRIES the told type -- the tell is undeliverable as modelled. A
+    // separate rule from `msg-tell-target-unreachable` because the remedy differs: not "add a
+    // connector", but "give the target an inlet admitting the message", or tell it something it
+    // can receive. Only where A6 itself is silent -- its exemptions, and a type-blind path that
+    // exists -- so the two rules never report one tell.
+    val adjacency = connectorAdjacency()
+    def blindlyReaches(from: Processor[?], target: Processor[?]): Boolean =
+      val goal = ByIdentity[Processor[?]](target)
+      val seen = mutable.Set.empty[ByIdentity[Processor[?]]]
+      val queue = mutable.Queue(ByIdentity[Processor[?]](from))
+      var found = false
+      while queue.nonEmpty && !found do
+        val cur = queue.dequeue()
+        if cur == goal then found = true // `snd eq target` is exempt, so the start is never the goal
+        else if seen.add(cur) then
+          adjacency.getOrElse(cur, scala.collection.immutable.Set.empty).foreach(queue.enqueue)
+        end if
+      end while
+      found
+    end blindlyReaches
+    def reportNoRouteForType(ts: TellStatement, told: Type, target: Processor[?], snd: Processor[?]): Unit =
+      val exempt = isPredefined(target) || target.isEmpty || snd.isEmpty || target.inlets.isEmpty ||
+        missingOutlet(snd) || (snd eq target)
+      if !exempt && blindlyReaches(snd, target) then
+        val admitted = target.inlets.exists { i =>
+          resolution.refMap.definitionOf[Type](i.type_.pathId).exists(t => typeMembers(told).exists(typeAdmits(t, _)))
+        }
+        val (why, fix) =
+          if !admitted then
+            (s"none of ${target.identify}'s inlets admits it",
+              s"Declare an inlet on ${target.identify} whose type admits ${told.identify}, or tell " +
+                s"${target.identify} a message one of its inlets admits.")
+          else
+            (s"connectors join ${snd.identify} to it, but every path passes through a processor " +
+              s"that does not admit ${told.identify} or does not pass it on",
+              s"Wire one of ${snd.identify}'s outlets to an inlet of ${target.identify} that admits " +
+                s"${told.identify}, or have each processor on the path handle and re-send it.")
+        messages.addError(
+          ts.loc,
+          s"'tell' of ${told.identify} to ${target.identify} cannot be delivered: $why, so no route " +
+            "carries it there",
+          suggestion = fix,
+          ruleId = Some(RuleId.TellNoRouteForType)
+        )
+      end if
+    end reportNoRouteForType
+
+    // The single derived outlet of each unambiguous tell.
+    val tellOutlets = mutable.Map.empty[ByIdentity[Statement], Outlet]
+    collectedTells.foreach { case (ts, target, sender) =>
+      for snd <- sender; told <- tellOperandTypes.get(ByIdentity[Statement](ts)) do {
+        // The sender's OWN outlets only. Ownership for publication includes nested outlets (a
+        // context "owns" its entities' outlets), but a nested outlet is another processor's
+        // channel, and counting it would report a context's every `tell` as ambiguous.
+        val routes = connectedOutlets
+          .filter(o => symbols.parentOf(o).exists(_ eq snd) && reachesFrom(o, target, told))
+        routes match
+          case Seq(only) => tellOutlets(ByIdentity[Statement](ts)) = only
+          case Seq() => reportNoRouteForType(ts, told, target, snd)
+          case several =>
+            messages.addWarning(
+              ts.loc,
+              s"'tell' to ${target.identify} names no single channel: it is reachable from " +
+                s"${several.size} of ${snd.identify}'s outlets (" +
+                several.map(o => s"'${o.id.value}'").mkString(", ") + "), so which one it " +
+                "travels on is unstated",
+              suggestion = s"Write 'send ... to outlet <O>' naming the outlet the message should " +
+                s"take, or wire ${target.identify} from only one of ${snd.identify}'s outlets.",
+              ruleId = Some(RuleId.TellRouteAmbiguous)
+            )
+        end match
+      }
+    }
+
+    def operandKey(msg: MessageRef | Constructor | ValueRef): String = msg match
+      case vr: ValueRef    => s"ref:${vr.path.format}"
+      case c: Constructor  => s"new:${c.format}"
+      case mr: MessageRef  => s"msg:${mr.format}"
+
+    def emission(st: Statement): Option[(Outlet, String, String)] =
+      val id = ByIdentity[Statement](st)
+      st match
+        case s: SendStatement =>
+          emissionOutlets.get(id).map(o => (o, operandKey(s.msg), "send"))
+        case f: ForwardStatement =>
+          emissionOutlets.get(id).map(o => (o, operandKey(f.msg), "forward"))
+        case t: TellStatement =>
+          tellOutlets.get(id).map(o => (o, operandKey(t.msg), "tell"))
+        case _ => None
+    end emission
+
+    emissionLists.values.foreach { case (stmts, parents) =>
+      val firstSeen = mutable.Map.empty[(ByIdentity[Outlet], String), (Statement, String)]
+      stmts.foreach { st =>
+        emission(st).foreach { case (outlet, key, kind) =>
+          firstSeen.get(ByIdentity[Outlet](outlet) -> key) match
+            case None => firstSeen(ByIdentity[Outlet](outlet) -> key) = (st, kind)
+            case Some((first, firstKind)) =>
+              val where = parents.headOption.map(p => s" in ${p.identify}").getOrElse("")
+              val value = key.dropWhile(_ != ':').drop(1)
+              messages.addWarning(
+                st.loc,
+                s"'$kind' puts '$value' onto ${outlet.identify} a second time$where (first by " +
+                  s"'$firstKind' at ${first.loc.format}); it is delivered twice: the copies get " +
+                  "different message ids, so no deduplication downstream will recognise them as " +
+                  "one message",
+                suggestion = "Remove one of the two statements. If both are intended, keep them " +
+                  "knowing the receiver will see two messages.",
+                ruleId = Some(RuleId.DuplicateSendSameOutlet)
+              )
+          end match
+        }
+      }
+    }
+  }
+
   private def checkTellReachability(): Unit = {
     if collectedTells.isEmpty then return
     val adjacency = connectorAdjacency()
@@ -2883,6 +3075,9 @@ case class ValidationPass(
             checkAdaptorTargetsContext("send", owner, statement.loc, parents)
           }
           checkOutletOwnership("send", p, statement.loc, parents)
+          p match
+            case o: Outlet => emissionOutlets(ByIdentity[Statement](statement)) = o
+            case _         => ()
         }
       case ForwardStatement(_, msg, target) =>
         // Same operand split as send/tell: a bare MessageRef is checked here, while a Constructor
@@ -2905,6 +3100,9 @@ case class ValidationPass(
                 checkAdaptorTargetsContext("forward", owner, statement.loc, parents)
               }
               checkOutletOwnership("forward", p, statement.loc, parents)
+              p match
+                case o: Outlet => emissionOutlets(ByIdentity[Statement](statement)) = o
+                case _         => ()
             }
           case processor: ProcessorRef[?] =>
             checkRef[Processor[?]](processor, parents).foreach { proc =>
@@ -2951,6 +3149,10 @@ case class ValidationPass(
           checkAdaptorTargetsContext("tell", entity, statement.loc, parents)
           checkAdaptorTargetAdmitsMessage("tell", entity, msg, statement.loc, parents)
           collectedTells.addOne((ts, entity, enclosingProcessorOf(parents)))
+          parents
+            .collectFirst { case c: OnClause => clauseOperandType(msg, c) }
+            .getOrElse(operandType(msg))
+            .foreach(t => tellOperandTypes(ByIdentity[Statement](ts)) = t)
         }
         // A54: a bare MessageRef is checked here; a Constructor AND a bare ValueRef are validated in
         // checkStatementScopes (both need the threaded `let`/element scope — A56/message-value-source).
@@ -8973,41 +9175,28 @@ case class ValidationPass(
     }
   end propagatesOnward
 
-  /** `stream-graph-cycle` -- an INFINITE MESSAGE LOOP (Reid's ruling, 2026-09-07, replacing the
-    * 2026-09-04 "connectors of one type form a cycle" rule, which was too general).
-    *
-    * The loop to forbid: an `on X` clause in processor P transmits X (`send`, `tell` or `forward`,
-    * operand typed X); the message travels the portlet/connector network and arrives at an inlet
-    * admitting X on a processor whose own `on X` clause transmits X again; and so on until it
-    * arrives back at P. Length is irrelevant -- one node or many. Everything else is NOT a loop,
-    * and the difference is what let the `send ... at` schedule-to-yourself idiom (an outlet looped
-    * to the sender's own inlet) validate: the emitting clause there is `on command Book` or `on
-    * quiescence`, which the event it sends can never re-enter. The old rule reported that self-loop
-    * as "a cycle of one"; this one asks whether the message can come back to the clause that sent
-    * it, and it cannot.
-    *
-    * Three rulings folded in:
-    *   - **X may be a union member.** Portlets are typically typed with the alternation (`Y is one
-    *     of { W or X or Z }`), so a chain of Y-typed ports carries X, an `on Y` clause handles X,
-    *     and an `on Z` clause emitting X loops nothing. `typeAdmits`/`typeMembers` do the
-    *     expansion at every hop: handled type, operand type, inlet type.
-    *   - **A processor with no handlers does not validate and passes nothing through**, so the walk
-    *     ends there. ([[isStreamTail]] diverged from this until [5.7] was ruled on 2026-09-08;
-    *     the two now agree, on the principle that an opaque processor lets NO rule assert what it
-    *     does with a message — neither that the message returns nor that it continues.)
-    *   - **`tell` and `forward` are semantically identical to `send` at the model level** and ride
-    *     the same channel: a `tell`/`forward` to processor Q arrives at Q exactly when Q declares
-    *     an inlet admitting X (or, for an adaptor, accepts X on its implied inlet). Only riddlg's
-    *     lowering may make them direct or edgeless.
-    *   - `on other`, `on init`, `on term`, `on quiescence` do not count as handling X.
-    *
-    * Reported once per loop, at the first member's transmitting clause, naming the processors in
-    * order. Keyed by reference identity (`ByIdentity`) for the reason `connectorAdjacency` records.
-    */
-  protected def checkMessageLoops(): Unit =
-    type Gate = Type => Boolean // does this arrival admit a message of the given type?
-    type Arrival = (Processor[?], Gate)
+  private type Gate = Type => Boolean // does this arrival admit a message of the given type?
+  private type Arrival = (Processor[?], Gate)
 
+  /** How a message of a given type MOVES through the model -- the graph [[checkMessageLoops]]
+    * walks, built once so the `tell`-route derivation in [[checkDuplicateEmissions]] walks the SAME
+    * one rather than a second copy that could disagree.
+    *
+    * @param leadsTo
+    *   each declared outlet to the arrivals at the far end of its connectors
+    * @param edges
+    *   type X -> processor P -> (Q, the clause in P that handles X and transmits X so it reaches
+    *   Q). This is what "P passes X on" means: an `on X` clause re-transmitting X. A handler-less
+    *   processor contributes no edge, so it passes nothing through.
+    */
+  private case class MessageCarriage(
+    leadsTo: Map[ByIdentity[Outlet], Seq[Arrival]],
+    edges: Map[ByIdentity[Type], Map[ByIdentity[Processor[?]], Seq[(Processor[?], OnClause)]]],
+    typeOf: Map[ByIdentity[Type], Type]
+  )
+
+  /** Built on first use, which is in `postProcess`, after every connector and clause is known. */
+  private lazy val messageCarriage: MessageCarriage =
     def inletGate(inlet: Inlet): Gate =
       resolution.refMap.definitionOf[Type](inlet.type_.pathId) match
         case Some(t) => x => typeAdmits(t, x)
@@ -9093,6 +9282,47 @@ case class ValidationPass(
       }
     }
 
+    MessageCarriage(
+      leadsTo.map((k, v) => k -> v.toSeq).toMap,
+      edges.map((k, v) => k -> v.map((p, l) => p -> l.toSeq).toMap).toMap,
+      typeOf.toMap
+    )
+  end messageCarriage
+
+  /** `stream-graph-cycle` -- an INFINITE MESSAGE LOOP (Reid's ruling, 2026-09-07, replacing the
+    * 2026-09-04 "connectors of one type form a cycle" rule, which was too general).
+    *
+    * The loop to forbid: an `on X` clause in processor P transmits X (`send`, `tell` or `forward`,
+    * operand typed X); the message travels the portlet/connector network and arrives at an inlet
+    * admitting X on a processor whose own `on X` clause transmits X again; and so on until it
+    * arrives back at P. Length is irrelevant -- one node or many. Everything else is NOT a loop,
+    * and the difference is what let the `send ... at` schedule-to-yourself idiom (an outlet looped
+    * to the sender's own inlet) validate: the emitting clause there is `on command Book` or `on
+    * quiescence`, which the event it sends can never re-enter. The old rule reported that self-loop
+    * as "a cycle of one"; this one asks whether the message can come back to the clause that sent
+    * it, and it cannot.
+    *
+    * Three rulings folded in:
+    *   - **X may be a union member.** Portlets are typically typed with the alternation (`Y is one
+    *     of { W or X or Z }`), so a chain of Y-typed ports carries X, an `on Y` clause handles X,
+    *     and an `on Z` clause emitting X loops nothing. `typeAdmits`/`typeMembers` do the
+    *     expansion at every hop: handled type, operand type, inlet type.
+    *   - **A processor with no handlers does not validate and passes nothing through**, so the walk
+    *     ends there. ([[isStreamTail]] diverged from this until [5.7] was ruled on 2026-09-08;
+    *     the two now agree, on the principle that an opaque processor lets NO rule assert what it
+    *     does with a message — neither that the message returns nor that it continues.)
+    *   - **`tell` and `forward` are semantically identical to `send` at the model level** and ride
+    *     the same channel: a `tell`/`forward` to processor Q arrives at Q exactly when Q declares
+    *     an inlet admitting X (or, for an adaptor, accepts X on its implied inlet). Only riddlg's
+    *     lowering may make them direct or edgeless.
+    *   - `on other`, `on init`, `on term`, `on quiescence` do not count as handling X.
+    *
+    * Reported once per loop, at the first member's transmitting clause, naming the processors in
+    * order. Keyed by reference identity (`ByIdentity`) for the reason `connectorAdjacency` records.
+    */
+  protected def checkMessageLoops(): Unit =
+    val MessageCarriage(_, edges, typeOf) = messageCarriage
+
     def byPosition(n: ByIdentity[Processor[?]]): Int = n.value.loc.offset
 
     edges.toSeq.sortBy { case (k, _) => typeOf(k).loc.offset }.foreach { case (key, adj) =>
@@ -9102,7 +9332,7 @@ case class ValidationPass(
       val reported = mutable.Set.empty[scala.collection.immutable.Set[ByIdentity[Processor[?]]]]
 
       def clauseLeaving(n: ByIdentity[Processor[?]], to: ByIdentity[Processor[?]]): Option[OnClause] =
-        adj.getOrElse(n, mutable.ListBuffer.empty).collectFirst { case (q, c) if q eq to.value => c }
+        adj.getOrElse(n, Seq.empty).collectFirst { case (q, c) if q eq to.value => c }
 
       def report(cycle: Seq[ByIdentity[Processor[?]]]): Unit =
         val first = cycle.head
@@ -9124,7 +9354,7 @@ case class ValidationPass(
       def visit(n: ByIdentity[Processor[?]]): Unit =
         state(n) = 1
         path += n
-        adj.getOrElse(n, mutable.ListBuffer.empty).map(e => ByIdentity[Processor[?]](e._1)).distinct
+        adj.getOrElse(n, Seq.empty).map(e => ByIdentity[Processor[?]](e._1)).distinct
           .sortBy(byPosition).foreach { m =>
             state.getOrElse(m, 0) match
               case 0 => visit(m)
@@ -12013,6 +12243,9 @@ case class ValidationPass(
     // element) but left the body unable to dereference: `line` was known, `line.sku` was not.
     inScopeElements: Map[String, TypeExpression] = Map.empty
   ): Unit =
+    stmts.headOption.foreach { first =>
+      emissionLists.getOrElseUpdate(ByIdentity[Statement](first), (stmts, parents))
+    }
     var lets = inScopeLets
     // Whether a `morph` has already run in THIS statement list. `checkNoSetAfterMorph` reports the
     // `set` itself; this flag exists so `checkSetStateIsCurrent` STAYS QUIET there, because after a

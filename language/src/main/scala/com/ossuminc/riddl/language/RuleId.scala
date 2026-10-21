@@ -275,6 +275,12 @@ enum RuleId(
   case TellNotDeliverable extends RuleId("msg-tell-not-deliverable")
   case TellTargetUnreachable extends RuleId("msg-tell-target-unreachable")
   case TellCrossesUnrelatedDomains extends RuleId("msg-tell-crosses-unrelated-domains")
+  // Reid, 2026-10-16: a `tell` whose target is reachable from MORE THAN ONE of the sender's own
+  // outlets names no single channel, so which outlet it travels on is unstated.
+  case TellRouteAmbiguous extends RuleId("msg-tell-route-ambiguous")
+  // Reid, 2026-10-21: a connector path joins sender and target, but none CARRIES the told type --
+  // no inlet on the way admits it, or nothing on the way passes it on. Undeliverable as modelled.
+  case TellNoRouteForType extends RuleId("msg-tell-no-route-for-type")
   case CommandNoFields extends RuleId("msg-command-no-fields")
   case EventNeverEmitted extends RuleId("msg-event-never-emitted")
   case YieldUndeclared extends RuleId("msg-yield-undeclared")
@@ -495,6 +501,9 @@ enum RuleId(
   case YieldAfterForward extends RuleId("stmt-yield-after-forward")
   case ReplyAfterForward extends RuleId("stmt-reply-after-forward")
   case ForwardNotLast extends RuleId("stmt-forward-not-last")
+  // Reid, 2026-10-16 (riddl-generator's "incognito duplicate"): one clause puts the same value
+  // onto the same outlet twice. Non-blocking: the generator delivers both, as the model says.
+  case DuplicateSendSameOutlet extends RuleId("stmt-duplicate-send-same-outlet")
   case SendAtNotInstant extends RuleId("stmt-send-at-not-instant")
   // B6/B8 (riddl-generator's 2026-09-17 list; landed 2026-09-21): two lints on prose holes.
   case YieldArgumentPrompt extends RuleId("stmt-yield-argument-prompt")
@@ -673,7 +682,9 @@ object RuleId:
     * what `isGenerable` exists to prevent.
     */
   val nonBlocking: Set[RuleId] = Set(
-    SagaNoTimeout
+    SagaNoTimeout,
+    // Reid, 2026-10-16: the default is the model as written -- both copies are delivered.
+    DuplicateSendSameOutlet
   )
 
   val retired: Set[String] = Set(
