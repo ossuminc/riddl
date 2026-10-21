@@ -1754,6 +1754,20 @@ resolution and type-checking — in `checkStatementScopes`.
   because the corpus's tell-target entities declare no inlets at all; the
   interaction surfaces only as models comply.
 
+- **A `tell`'s ROUTE is type-aware; A6's reachability is not, and both are right** (Reid,
+  2026-10-21). `checkTellReachability` asks whether ANY connector path joins the pair.
+  Deriving WHICH outlet a tell travels on (duplicate and ambiguity checks) asks whether a path
+  CARRIES the message: it arrives only at an inlet admitting it and continues only through a
+  processor whose `on X` clause transmits X again. That is the `messageCarriage` graph
+  `checkMessageLoops` walks; do not build a third. Type-blind, nearly every split outlet
+  "reached" nearly every entity through context routing, making 1,821 corpus tells look
+  ambiguous. A path that joins the pair but carries nothing is `msg-tell-no-route-for-type`, an
+  Error, separate from A6 because its fix is an admitting inlet, not a connector. **It
+  corrected a misdiagnosis**: riddl-generator's reactive-bbq "incognito duplicate" (four kitchen
+  tickets per order) was a tell of an EVENT to an entity whose inlets admit only commands,
+  routed by riddlg over a path that cannot carry it. Corpus at landing: 2,026 Errors in 186 of
+  191 models, and self-tells (1,752) exempt as under A6.
+
 - **An `ask` needs a modelled path BOTH WAYS** (Reid, 2026-09-09/10;
   `msg-ask-target-unreachable`, `msg-ask-reply-unreachable`). `ask` is `send`
   plus a declared correlation — *"there are no magic ways for processors to

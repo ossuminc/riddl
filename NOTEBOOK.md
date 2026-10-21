@@ -62,6 +62,10 @@ acceptance criteria.
 
 ### In flight
 
+**2026-10-21: `msg-tell-no-route-for-type` (Error) landed with type-aware tell routing.**
+`commands`' corpus round-trip is RED (186 of 191 models) by Reid's choice, until
+riddl-models clears its task `2026-10-21-tell-no-route-for-type.md`. Entry below.
+
 **[1.25], the ask-reply boundary fix and the `on other` ruling are all committed AND pushed
 (Reid, 2026-09-11 night, `5104ea23d..d63cc2c39`).** riddl-models drained the whole corpus the
 same evening: with `2.1.1-47` against their `516c5d5f` the census is **5 findings, 0 Errors**
@@ -115,6 +119,42 @@ JVM `utils` 148, `language` 76/760, `passes` 269/1828, `testkit` 2, `riddlLib` (
 `riddlLib`/`riddlc` on Native (CI covers them; the corpus row will be red there too).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-10-21 — the "incognito duplicate" was a tell with no route
+
+riddl-generator reported one order producing four kitchen tickets in reactive-bbq, and
+diagnosed it as the same event put onto one outlet twice: a `send` plus a `tell` whose A6
+outlet it was. Reid ruled cases 1-3 a non-blocking warning, an ambiguous route a separate
+diagnostic, and case 4 deferred ([5.9]).
+
+**The first build measured wrong, and the measurement is what showed it.** Deriving a tell's
+outlet over `connectorAdjacency`, which carries no types, made 1,821 corpus tells
+"ambiguous". reactive-bbq's split drew the ambiguity warning instead of the duplicate the
+task asked for. In generated models nearly every split outlet reaches nearly every entity
+through context routing. Reid approved type-aware routes: a message arrives only at an inlet
+admitting it and continues only through an `on X` clause that transmits X. That is exactly
+`checkMessageLoops`' semantics, so its graph was extracted (`messageCarriage`) rather than
+copied.
+
+**Type-aware, both counts went to ZERO, and the zero was the finding.** `TableOrder`'s inlets
+admit only commands; the split tells it events. No route exists. The generator's fourth copy
+was an event delivered over a path that cannot carry it. Reid: *"If there's no route to the
+destination for a tell, isn't that a model error?"* Ruled an Error and a separate rule,
+`msg-tell-no-route-for-type`, because its remedy is an admitting inlet, not a connector.
+Corpus: 2,026 Errors in 186 of 191 models, and no other rule errors. A temporary diagnostic
+first split the 3,778 no-route tells into 1,752 self-tells (exempt as under A6) and 2,026 real
+ones, before a rule was written.
+
+**Lessons.**
+- **A rule that names a route must agree with the rule that names the channel.** A6 asks "is
+  there any connector path"; the outlet derivation asks "which path carries this". Using A6's
+  graph for the second question produced plausible, false diagnoses, and a consumer had
+  already lowered code from the same mistake.
+- **When a fix drives a count to zero, ask what the zero means before celebrating it.** Here
+  it meant the reported defect was a different defect.
+
+Commands' `RiddlModelsRoundTripTest` is red (186 models) until riddl-models migrates; Reid
+chose to commit anyway. Tasks filed in riddl-models and riddl-generator.
 
 ## 2026-10-07 (evening) — 2.4.0 released
 
