@@ -7,116 +7,64 @@ GitHub release notes — don't reproduce it here.
 ## HANDOFF
 
 Orientation for a session with no memory of this work. **Open work is in `BACKLOG.md`**;
-durable facts are in `CLAUDE.md`; what a change TAUGHT us is in this NOTEBOOK's body.
-Ask `git` for branch, tree and unpushed span — never trust a written answer to those.
+durable facts are in `CLAUDE.md` plus its two companions, `docs/claude/language-constructs.md`
+and `docs/claude/build-and-api.md` (split 2026-09-11; reference moved, traps stayed; equally
+authoritative). Ask `git` for branch, tree and unpushed span — never trust a written answer.
 
-### READ THIS FIRST — CLAUDE.md was split on 2026-09-11
+### Build state — verified 2026-10-21 by running
 
-It had reached 195,688 chars, past the 150k point where it stops being loaded in full.
-Now 135,724, with two companions **that are as authoritative as the parts that stayed**:
+- **2.4.0 is the latest release** ("every value is typed, by a type NAME", BACKLOG [1.26]).
+  BAST `FORMAT_REVISION` 31.
+- **`../bin/riddlc` is the NATIVE build `2.4.0-3-fa72d569`** (= HEAD `fa72d5695`), staged
+  together with `publishLocal` of the same build. Previous binary kept as
+  `../bin/riddlc.2.4.0.bak`. Check with `../bin/riddlc version` against
+  `git describe --tags --long`.
 
-- **`docs/claude/language-constructs.md`** — per-construct reference: syntax, AST shape,
-  BAST tags, `FORMAT_REVISION` numbers, JSON keys, design rationale (A70, instance
-  identity, A20, A55/A57, quiescence, `send … at`, `empty`, intentions, literals).
-- **`docs/claude/build-and-api.md`** — adding a riddlc command, NPM, import vs include,
-  writing a Pass, RiddlLib/RiddlAPI, workflows.
+### In flight — the corpus is RED on purpose
 
-**The split rule: reference moved, traps stayed.** Anything whose failure mode is "not
-knowing you needed to look" — Total Dispatch, the false-green family, `isEmpty`, the BAST
-hazards, the corpus floor, FALSE ZERO, the parser CUT hazard — is still in CLAUDE.md.
-**If you need a fact from a companion that you had no reason to look for, move it back.**
-Line-number citations into CLAUDE.md from before this date are stale; two were repaired
-(`BACKLOG.md:83`, `NOTEBOOK.md:619`), the rest were checked and there are no others.
+**Type-aware tell routing and `msg-tell-no-route-for-type` (Error) landed 2026-10-21**
+(`46fd7adb8`; entry below; CM paragraph in ossuminc `6c7793b`). Census at landing: **2,026
+Errors in 186 of 191 riddl-models entry points**, 0 for the two warning rules
+(`msg-tell-route-ambiguous`, `stmt-duplicate-send-same-outlet`), nothing else.
 
-### Build state — verified 2026-09-11 (afternoon) by running
-
-**`2.2.0` is released** (tag on `d4f11e348`, 2026-09-14), Scala 3.9.0 final. **BAST
-`FORMAT_REVISION` 25.** `../bin/riddlc` and ivy are at `2.2.0`.
-
-**`../bin/riddlc` is `2.1.1-33-dd3c2d80`, dated Sep 10 — now well behind HEAD and it contains
-NEITHER `handler-duplicate-special-clause` NOR the [1.25] port rules.** Nothing was published
-or staged outside the repo on 2026-09-11, deliberately (Reid's call). The in-repo JVM stage at
-`target/out/jvm/scala-3.9.0/riddlc/universal/stage/bin/riddlc` IS current and is what the
-corpus census used. Confirm with `../bin/riddlc --no-ansi-messages version` against
-`git describe --tags --long`.
-
-**Fifteen language/validation changes since 2.1.1** (see the dated entries below): `on
-quiescence <window>`; `send … at <instant>`; `stream-graph-cycle` as an infinite MESSAGE loop;
-`msg-tell-crosses-unrelated-domains`; [5.7]; `saga-no-timeout` non-blocking; `saga-step-no-tell`
-an Error; `ask` both ways; `handler-duplicate-special-clause`; **[1.25] implied adaptor ports
-ABOLISHED, missing ports are Missing warnings, rules abstain per side**; **the adaptor is the
-boundary for its pair in BOTH directions**; **`on other` is `case _` and receives; a
-handler-less Context/Projector inlet is reported (error-sink exempt)**; **`URL("https")`
-prettifies with its parentheses**; **the `Advisory` message kind and four event-sourcing
-rules**; **`append`/`remove` (twenty-one statement kinds, `FORMAT_REVISION` 25) and the
-derived-fold reading of `set field F to prompt(…)`**. The staged `../bin/riddlc` carries all of
-them only if its version matches `git describe` — check, never assume.
-
-### Corpus — 1290 findings after [1.25], from a verified ZERO before
-
-191 entry points, riddl-models @ `6d9e7ce8`. All attributable and all RULED (2026-09-11):
-the 388 consume-only adaptors DELETE their `as flow`; the 21 receiving `source` streamlets and
-the 102 yielding external contexts are model defects for riddl-models to fix. Table in the
-2026-09-11 (later) entry; the task drop in `../riddl-models/task/` carries all four as
-acceptance criteria.
-
-### In flight
-
-**2026-10-21: `msg-tell-no-route-for-type` (Error) landed with type-aware tell routing.**
-`commands`' corpus round-trip is RED (186 of 191 models) by Reid's choice, until
-riddl-models clears its task `2026-10-21-tell-no-route-for-type.md`. Entry below.
-
-**[1.25], the ask-reply boundary fix and the `on other` ruling are all committed AND pushed
-(Reid, 2026-09-11 night, `5104ea23d..d63cc2c39`).** riddl-models drained the whole corpus the
-same evening: with `2.1.1-47` against their `516c5d5f` the census is **5 findings, 0 Errors**
-(from 1290 at 14:00), so the corpus round-trip row should be green; read `gh run list`. Their
-task drop (`../riddl-models/task/2026-09-11-implied-ports-abolished-…md`) carries the five.
-Task drops also in `../ossum.tech/task/` and `../riddl-generator/task/`. Five task files
-closed to `task/done/` with Results, plus two on the 12th (URL prettify, error-sink
-exemption). The `Advisory` kind and the four event-sourcing rules landed 2026-09-12; `append`/`remove` and
-the derived-fold reading landed 2026-09-14 (entries below). `task/` is EMPTY. Consumer drops:
-riddl-models (three addenda on one file), synapify and riddl-vscode (new kind), riddl-generator,
-ossum.tech (language reference: implied ports, Advisory, `forward`, `append`/`remove`).
-**2.2.0 SHIPPED 2026-09-14** (tag on `d4f11e348`; release, npm, Homebrew all green). The
-`bump-consumers` step is still pending Reid's approval of the seven task files (riddl-models,
-riddl-generator, synapify, riddl-vscode, riddl-idea-plugin, ossum.tech, ossum.ai; riddlsim and
-riddl-mcp-server are not checked out). BACKLOG [2.11]–[2.18] held riddlg's language proposals;
-**Reid ruled 2026-09-18**: B4 reversed within bounds, B1 approved and LANDED (entry below,
-[2.14] closed), "proceed with those new language features and anything else in the backlog";
-the consumer-bump task files are CANCELLED until the next release. **B4 landed 2026-09-21**
-(entry below; [2.18] closed, [2.19] filed for the duration windows); **B6, B8, B7 and B3 landed the
-same day** ([2.11], [2.12], [2.13], [2.15] closed); Reid ruled B2 IN (all four statements plus
-`upsert`) and B5 "plan it now". Restage `../bin/riddlc` + ivy after each batch (last at
-`2.2.0-7-5f57d5e0`, before B3). **B2 landed 2026-09-22 and B5 2026-09-23** ([2.17], [2.16] closed) — riddlg's eight are all
-decided and built. Two riddl-models reports handled the same day (the `dump --json` MatchError
-and the origination rule). Remaining in § 2: [2.19], duration literals in the two string-duration
-windows. Restage `../bin/riddlc` + ivy after each batch. `../bin/riddlc` and ivy were restaged together at the
-end of the session — confirm the version from the binary.
+- `commands`' `RiddlModelsRoundTripTest` fails 186 cases at "validate original" — **Reid's
+  explicit choice** ("1, commit and file the riddl-models task"), until riddl-models clears
+  `../riddl-models/task/2026-10-21-tell-no-route-for-type.md`. CI's corpus row will be red
+  too. Do not "fix" it here.
+- Consumer drops filed: that riddl-models task, and
+  `../riddl-generator/task/2026-10-21-tell-route-is-type-aware.md` (derive a tell's outlet by
+  a CARRYING route, never connector reachability alone).
+- The originating task is closed in `task/done/2026-10-16-incognito-duplicate-sends.md`.
+  Case 4 of it is BACKLOG [5.9], DEFERRED by Reid.
+- **Not pushed** as of this handoff — check `git log origin/main..HEAD`.
 
 ### Traps a fresh session would hit
 
+- **A tell's ROUTE is type-aware, A6 is not** — see CLAUDE.md. Type-blind reachability
+  manufactured 1,821 false "ambiguous" tells; do not reuse `connectorAdjacency()` to answer
+  "which outlet does this tell travel on". Use `messageCarriage`.
+- **A zero from a new census is a claim to investigate, not a result.** The type-aware zeros
+  were real only because `TableOrder`'s inlets admit commands alone — which is what found the
+  new rule.
 - **Missing warnings are DROPPED when `showMissingWarnings` is off, and `pc.options` is global
-  test state.** A suite asserting one goes red only in the FULL run. Pin
-  `pc.withOptions(CommonOptions.default)`.
-- **Report AFTER measuring, not before.** The "23 endpoints" was a stale, unrecorded count; the
-  real number was 26 and rising. Re-measure anything older than a day against the branch.
-- **Endpoint paths name the PENULTIMATE segment** — `outlet <Context>.<Adaptor>.<Portlet>`.
-- **A corpus census must capture the MESSAGE line, not just the header** — the kind is on the
-  second line of every riddlc diagnostic.
-- **A bare single-segment portlet name in a fixture is ambiguous** the moment two processors
-  declare it; qualify the path.
-- **A backtick in ANY model-authored shell string is command substitution** — see the parent
-  `../CLAUDE.md`.
+  test state.** Pin `pc.withOptions(CommonOptions.default)` in any suite asserting one.
+- **Certify cold**: `sbt -batch shutdown`, then `-Dsbt.global.localcache=/tmp/...`, confirm
+  the cache GREW, count one `Suites: completed` per command.
+- **A backtick in ANY model-authored shell string is command substitution** (parent CLAUDE.md).
 
 ### Certainty
 
-Verified by running this session: BEFORE census 0/191 (calibrated); AFTER census 1290;
-JVM `utils` 148, `language` 76/760, `passes` 269/1828, `testkit` 2, `riddlLib` (JSON corpus
-191/191 identity AND parity), `riddlc`; `tJS` green (111/438/317/1/149); Native `language`
-72/745 and `passes` 266/1818; `cNative` for all. Both new suites canaried. **Known red:**
-`commands`' `RiddlModelsRoundTripTest`, 171/191 models, all at "validate original" on the
-414 new Errors — by construction until riddl-models migrates. **Not run:** `commands`/
-`riddlLib`/`riddlc` on Native (CI covers them; the corpus row will be red there too).
+Verified this session, cold cache (230M): JVM utils/language/passes/testkit/riddlLib/riddlc,
+JS utils/language/passes/testkit/riddlLib, Native utils/language/passes/testkit/riddlLib/
+riddlc, `riddlcNative/nativeLink` — all green. `commands` 171 passed, 186 failed, every
+failure the corpus round-trip. reactive-bbq with the staged binary: 34
+`msg-tell-no-route-for-type`, nothing else. **Assumed, not checked:** that riddl-models'
+fixes will be mostly deletions of redundant event tells — the task asks them to judge each.
+
+### task/
+
+Empty of task files (`probe-2026-09-06-adaptor/` is a leftover scratch directory of probe
+fixtures, not a task).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
