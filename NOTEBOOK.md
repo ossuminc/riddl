@@ -11,34 +11,28 @@ durable facts are in `CLAUDE.md` plus its two companions, `docs/claude/language-
 and `docs/claude/build-and-api.md` (split 2026-09-11; reference moved, traps stayed; equally
 authoritative). Ask `git` for branch, tree and unpushed span — never trust a written answer.
 
-### Build state — verified 2026-10-21 by running
+### Build state — verified 2026-10-30 by running
 
-- **2.4.0 is the latest release** ("every value is typed, by a type NAME", BACKLOG [1.26]).
-  BAST `FORMAT_REVISION` 31.
-- **`../bin/riddlc` is the NATIVE build `2.4.0-3-fa72d569`** (= HEAD `fa72d5695`), staged
-  together with `publishLocal` of the same build. Previous binary kept as
-  `../bin/riddlc.2.4.0.bak`. Check with `../bin/riddlc version` against
-  `git describe --tags --long`.
+- **2.5.0 is the latest release** (tag on `7a36acfe0`): type-aware tell routing,
+  `msg-tell-no-route-for-type` (Error), `msg-tell-route-ambiguous` and
+  `stmt-duplicate-send-same-outlet` (Warnings). BAST `FORMAT_REVISION` 31, unchanged.
+- **`../bin/riddlc` and ivy are both `2.5.0`**, staged together by
+  `scripts/publish-and-stage.sh`. Previous binary kept as `../bin/riddlc.2.4.0-3.bak`.
+- **The corpus is GREEN**: riddl-models cleared its no-route task (`ca7dbc5e6`); census
+  with 2.5.0 is 0 errors, 0 warnings across 191 entry points, and `commands`'
+  `RiddlModelsRoundTripTest` passes 190/190.
 
-### In flight — the corpus is RED on purpose
+### In flight
 
-**Type-aware tell routing and `msg-tell-no-route-for-type` (Error) landed 2026-10-21**
-(`46fd7adb8`; entry below; CM paragraph in ossuminc `6c7793b`). Census at landing: **2,026
-Errors in 186 of 191 riddl-models entry points**, 0 for the two warning rules
-(`msg-tell-route-ambiguous`, `stmt-duplicate-send-same-outlet`), nothing else.
-
-- `commands`' `RiddlModelsRoundTripTest` fails 186 cases at "validate original" — **Reid's
-  explicit choice** ("1, commit and file the riddl-models task"), until riddl-models clears
-  `../riddl-models/task/2026-10-21-tell-no-route-for-type.md`. CI's corpus row will be red
-  too. Do not "fix" it here.
-- Consumer drops filed: that riddl-models task, and
-  `../riddl-generator/task/2026-10-21-tell-route-is-type-aware.md` (derive a tell's outlet by
-  a CARRYING route, never connector reachability alone).
-- The originating task is closed in `task/done/2026-10-16-incognito-duplicate-sends.md`.
-  Case 4 of it is BACKLOG [5.9], DEFERRED by Reid.
-- **Not pushed** as of this handoff — check `git log origin/main..HEAD`.
+Nothing in riddl. riddl-generator holds
+`../riddl-generator/task/2026-10-21-tell-route-is-type-aware.md`. BACKLOG [5.9] stays
+DEFERRED by Reid.
 
 ### Traps a fresh session would hit
+
+- **`riddlc from <conf> validate --json` REJECTS `--json`** ("Unknown option"), and a
+  census that discards stderr reads that as ZERO findings. Validate the `.riddl` directly.
+  Bit 2026-10-30; caught only because a zero-of-everything was calibrated.
 
 - **A tell's ROUTE is type-aware, A6 is not** — see CLAUDE.md. Type-blind reachability
   manufactured 1,821 false "ambiguous" tells; do not reuse `connectorAdjacency()` to answer
@@ -67,6 +61,15 @@ Empty of task files (`probe-2026-09-06-adaptor/` is a leftover scratch directory
 fixtures, not a task).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-10-30 — 2.5.0 released
+
+Shipped after riddl-models cleared `msg-tell-no-route-for-type` (2,026 Errors to 0). Gate:
+`; clean; tJVM; tJS; tNative; publish`, 19 suite summaries, 0 failures, `commands` 357 on
+JVM and Native including the corpus round-trip. MINOR because a new Error can fail a model
+that validated on 2.4.0. `publish-and-stage.sh` failed once at `utilsNative` compile and
+passed on an immediate rerun with no source change; `utilsNative/compile` alone was clean in
+between. Not diagnosed. If it recurs, keep the full log.
 
 ## 2026-10-21 — the "incognito duplicate" was a tell with no route
 
