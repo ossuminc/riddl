@@ -12,7 +12,7 @@ object V {
   val dom = "2.8.1"
   val fastparse = "3.1.1"
   val lang3 = "3.21.0"
-  val previous = "1.0.0"
+  val previous = "2.5.0"
   val scala = "3.9.0"
   val scala_java_time = "2.9.0"
   val scalacheck = "1.20.0"
