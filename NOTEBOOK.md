@@ -21,6 +21,8 @@ authoritative). Ask `git` for branch, tree and unpushed span — never trust a w
 - **The corpus is GREEN**: riddl-models cleared its no-route task (`ca7dbc5e6`); census
   with 2.5.0 is 0 errors, 0 warnings across 191 entry points, and `commands`'
   `RiddlModelsRoundTripTest` passes 190/190.
+- **Toolchain since 2026-10-31**: sbt 2.0.12, sbt-ossuminc 3.2.0, libraries at current
+  releases, MiMa baseline 2.5.0. Unreleased; ivy and `../bin/riddlc` are still 2.5.0.
 
 ### In flight
 
@@ -61,6 +63,24 @@ Empty of task files (`probe-2026-09-06-adaptor/` is a leftover scratch directory
 fixtures, not a task).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-10-31 — toolchain and dependency upgrade
+
+sbt 2.0.6 to 2.0.12, sbt-ossuminc 3.1.0 to 3.2.0, then 13 library bumps, all checked to
+need scala3-library 3.9.0 or older (Scala stays 3.9 until the next LTS, Reid). Two cold
+three-platform runs, before and after the library bumps, gave identical counts: 19
+summaries, 8095 passed, 0 failed. Three things worth keeping:
+
+- **The gate never touches sttp.** Its only test, `LoadBytesNetworkTest`, cancels unless
+  `RIDDL_NETWORK_TESTS` is set. It accounts for both "canceled" counts in every full run.
+  Set it when sttp or `NativePlatformContext` changes.
+- **The notices were already stale before this change.** `scala-xml` was listed but shipped
+  nowhere. Diffing the shipped artifact sets before and after the bumps found it, along with
+  `scala-collection-compat`, which sconfig 1.12 dropped. Diff what ships; don't read the
+  notices.
+- **MiMa was configured but compared against 1.0.0, and nothing runs it.** The baseline is
+  now 2.5.0, calibrated by a canary rename that it caught. Six modules are clean. Wiring
+  `mimaReportBinaryIssues` into a gate is a separate decision.
 
 ## 2026-10-30 — 2.5.0 released
 
