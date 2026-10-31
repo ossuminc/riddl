@@ -25,9 +25,8 @@ SUMMARY BY LICENSE
 --------------------------------------------------------------------------------
 
 Apache License 2.0
-  Scala standard library, scala-collection-compat, scala-xml,
-  Scala.js runtime library, Apache Commons Codec, Apache Commons IO,
-  Apache Commons Compress, Apache Commons Lang, sconfig,
+  Scala standard library, Scala.js runtime library, Apache Commons Codec,
+  Apache Commons IO, Apache Commons Compress, Apache Commons Lang, sconfig,
   Airframe (log, json, ULID), sttp (client, model, shared)
 
 MIT License
@@ -56,16 +55,6 @@ specific language governing permissions and limitations under the License.
     Copyright (c) 2002-2026 EPFL
     Copyright (c) 2011-2026 Lightbend, Inc. dba Akka
     https://github.com/scala/scala3
-
---- scala-collection-compat ----------------------------------------------------
-    Copyright (c) 2002-2026 EPFL
-    Copyright (c) 2011-2026 Lightbend, Inc. dba Akka
-    https://github.com/scala/scala-collection-compat
-
---- scala-xml ------------------------------------------------------------------
-    Copyright (c) 2002-2026 EPFL
-    Copyright (c) 2011-2026 Lightbend, Inc. dba Akka
-    https://github.com/scala/scala-xml
 
 --- Scala.js runtime library ---------------------------------------------------
     Copyright (c) 2013-2026 EPFL

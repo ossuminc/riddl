@@ -63,8 +63,6 @@ object ThirdPartyNotices {
       |
       |Apache License 2.0 — https://www.apache.org/licenses/LICENSE-2.0
       |  Scala standard library          © LAMP/EPFL and Lightbend, Inc.
-      |  scala-collection-compat         © LAMP/EPFL and Lightbend, Inc.
-      |  scala-xml                       © LAMP/EPFL and Lightbend, Inc.
       |  Scala.js runtime library (JS)   © LAMP/EPFL
       |  Apache Commons Codec (JVM)      © The Apache Software Foundation
       |  Apache Commons IO (JVM)         © The Apache Software Foundation

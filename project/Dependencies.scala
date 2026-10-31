@@ -5,22 +5,22 @@ import sbt.Keys.libraryDependencies
 /** V - Dependency Versions object */
 
 object V {
-  val airframe_json = "24.9.2"
-  val airframe_ulid = "24.12.2"
-  val commons_io = "2.18.0"
-  val compress = "1.27.1"
-  val dom = "2.8.0"
+  val airframe_json = "2026.2.5"
+  val airframe_ulid = "2026.2.5"
+  val commons_io = "2.22.0"
+  val compress = "1.28.0"
+  val dom = "2.8.1"
   val fastparse = "3.1.1"
-  val lang3 = "3.17.0"
+  val lang3 = "3.21.0"
   val previous = "1.0.0"
   val scala = "3.9.0"
-  val scala_java_time = "2.6.0"
-  val scalacheck = "1.18.1"
-  val scalatest = "3.2.19"
-  val sconfig = "1.8.1"
-  val scopt = "4.1.0"
-  val sttp = "4.0.0-M22"
-  val upickle = "4.0.2"
+  val scala_java_time = "2.9.0"
+  val scalacheck = "1.20.0"
+  val scalatest = "3.2.20"
+  val sconfig = "1.12.4"
+  val scopt = "4.2.0"
+  val sttp = "4.1.0"
+  val upickle = "4.4.3"
 }
 
 object Dep {
