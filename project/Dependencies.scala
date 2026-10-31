@@ -9,21 +9,17 @@ object V {
   val airframe_ulid = "24.12.2"
   val commons_io = "2.18.0"
   val compress = "1.27.1"
-  val config = "1.4.2"
   val dom = "2.8.0"
   val fastparse = "3.1.1"
-  val jgit = "6.5.0"
   val lang3 = "3.17.0"
   val previous = "1.0.0"
   val scala = "3.9.0"
-  val scala_native = "0.5.11"
   val scala_java_time = "2.6.0"
   val scalacheck = "1.18.1"
   val scalatest = "3.2.19"
   val sconfig = "1.8.1"
   val scopt = "4.1.0"
   val sttp = "4.0.0-M22"
-  val slf4j = "2.0.4"
   val upickle = "4.0.2"
 }
 
@@ -47,8 +43,6 @@ object Dep {
   val fastparse_nojvm = Def.setting { "com.lihaoyi" %% "fastparse" % V.fastparse }
   val upickle = "com.lihaoyi" %% "upickle" % V.upickle
   val upickle_nojvm = Def.setting { "com.lihaoyi" %% "upickle" % V.upickle }
-  val jacabi_w3c = "com.jcabi" % "jcabi-w3c" % "1.4.0"
-  val jgit = "org.eclipse.jgit" % "org.eclipse.jgit" % V.jgit
   val lang3 = "org.apache.commons" % "commons-lang3" % V.lang3
 
   val scalactic = "org.scalactic" %% "scalactic" % V.scalatest
@@ -68,10 +62,7 @@ object Dep {
   val scopt = "com.github.scopt" %% "scopt" % V.scopt
   val scopt_nojvm = Def.setting { "com.github.scopt" %% "scopt" % V.scopt }
 
-  val sttp = "com.softwaremill.sttp.client3" %% "core" % V.sttp
   val sttp_nojvm = Def.setting { "com.softwaremill.sttp.client4" %% "core" % V.sttp }
-
-  val slf4j = "org.slf4j" % "slf4j-nop" % V.slf4j
 
   val testing: Seq[ModuleID] = Seq(scalactic % Test, scalatest % Test, scalacheck % Test)
   val testKitDeps: Seq[ModuleID] = Seq(scalactic, scalatest, scalacheck)
