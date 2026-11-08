@@ -73,8 +73,31 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y libcurl4-openssl-dev libidn2-dev
 
+    # The Native link resolves `-lcrypto` through Homebrew's UNVERSIONED
+    # /opt/homebrew/lib/libcrypto.dylib, which points at whichever openssl keg is linked,
+    # and the binary records that keg's install name. Nothing in the build chooses a major,
+    # so 2.5.0 silently linked openssl@4 while the tap formula declared openssl@3, and
+    # `brew install riddlc` aborted at load on any Mac without @4. libcrypto is needed by
+    # airframe-ulid (NativeSecureRandom) and sttp (CryptoMd5); libidn2 by sttp-model.
+    # Pin the major here, and keep it equal to the formula's `depends_on`.
+    - name: Link openssl@3 for the Native build (macOS only)
+      if: runner.os == 'macOS'
+      run: |
+        brew install openssl@3 libidn2
+        for keg in $(brew list --formula | grep -E '^openssl@' | grep -v '^openssl@3$'); do
+          brew unlink "$keg" || true
+        done
+        brew link --force --overwrite openssl@3
+        ls -l /opt/homebrew/lib/libcrypto.dylib
+
     - name: Build Native Binary
       run: sbt riddlcNative/nativeLink
+
+    # Fail the release rather than ship a binary whose libcrypto the formula does not
+    # install. Change this together with the pin above and the tap formula.
+    - name: Verify the linked openssl major (macOS only)
+      if: runner.os == 'macOS'
+      run: scripts/check-native-openssl.sh target/out/native0.5/scala-3.9.0/riddlc/riddlc 3
 
     - name: Package Native Binary
       run: |
