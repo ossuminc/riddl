@@ -105,7 +105,7 @@ is a specific reason not to.
 - **ALWAYS Scala 3 syntax**: `while i < end do … end while`; no `null` checks
   (use `Option(x)`); `do`/`then`/`end` control flow.
 
-### sbt-ossuminc 3.0.3 (sbt 2.0.2+, projectMatrix)
+### sbt-ossuminc 3.2.0 (sbt 2.0.12, projectMatrix)
 
 sbt is pinned in `project/build.properties`; sbt 2 credentials live in
 `~/.sbt/2/`.
@@ -117,9 +117,9 @@ sbt is pinned in `project/build.properties`; sbt 2 credentials live in
   `<mod>/src/{main,test}/scala` (shared), plus `.../scalajvm`, `.../scalajs`,
   `.../scalanative`, and `.../scala-jvm-native` (JVM+Native shared, wired via
   `unmanagedSourceDirectories`).
-- 3.0.3 auto-adds `scalajs-stubs % provided` to the JVM/Native rows of any
-  module that also targets JS, so shared `@JSExport*` code compiles — no
-  consumer dep needed.
+- Since 3.0.3 it auto-adds `scalajs-stubs % provided` to the JVM/Native rows
+  of any module that also targets JS, so shared `@JSExport*` code compiles —
+  no consumer dep needed.
 - Cross-platform deps use plain `%%` (the `%%%` operator is gone).
 
 ```scala
