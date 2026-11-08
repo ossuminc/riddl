@@ -206,4 +206,93 @@ class EventSourcedEntityTest extends AbstractValidatingTest {
       }
     }
   }
+
+  "R5 — `system.now`/`system.random` read in a fold of an own event" should {
+    def nondeterministic(msgs: Messages): Messages =
+      msgs.filter(m =>
+        m.isError && m.ruleId.contains(com.ossuminc.riddl.language.RuleId.EventSourcedFoldNondeterministic)
+      )
+
+    /** Timestamped variant of `conforming`: `at` is on the state AND on the event, so the remedy
+      * (carry the instant on the event) is expressible.
+      */
+    def clocked(fold: String, command: String = "yield event Order.Placed"): String =
+      s"""domain D is {
+         |  context C is {
+         |    event-sourced entity Order is {
+         |      record Fields is { total: Integer  at: TimeStamp  score: Real } with { briefly "f" }
+         |      command Place yields event Placed is { total: Integer } with { briefly "c" }
+         |      event Placed is { total: Integer  at: TimeStamp } with { briefly "e" }
+         |      state Main of record Order.Fields is {
+         |        handler H is {
+         |          on command Order.Place { $command } with { briefly "h1" }
+         |          on ev: event Order.Placed { $fold } with { briefly "h2" }
+         |        } with { briefly "h" }
+         |      } with { briefly "s" }
+         |    } with { briefly "o" }
+         |  } with { briefly "c" }
+         |} with { briefly "d" }
+         |""".stripMargin
+
+    "be an error for `system.now`, because replay would produce a different state" in {
+      (td: TestData) =>
+        val msgs = messagesFor(clocked("set field Main.at to system.now"), td)
+        withClue(s"messages were: ${clue(msgs)}") {
+          val found = nondeterministic(msgs)
+          found must have size 1
+          found.head.message must include("'system.now'")
+          found.head.message must include("different state")
+          mutation(msgs) mustBe empty
+        }
+    }
+
+    "be an error for `system.random`" in { (td: TestData) =>
+      val msgs = messagesFor(clocked("set field Main.score to system.random"), td)
+      withClue(s"messages were: ${clue(msgs)}") {
+        nondeterministic(msgs).map(_.message).mkString must include("'system.random'")
+      }
+    }
+
+    "find one nested in a `when` body and in a comparison operand" in { (td: TestData) =>
+      val fold = "when Main.at < system.now then set field Main.at to system.now end"
+      val msgs = messagesFor(clocked(fold), td)
+      withClue(s"messages were: ${clue(msgs)}") { nondeterministic(msgs) must have size 2 }
+    }
+
+    "be an error where the read does not reach state, without claiming it does" in {
+      (td: TestData) =>
+        // Reid, 2026-11-07: any clock read in an own-event fold is an Error, not only one that
+        // reaches state. Two of reactive-bbq's three sites are `tell` arguments; `log` is the
+        // same shape without dragging in the messaging rules.
+        val fold = "set field Main.at to ev.at log system.now"
+        val msgs = messagesFor(clocked(fold), td)
+        withClue(s"messages were: ${clue(msgs)}") {
+          val found = nondeterministic(msgs)
+          found must have size 1
+          found.head.message must include("different value")
+          found.head.message must not include "different state"
+        }
+    }
+
+    "allow the remedy: read the clock in the command handler, carry it on the event" in {
+      (td: TestData) =>
+        val msgs = messagesFor(
+          clocked(
+            fold = "set field Main.at to ev.at",
+            command = "yield event Order.Placed(total = 1, at = system.now)"
+          ),
+          td
+        )
+        withClue(s"messages were: ${clue(msgs)}") {
+          nondeterministic(msgs) mustBe empty
+          mutation(msgs) mustBe empty
+        }
+    }
+
+    "not apply to an entity that is not event-sourced" in { (td: TestData) =>
+      val src = clocked("set field Main.at to system.now").replace("event-sourced entity", "entity")
+      val msgs = messagesFor(src, td)
+      withClue(s"messages were: ${clue(msgs)}") { nondeterministic(msgs) mustBe empty }
+    }
+  }
 }

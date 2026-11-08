@@ -372,6 +372,7 @@ enum RuleId(
   case EventSourcedCommandNoYields extends RuleId("entity-event-sourced-command-no-yields")
   case EventSourcedEventNoClause extends RuleId("entity-event-sourced-event-no-clause")
   case EventSourcedMutationScope extends RuleId("entity-event-sourced-mutation-scope")
+  case EventSourcedFoldNondeterministic extends RuleId("entity-event-sourced-fold-nondeterministic")
 
   // ---- proj: projectors and correlations -----------------------------------------------------
   case CorrelationFieldSetTwice extends RuleId("proj-correlation-field-set-twice")

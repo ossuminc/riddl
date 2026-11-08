@@ -574,13 +574,20 @@ fact from that file that you had no reason to look for, it belongs back here.
   options advisory, and a hard Error keyed off advisory metadata is a category
   error. The parser stores them via `EntityIntention.canonical` because
   **`Definition.equals` compares this field** — write order must never make two
-  identical entities compare unequal. **Four event-sourcing rules are Errors**
+  identical entities compare unequal. **Five event-sourcing rules are Errors**
   because replay must reproduce the same state changes, and **R1/R2 read the
   `yields` DECLARATION on the command's type, never `yield` statements in a
   body**. Two migration traps: `yields` exists ONLY on the kind-first form, so
   type-first commands must be reshaped; and R3 forbids `set` in `on init` while
   an empty body is a parse error, so the idiom is `on init is { yield event
-  Created }` plus an `on event Created` clause doing the mutation.
+  Created }` plus an `on event Created` clause doing the mutation. **R5 (2026-11-07)
+  bans `system.now`/`system.random` in a fold of an OWN event**: the fold runs
+  again on every replay, so the clock would set a different state each time.
+  **EVERY read counts, not only one reaching state** (Reid chose this over
+  narrowing it): two of reactive-bbq's three sites were `tell` arguments.
+  The remedy is the reason `now` was admitted at all — read it in the command
+  handler and carry it on the event. Folds of FOREIGN events are exempt, since
+  R3/R4 already stop them mutating.
 
 - **Unified processor model / `streamlet` keyword** — **shape and intention
   participate in `Definition.equals`, so keep their `loc` at `At.empty` on every
@@ -686,11 +693,12 @@ fact from that file that you had no reason to look for, it belongs back here.
   is the `admitsEmpty` bug of 2.3.1 again (and `ProjectionPass` had a second
   copy of it). Details in `docs/claude/language-constructs.md`.
   Two traps worth re-reading before adding any `Value` arm:
-  1. **The four throw-terminated walks are INVISIBLE to `-Werror`**
-     (`countValueFailPoints`, `stateReadsIn`, `initiatesIn`, `asksIn`) — the
-     terminal `throw` that enforces totality is itself what makes the match
-     exhaustive. `-Werror` found three sites; the fourth threw at RUN time and
-     aborted `checkStatementScopes` before the new checks could run. **Grep for
+  1. **The five throw-terminated walks are INVISIBLE to `-Werror`**
+     (`countValueFailPoints`, `stateReadsIn`, `initiatesIn`, `asksIn`,
+     `systemValuesIn`) — the terminal `throw` that enforces totality is itself
+     what makes the match exhaustive. `-Werror` found three sites; the fourth
+     threw at RUN time and aborted `checkStatementScopes` before the new checks
+     could run. **Grep for
      `has no arm for` and add an arm to each.**
   2. **An optional trailing TypeExpression SWALLOWS THE NEXT STATEMENT.** An
      aliased type is a bare path and RIDDL statements are whitespace-separated

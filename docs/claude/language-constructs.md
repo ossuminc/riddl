@@ -445,10 +445,11 @@ decision.
   Any order parses; the parser stores them via `EntityIntention.canonical`
   because **`Definition.equals` compares this field** — write order must never
   make two identical entities compare unequal. Prettify emits `canonicalOrder`.
-  **Four event-sourcing rules are Errors** (`ValidationPass.scala:1865`), because
+  **Five event-sourcing rules are Errors** (`checkEventSourcing` in `ValidationPass`), because
   replay must reproduce the same state changes: R1 every handled command declares
   `yields`; R2 every yielded event has an `on event` clause; R3/R4 no
-  `set`/`morph` outside handling one of the entity's OWN events. R1/R2 read the
+  `set`/`morph` outside handling one of the entity's OWN events; R5 no `system.now`/`system.random`
+  read in a fold of an own event (it would differ on every replay). R1/R2 read the
   `yields` DECLARATION on the command's type, never `yield` statements in a body.
   Two migration traps: `yields` exists ONLY on the kind-first form (`command X
   yields event Y is {…}`), so type-first commands must be reshaped; and R3

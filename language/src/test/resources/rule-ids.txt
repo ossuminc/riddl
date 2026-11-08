@@ -423,3 +423,4 @@ value-empty-ascription-contradicts
 msg-tell-route-ambiguous
 stmt-duplicate-send-same-outlet
 msg-tell-no-route-for-type
+entity-event-sourced-fold-nondeterministic

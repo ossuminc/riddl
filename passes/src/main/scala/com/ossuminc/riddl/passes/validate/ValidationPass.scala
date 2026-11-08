@@ -5194,6 +5194,39 @@ case class ValidationPass(
           }
         }
     }
+
+    // R5. A fold of one of the entity's OWN events runs again on every replay, so a value that is
+    // re-evaluated at each use (CM: `system.now`/`system.random`) differs on every recovery: in
+    // state it breaks reconstruction as of a past point (CM §4.2), and anywhere else in the fold
+    // (a `tell` argument, a condition) it makes the fold unreproducible. Reid ruled BOTH are
+    // Errors (2026-11-07) -- do not narrow this to state-reaching reads. The remedy is the
+    // reason `now` was admitted at all (`SystemValue` scaladoc): read it in the command handler and
+    // CARRY it on the yielded event. Folds of FOREIGN events are excluded -- R3/R4 already forbid
+    // them to mutate, so nothing they compute reaches replayed state except through an own event.
+    allClauses.foreach {
+      case oec: OnEventClause if isDeclaredInEntity(oec.msg.pathId, entity) =>
+        walkStatements(oec.contents) { stmt =>
+          statementValues(stmt).flatMap(systemValuesIn).foreach { sv =>
+            sv.field.map(_.value).filter(nonReplayableSystemMembers.contains).foreach { member =>
+              // Say "different state" only where the read lands in state. Elsewhere (a `tell`
+              // argument, a `when` condition, a `let`) the rule still holds by Reid's ruling --
+              // the fold is not reproducible -- but claiming a state difference would be false.
+              val consequence = mutationKeyword(stmt) match
+                case Some(_) => "would set a different state each time"
+                case None    => "would compute a different value each time"
+              messages.addError(
+                sv.loc,
+                s"${entity.identify} is event-sourced, so 'system.$member' may not be read in " +
+                  s"${oec.identify}: the clause runs again on every replay and " + consequence,
+                suggestion = s"Read 'system.$member' in the command handler, carry it as a field of " +
+                  s"'${oec.msg.format}', and read that field here.",
+                ruleId = Some(RuleId.EventSourcedFoldNondeterministic)
+              )
+            }
+          }
+        }
+      case _ => ()
+    }
   }
 
   /** `set`, `morph` and `become` all change what replay must reproduce. */
@@ -8217,6 +8250,44 @@ case class ValidationPass(
       case f: Function   => f
       case c: Context    => c
     }
+
+  /** The `system` members whose value differs on each evaluation, so may not feed replayed state
+    * (R5). Listed rather than derived from [[SystemValue.members]]: a future member may well be
+    * deterministic, and admitting one should be a decision made here, not inherited.
+    */
+  private val nonReplayableSystemMembers: scala.collection.immutable.Set[String] =
+    scala.collection.immutable.Set("now", "random")
+
+  /** Every [[SystemValue]] embedded in a value expression, at any depth. Same arms as `asksIn`,
+    * and terminated by a `throw` for the same reason.
+    */
+  private def systemValuesIn(v: RiddlValue): Seq[SystemValue] = v match
+    case sv: SystemValue          => Seq(sv)
+    case lv: LookupValue          => systemValuesIn(lv.collection) ++ lv.indices.flatMap(systemValuesIn)
+    case call: Call               => call.args.toSeq.flatMap(a => systemValuesIn(a.value))
+    case c: Constructor           => c.args.toSeq.flatMap(a => systemValuesIn(a.value))
+    case init: Initiate           => init.args.toSeq.flatMap(a => systemValuesIn(a.value))
+    case le: LogicalExpression    => systemValuesIn(le.left) ++ systemValuesIn(le.right)
+    case ne: NotExpression        => systemValuesIn(ne.expr)
+    case ce: ComparisonExpression => systemValuesIn(ce.left) ++ systemValuesIn(ce.right)
+    case ae: ArithmeticExpression => systemValuesIn(ae.left) ++ systemValuesIn(ae.right)
+    case qv: QueryValue           => qv.where.toSeq.flatMap(systemValuesIn)
+    case cp: CollectionPredicate  => systemValuesIn(cp.collection) ++ systemValuesIn(cp.predicate)
+    case cf: CollectionFilter     => systemValuesIn(cf.collection) ++ systemValuesIn(cf.predicate)
+    case cv: CountValue           => systemValuesIn(cv.collection)
+    case mv: MembershipValue      => systemValuesIn(mv.collection) ++ systemValuesIn(mv.element)
+    case ic: InvariantCondition   => ic.argument.toSeq.flatMap(systemValuesIn)
+    case _: DurationLiteral | _: GetValue | _: Ask | _: EmptyValue | _: Reference[?] |
+        _: Identifier | _: SelfValue =>
+      Seq.empty
+    case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral | _: NumericLiteral =>
+      Seq.empty
+    case other =>
+      throw new IllegalStateException(
+        s"systemValuesIn has no arm for ${other.getClass.getSimpleName} at ${other.loc}; " +
+          "decide whether it can contain a 'system' value rather than assuming it cannot"
+      )
+  end systemValuesIn
 
   private def asksIn(v: RiddlValue): Seq[Ask] = v match
     case ask: Ask        => Seq(ask)
