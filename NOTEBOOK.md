@@ -18,15 +18,19 @@ authoritative). Ask `git` for branch, tree and unpushed span — never trust a w
   `stmt-duplicate-send-same-outlet` (Warnings). BAST `FORMAT_REVISION` 31, unchanged.
 - **`../bin/riddlc` and ivy are both `2.5.0`**, staged together by
   `scripts/publish-and-stage.sh`. Previous binary kept as `../bin/riddlc.2.4.0-3.bak`.
-- **The corpus is GREEN**: riddl-models cleared its no-route task (`ca7dbc5e6`); census
-  with 2.5.0 is 0 errors, 0 warnings across 191 entry points, and `commands`'
-  `RiddlModelsRoundTripTest` passes 190/190.
+- **The corpus is RED on purpose since 2026-11-07**: the new
+  `entity-event-sourced-fold-nondeterministic` Error fires 3 times in reactive-bbq, so
+  `RiddlModelsRoundTripTest` fails that one model on JVM and Native. Reid approved committing
+  red; riddl-models is fixing it
+  (`../riddl-models/task/2026-11-07-system-now-in-event-sourced-folds.md`). **Re-test when
+  they report**: census, then a cold `tJVM` + `tNative`.
 - **Toolchain since 2026-10-31**: sbt 2.0.12, sbt-ossuminc 3.2.0, libraries at current
   releases, MiMa baseline 2.5.0. Unreleased; ivy and `../bin/riddlc` are still 2.5.0.
 
 ### In flight
 
-Nothing in riddl. riddl-generator holds
+Re-test the corpus once riddl-models clears reactive-bbq (above). Otherwise nothing in
+riddl. riddl-generator holds
 `../riddl-generator/task/2026-10-21-tell-route-is-type-aware.md`. BACKLOG [5.9] stays
 DEFERRED by Reid.
 
@@ -63,6 +67,33 @@ Empty of task files (`probe-2026-09-06-adaptor/` is a leftover scratch directory
 fixtures, not a task).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-11-07 — R5: a fold may not read the clock; repository writes are per entity
+
+Two riddl-generator tasks, both closed.
+
+- **CM §5.6/§5.7.** A repository is single writer PER ENTITY, not totally ordered. A write
+  names its entity by its message's first `Id(E)` field. `option available` is the CAP
+  choice: during a partition, keep operating and give up consistency.
+- **R5, `entity-event-sourced-fold-nondeterministic`.** `system.now`/`system.random` in an
+  own-event fold is an Error.
+
+**The corpus changed the design question.** riddlg reported one site, a `morph` setting
+`createdAt = system.now`. The census found three, and two were `tell` arguments, where the
+first draft's message ("would produce a different state") was simply false. That was a
+design checkpoint, not a wording fix. Reid chose to ban every read rather than narrow the
+rule to state-reaching ones, and the message now states whichever consequence actually
+applies. **A diagnostic's stated REASON has to be true at every site it fires on**, and
+only the corpus shows the sites nobody imagined.
+
+**A red corpus stops the `;` chain, and the order of the aliases decides what it hides.**
+`; tJVM; tJS; tNative` stopped at `commands` and ran neither JS nor Native. The second run
+put JVM last and still lost the rest of `tNative` to `commandsNative`'s copy of the same
+corpus test. Certifying through a known-red corpus means running the remaining rows by hand
+and counting to 19 summaries.
+
+`/ship` now gates on MiMa (step 8a) and moves `V.previous` after each release (13a). Reid:
+MiMa runs in `/ship` only.
 
 ## 2026-10-31 — toolchain and dependency upgrade
 
