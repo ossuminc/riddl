@@ -18,19 +18,21 @@ authoritative). Ask `git` for branch, tree and unpushed span — never trust a w
   `stmt-duplicate-send-same-outlet` (Warnings). BAST `FORMAT_REVISION` 31, unchanged.
 - **`../bin/riddlc` and ivy are both `2.5.0`**, staged together by
   `scripts/publish-and-stage.sh`. Previous binary kept as `../bin/riddlc.2.4.0-3.bak`.
-- **The corpus is RED on purpose since 2026-11-07**: the new
-  `entity-event-sourced-fold-nondeterministic` Error fires 3 times in reactive-bbq, so
-  `RiddlModelsRoundTripTest` fails that one model on JVM and Native. Reid approved committing
-  red; riddl-models is fixing it
-  (`../riddl-models/task/2026-11-07-system-now-in-event-sourced-folds.md`). **Re-test when
-  they report**: census, then a cold `tJVM` + `tNative`.
+- **The corpus is GREEN with the R5 fold rule** (re-verified 2026-11-07): riddl-models
+  `dd2665797` cleared reactive-bbq; census 0/191, `RiddlModelsRoundTripTest` 190/190 on JVM
+  and Native from a cold cache. Their fix moved the two `tell`s OUT of the folds into the
+  command handlers, which is better than the task's suggestion: the real defect was a
+  second notification on every replay.
 - **Toolchain since 2026-10-31**: sbt 2.0.12, sbt-ossuminc 3.2.0, libraries at current
   releases, MiMa baseline 2.5.0. Unreleased; ivy and `../bin/riddlc` are still 2.5.0.
 
 ### In flight
 
-Re-test the corpus once riddl-models clears reactive-bbq (above). Otherwise nothing in
-riddl. riddl-generator holds
+`task/2026-11-07-release-riddlc-links-homebrew-openssl4.md`: DIAGNOSED, remedy awaits
+Reid. The macOS Native link binds `-lcrypto` through `/opt/homebrew/lib/libcrypto.dylib`,
+so the openssl MAJOR is whatever Homebrew has linked on the build machine (the published
+2.5.0 got `openssl@4`; the formula says `openssl@3`). Details in the task file. Otherwise
+nothing in riddl. riddl-generator holds
 `../riddl-generator/task/2026-10-21-tell-route-is-type-aware.md`. BACKLOG [5.9] stays
 DEFERRED by Reid.
 
