@@ -11,32 +11,26 @@ durable facts are in `CLAUDE.md` plus its two companions, `docs/claude/language-
 and `docs/claude/build-and-api.md` (split 2026-09-11; reference moved, traps stayed; equally
 authoritative). Ask `git` for branch, tree and unpushed span — never trust a written answer.
 
-### Build state — verified 2026-10-30 by running
+### Build state — verified 2026-11-08 by running
 
-- **2.5.0 is the latest release** (tag on `7a36acfe0`): type-aware tell routing,
-  `msg-tell-no-route-for-type` (Error), `msg-tell-route-ambiguous` and
-  `stmt-duplicate-send-same-outlet` (Warnings). BAST `FORMAT_REVISION` 31, unchanged.
-- **`../bin/riddlc` and ivy are both `2.5.0-13-511b095f`** (staged 2026-11-07 by
-  `scripts/publish-and-stage.sh`; carries R5, the dependency upgrades and the sbt 2.0.12
-  toolchain). Previous binary kept as `../bin/riddlc.2.5.0.bak`. **It links Homebrew
-  `openssl@4`**, since that is the linked keg on this Mac; fine here, and the reason the
-  release pin exists.
-- **The corpus is GREEN with the R5 fold rule** (re-verified 2026-11-07): riddl-models
-  `dd2665797` cleared reactive-bbq; census 0/191, `RiddlModelsRoundTripTest` 190/190 on JVM
-  and Native from a cold cache. Their fix moved the two `tell`s OUT of the folds into the
-  command handlers, which is better than the task's suggestion: the real defect was a
-  second notification on every replay.
-- **Toolchain since 2026-10-31**: sbt 2.0.12, sbt-ossuminc 3.2.0, libraries at current
-  releases, MiMa baseline 2.5.0. Unreleased; `/ship` was started and stopped before tagging,
-  so no 2.6.0 tag exists.
+- **2.6.0 is the latest release** (tag on `955374707`): R5
+  `entity-event-sourced-fold-nondeterministic` (Error), CM per-entity repository writes,
+  library upgrades, sbt 2.0.12 / sbt-ossuminc 3.2.0, and the macOS openssl pin. Published
+  to GitHub Packages and npm (`@ossuminc/riddl-lib@2.6.0`). The Homebrew formula is at 2.6.0
+  with `depends_on "openssl@3"`, matching the binary, as the release guard verified.
+- **MiMa baseline is 2.6.0** (`3a31717ab`). The 2.6.0 MiMa gate ran clean against 2.5.0
+  from an empty cache.
+- **`../bin/riddlc` and ivy are `2.5.0-13-511b095f`, NOT 2.6.0.** That build has the same
+  code as the tag, with only NOTEBOOK commits between them, but the version string differs.
+  It links `openssl@4` (this Mac's linked keg). Restaging at the tag means a checkout of
+  `2.6.0`; see `scripts/publish-and-stage.sh`, which handles a build at an exact tag.
+- **The corpus is GREEN**: census 0/191, `RiddlModelsRoundTripTest` 190/190 on JVM and
+  Native.
+- **Toolchain**: sbt 2.0.12, sbt-ossuminc 3.2.0, Scala 3.9.0.
 
 ### In flight
 
-`task/2026-11-07-release-riddlc-links-homebrew-openssl4.md`: riddl's half is DONE
-(`e7262efa2`: `release.yml` links `openssl@3` and fails the release otherwise), but
-it is untested until the next release run. The 2.5.0 formula is homebrew-tap's task. The
-file stays open because sbt-riddl's direct download of 2.5.0 still needs `openssl@4`.
-Otherwise
+Nothing in riddl; `task/` is empty apart from `done/`. Otherwise
 nothing in riddl. riddl-generator holds
 `../riddl-generator/task/2026-10-21-tell-route-is-type-aware.md`. BACKLOG [5.9] stays
 DEFERRED by Reid.
@@ -74,6 +68,26 @@ Empty of task files (`probe-2026-09-06-adaptor/` is a leftover scratch directory
 fixtures, not a task).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-11-08 — 2.6.0 released
+
+The tag is on `955374707`, and every gate ran from a throwaway cache
+(`/tmp/sbt-verify-260`, 279M):
+
+- MiMa: six clean reports against 2.5.0, baseline confirmed
+  `Set(com.ossuminc:riddl-passes:2.5.0)`.
+- Tests: 19 suite summaries, 8113 succeeded, 0 failed, 2 canceled (the network test).
+- Publish: 80 published lines.
+
+Release Artifacts run 42439959961 was green. It was the first live test of the openssl pin,
+and it held: the runner's libcrypto symlink was moved to `openssl@3`, and the guard printed
+`OK: links openssl@3 only`. The tap formula followed to 2.6.0 with `@3`.
+
+**The MiMa gate's first real use raised the question of what a CLEAN report proves.**
+MiMa prints nothing on success, and the first run came back clean with 75–87% of its
+tasks cached, so silence was ambiguous. Re-running from an empty cache, with
+`show mimaPreviousArtifacts` alongside, settled both halves: what it compared against, and
+that it actually ran. Do that again whenever a gate's success is silent.
 
 ## 2026-11-07 — R5: a fold may not read the clock; repository writes are per entity
 
