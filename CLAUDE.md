@@ -2267,6 +2267,16 @@ the fixture working.
   separate decision. **A CI job that dies with no logs at all is a lost runner,
   not a timeout**: a real `timeout-minutes` kill is marked `cancelled` and KEEPS
   its logs.
+- **The macOS riddlc's openssl MAJOR is pinned in `release.yml`, and three things
+  must move TOGETHER**: the `Link openssl@3` step, the guard
+  (`scripts/check-native-openssl.sh <bin> 3`), and the tap formula's `depends_on
+  "openssl@3"`. Without the pin, the Native link binds `-lcrypto` through Homebrew's
+  UNVERSIONED `/opt/homebrew/lib/libcrypto.dylib`, so the binary takes whatever major
+  the build machine has linked. That is how 2.5.0 shipped `openssl@4` against a `@3`
+  formula and aborted at load. It also applies LOCALLY: on a Mac with `openssl@4`
+  linked, `scripts/publish-and-stage.sh` stages an `@4` binary. libcrypto is genuinely
+  needed (airframe-ulid's `NativeSecureRandom`, sttp's `CryptoMd5`), and libidn2 comes
+  from sttp-model.
 - **release.yml** — triggered by `gh release create`. Builds native riddlc (macOS
   ARM64, Linux x86_64) + JVM universal, and sends `repository_dispatch` to
   homebrew-tap with SHA256s. Requires the `HOMEBREW_TAP_SECRET` repo secret.

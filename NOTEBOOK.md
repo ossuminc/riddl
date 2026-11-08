@@ -28,10 +28,11 @@ authoritative). Ask `git` for branch, tree and unpushed span — never trust a w
 
 ### In flight
 
-`task/2026-11-07-release-riddlc-links-homebrew-openssl4.md`: DIAGNOSED, remedy awaits
-Reid. The macOS Native link binds `-lcrypto` through `/opt/homebrew/lib/libcrypto.dylib`,
-so the openssl MAJOR is whatever Homebrew has linked on the build machine (the published
-2.5.0 got `openssl@4`; the formula says `openssl@3`). Details in the task file. Otherwise
+`task/2026-11-07-release-riddlc-links-homebrew-openssl4.md`: riddl's half is DONE
+(`e7262efa2`: `release.yml` links `openssl@3` and fails the release otherwise), but
+it is untested until the next release run. The 2.5.0 formula is homebrew-tap's task. The
+file stays open because sbt-riddl's direct download of 2.5.0 still needs `openssl@4`.
+Otherwise
 nothing in riddl. riddl-generator holds
 `../riddl-generator/task/2026-10-21-tell-route-is-type-aware.md`. BACKLOG [5.9] stays
 DEFERRED by Reid.
