@@ -16,15 +16,19 @@ authoritative). Ask `git` for branch, tree and unpushed span — never trust a w
 - **2.5.0 is the latest release** (tag on `7a36acfe0`): type-aware tell routing,
   `msg-tell-no-route-for-type` (Error), `msg-tell-route-ambiguous` and
   `stmt-duplicate-send-same-outlet` (Warnings). BAST `FORMAT_REVISION` 31, unchanged.
-- **`../bin/riddlc` and ivy are both `2.5.0`**, staged together by
-  `scripts/publish-and-stage.sh`. Previous binary kept as `../bin/riddlc.2.4.0-3.bak`.
+- **`../bin/riddlc` and ivy are both `2.5.0-13-511b095f`** (staged 2026-11-07 by
+  `scripts/publish-and-stage.sh`; carries R5, the dependency upgrades and the sbt 2.0.12
+  toolchain). Previous binary kept as `../bin/riddlc.2.5.0.bak`. **It links Homebrew
+  `openssl@4`**, since that is the linked keg on this Mac; fine here, and the reason the
+  release pin exists.
 - **The corpus is GREEN with the R5 fold rule** (re-verified 2026-11-07): riddl-models
   `dd2665797` cleared reactive-bbq; census 0/191, `RiddlModelsRoundTripTest` 190/190 on JVM
   and Native from a cold cache. Their fix moved the two `tell`s OUT of the folds into the
   command handlers, which is better than the task's suggestion: the real defect was a
   second notification on every replay.
 - **Toolchain since 2026-10-31**: sbt 2.0.12, sbt-ossuminc 3.2.0, libraries at current
-  releases, MiMa baseline 2.5.0. Unreleased; ivy and `../bin/riddlc` are still 2.5.0.
+  releases, MiMa baseline 2.5.0. Unreleased; `/ship` was started and stopped before tagging,
+  so no 2.6.0 tag exists.
 
 ### In flight
 
