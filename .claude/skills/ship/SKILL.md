@@ -92,6 +92,27 @@ not provided:
    If it has a suffix, do NOT proceed — delete the tag
    (`git tag -d <VERSION>`), fix the issue, and re-tag.
 
+8a. **Check binary compatibility against the previous release (MiMa).**
+   This is the ONLY place MiMa runs — not in `tJVM`, not in CI (Reid,
+   2026-11-07). It is what gives the backward-compatibility policy in
+   `CLAUDE.md` a tool behind it:
+   ```
+   sbt "; utils/mimaReportBinaryIssues ; language/mimaReportBinaryIssues ; passes/mimaReportBinaryIssues ; testkit/mimaReportBinaryIssues ; riddlLib/mimaReportBinaryIssues ; commands/mimaReportBinaryIssues"
+   ```
+   It compares each JVM artifact against `V.previous` in
+   `project/Dependencies.scala`, which must name the LAST RELEASE (step
+   13a keeps it there). Expect six clean reports. Any `Problem` is a
+   removed or changed public signature: **stop, delete the tag, and
+   restore the old signature** (deprecate, don't delete). Never
+   silence a problem with a MiMa filter unless Reid approves that
+   specific one.
+
+   A clean run proves nothing if it never compared anything. If you
+   doubt it, calibrate the way it was calibrated on 2026-10-31: rename a
+   public method (e.g. `ThirdPartyNotices.noticesFile`), confirm
+   `utils/mimaReportBinaryIssues` reports a `DirectMissingMethodProblem`,
+   then revert.
+
 9. Run the full test suite and publish all modules:
    ```
    sbt "; clean; tJVM; tJS; tNative; publish"
@@ -198,6 +219,13 @@ not provided:
     - Push: `git push origin main`
     These changes are harmless formatting fixes and should be
     committed straight to `main`.
+
+13a. **Move the MiMa baseline to the version just shipped.** Set
+    `V.previous` in `project/Dependencies.scala` to `<VERSION>`, then
+    commit to `main` and push. Without this the next release is
+    compared against an older baseline, and anything added in this
+    release can be removed with no warning. The artifacts must already
+    be resolvable, which step 9's `publish` ensures.
 
 14. **Delete the release branch, if the release came from one.**
     There is no merge-back step: `main` IS the working branch, so
