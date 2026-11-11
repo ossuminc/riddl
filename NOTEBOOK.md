@@ -20,10 +20,12 @@ authoritative). Ask `git` for branch, tree and unpushed span — never trust a w
   with `depends_on "openssl@3"`, matching the binary, as the release guard verified.
 - **MiMa baseline is 2.6.0** (`3a31717ab`). The 2.6.0 MiMa gate ran clean against 2.5.0
   from an empty cache.
-- **`../bin/riddlc` and ivy are `2.5.0-13-511b095f`, NOT 2.6.0.** That build has the same
-  code as the tag, with only NOTEBOOK commits between them, but the version string differs.
-  It links `openssl@4` (this Mac's linked keg). Restaging at the tag means a checkout of
-  `2.6.0`; see `scripts/publish-and-stage.sh`, which handles a build at an exact tag.
+- **`../bin/riddlc` and ivy are exactly `2.6.0`**, restaged 2026-11-11 from a checkout of
+  the tag via `scripts/publish-and-stage.sh`. The LOCAL binary links `openssl@4` (this Mac's
+  linked keg), unlike the released one, which links `@3`; that is fine on this machine.
+- **riddl 2.6.0 upgrade tasks are filed** in riddl-models, riddl-generator, ossum.tech,
+  riddl-idea-plugin, synapify, riddl-vscode and ossum.ai (`task/upgrade-riddl-2.6.0.md`).
+  riddlsim and riddl-mcp-server have no checkout here, so they got none.
 - **The corpus is GREEN**: census 0/191, `RiddlModelsRoundTripTest` 190/190 on JVM and
   Native.
 - **Toolchain**: sbt 2.0.12, sbt-ossuminc 3.2.0, Scala 3.9.0.
