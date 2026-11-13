@@ -1431,6 +1431,37 @@ is the one item this work produced.
   `Correlation.timeout` as of B4. *(This entry was deleted by accident in the B2 commit's
   BACKLOG edit and restored here.)*
 
+#### Noticed while giving ten diagnostics rule ids, 2026-11-13
+
+Both were left alone because that task (synapify's) required text and kind to stay
+unchanged. Each needs a ruling before it is built.
+
+- **[2.20] One handler-less entity is reported twice, as an Error AND a Completeness
+  warning.** In `ValidationPass` (as of `d5eebae5c`), `entity-no-handlers-or-states`
+  (Error, ~:4860) fires when an entity has no states and no handlers, and
+  `entity-state-no-handlers` (Error, ~:4846) fires per state when neither the state nor
+  the entity has handlers. Completeness 4f, `entity-no-handlers` (~:4905), fires when the
+  entity and all its states have no handlers. So every entity that trips either Error also
+  trips 4f: one omission, two messages of different kinds. Probably the Completeness one
+  should go, since the Error already says the same thing more strongly, but whether
+  "no handlers" is an Error or incompleteness is the real question. CLAUDE.md's rule that a
+  missing port is Missing, not Error, and that a `???` body earns only Missing, argues it
+  may be the Error that is too strong. **Decide which kind is right, then remove the other
+  emission.** Codes are not deleted: a withdrawn one goes to `RuleId.retired`. Expect
+  `.check` golden churn and a corpus census. **Small** once ruled.
+
+- **[2.21] `entity-fsm-single-state` is attached to a different rule than its name
+  says.** `RuleId.FsmSingleState` (`RuleId.scala:342`) is emitted by the check at
+  `ValidationPass` ~:4827, which fires on a `finite-state-machine` entity with **two or
+  more** states whose handlers contain no `morph` or `become`. "Too few states" is a
+  separate check, now `entity-fsm-too-few-states`. So the code names a condition it never
+  reports. Under the compat policy the code can't be renamed. The fix is a new code (e.g.
+  `entity-fsm-no-transitions`) for this site, with `entity-fsm-single-state` moved to
+  `RuleId.retired` and the ledger left intact. That is visible to anyone keying on the
+  old code, so tell synapify and riddl-vscode. Also worth checking while there: the check
+  only looks at `entity.handlers` and not the states' handlers, so a transition written
+  inside a `State`'s handler is not seen. Not verified by test. **Small.**
+
 #### Decided in `../RIDDL-Tools-To-Do-List.md` but never built
 
 **RULINGS TAKEN 2026-08-14, before an unattended run.** Reid answered four questions
