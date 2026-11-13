@@ -424,3 +424,12 @@ msg-tell-route-ambiguous
 stmt-duplicate-send-same-outlet
 msg-tell-no-route-for-type
 entity-event-sourced-fold-nondeterministic
+entity-empty-handlers
+entity-fsm-too-few-states
+entity-state-no-handlers
+entity-no-handlers-or-states
+field-method-should-be-lowercase
+field-method-arg-should-be-lowercase
+type-pattern-invalid-regex
+saga-step-uncompensated
+saga-step-too-many-fail-points

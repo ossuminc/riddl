@@ -27,6 +27,10 @@ import org.scalatest.TestData
   * non-optional type is a guarantee a compiler can enforce. Until that change, this test is the
   * guard, so keep the model below TRIPPING A LOT: its value is proportional to how many distinct
   * checks it reaches.
+  *
+  * **Its reach is also its limit**: ten id-less diagnostics (entity handler/FSM checks, method
+  * naming, saga steps, regex patterns) survived it until 2026-11-13 because this fixture trips none
+  * of them. `DiagnosticCallSitesHaveRuleIdsTest` is the call-site half that covers that gap.
   */
 class EveryDiagnosticHasARuleIdTest extends AbstractValidatingTest {
 

@@ -38,7 +38,8 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
             p.loc,
             x.getMessage,
             suggestion =
-              "Correct the regular-expression syntax in this pattern (RIDDL uses Java regex syntax)."
+              "Correct the regular-expression syntax in this pattern (RIDDL uses Java regex syntax).",
+            ruleId = Some(RuleId.PatternInvalidRegex)
           )
         )
     }

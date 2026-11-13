@@ -968,10 +968,20 @@ fact from that file that you had no reason to look for, it belongs back here.
 ### Diagnostic rule ids — every message names the RULE that produced it
 
 **`RuleId`** (`language/.../RuleId.scala`) is a kebab-case, subject-prefixed
-enum: 303 rules covering all 307 diagnostic sites. `Message.ruleId:
-Option[RuleId]`, and `ruleId` is a **REQUIRED** parameter on the eight
-`Accumulator.add*` helpers — a new diagnostic does not compile until it names its
-rule. The six calls in `MessagesTest` pass `None` explicitly.
+enum (431 cases at 2.6.0+). `Message.ruleId: Option[RuleId]`, and `ruleId` is
+a **REQUIRED** parameter on the eight `Accumulator.add*` helpers. The six calls
+in `MessagesTest` pass `None` explicitly.
+
+**"Does not compile without an id" is true ONLY of those helpers.** A site that
+builds `Message(...)` itself, or calls a `Messages.style/warning/...` factory, and
+hands it to `messages.add` compiles with no id, because there `ruleId` defaults to
+`None`. Ten validation diagnostics did that until 2026-11-13 (synapify could not
+name "has only empty handlers"). Two tests guard it, and they are complementary:
+`EveryDiagnosticHasARuleIdTest` checks the OUTPUT of one messy fixture (any
+construction form, but only the checks that fixture trips), and
+`DiagnosticCallSitesHaveRuleIdsTest` scans every `passes` source for id-less
+constructions (every site, but only the call forms it names). A new chokepoint
+shape must be added to the second.
 
 **It GENERALIZES `Messages.DeprecationCode`; it does not sit beside it.** That
 object was already a threaded kebab-case id registry for deprecations, consumed

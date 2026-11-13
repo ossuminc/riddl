@@ -71,6 +71,43 @@ fixtures, not a task).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-13 — ten diagnostics had no rule id, behind a guard that could not see them
+
+synapify asked for an id on "has only empty handlers" (task from 2026-11-11, now in
+`task/done/`). Only the ENTITY message lacked one; the adaptor's has carried
+`adaptor-empty-handlers` since rule ids landed. The real finding was the cause: `ruleId` is
+required only on the `Accumulator.add*` helpers, so a site that builds `Message(...)` or calls a
+`Messages.*` factory and passes it to `messages.add` compiles with none. Ten validation
+diagnostics did, and now carry ids:
+
+- entity: `entity-empty-handlers` (the asked one), `entity-fsm-too-few-states`,
+  `entity-state-no-handlers`, `entity-no-handlers-or-states`
+- naming: field names REUSE `field-should-be-lowercase` (same rule, another site);
+  `field-method-should-be-lowercase`, `field-method-arg-should-be-lowercase`
+- `type-pattern-invalid-regex`, `saga-step-uncompensated`, `saga-step-too-many-fail-points`
+
+Texts and kinds are unchanged. Two sites stay id-less on purpose: `Pass.scala`'s
+exception-as-Severe, and ResolutionPass's `--debug` trace.
+
+**`EveryDiagnosticHasARuleIdTest` already existed**, and its header argued a call-site census
+was the wrong tool. It asserts over the OUTPUT of one messy fixture, which catches any
+construction form but only for the checks that fixture trips, and none of these ten. The new
+`DiagnosticCallSitesHaveRuleIdsTest` scans every `passes` source; each test covers the other's
+blind spot. Canary-checked on JVM and Native by removing an id.
+
+**Trap hit:** the first version used a regex LOOKBEHIND, which Scala Native's engine lacks. As a
+`val` it threw at class initialisation, so `passesNative` reported "Error during tests" with
+2002 passing and zero failed, and the `;` chain stopped there. Check the preceding character
+in code instead.
+
+Noticed, NOT changed (the task said same text, same kind): an entity with no handlers and no
+states draws BOTH the Error `entity-no-handlers-or-states` and the Completeness
+`entity-no-handlers`; and `entity-fsm-single-state` is attached to the "no morph or become"
+message, which its name does not describe.
+
+Verified: tJVM, tJS, tNative all green (JVM/JS in one run, Native re-run after the fix:
+7 rows, 0 failed).
+
 ## 2026-11-08 — 2.6.0 released
 
 The tag is on `955374707`, and every gate ran from a throwaway cache

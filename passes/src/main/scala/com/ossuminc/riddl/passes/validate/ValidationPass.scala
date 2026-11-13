@@ -3561,7 +3561,8 @@ case class ValidationPass(
           "Field names should begin with a lower case letter",
           StyleWarning,
           suggestion =
-            s"Start the field name with a lower-case letter, e.g. '${f.id.value.take(1).toLowerCase + f.id.value.drop(1)}'."
+            s"Start the field name with a lower-case letter, e.g. '${f.id.value.take(1).toLowerCase + f.id.value.drop(1)}'.",
+          ruleId = Some(RuleId.FieldShouldBeLowercase)
         )
       )
     }
@@ -3579,7 +3580,8 @@ case class ValidationPass(
           "Method names should begin with a lower case letter",
           StyleWarning,
           suggestion =
-            s"Start the method name with a lower-case letter, e.g. '${m.id.value.take(1).toLowerCase + m.id.value.drop(1)}'."
+            s"Start the method name with a lower-case letter, e.g. '${m.id.value.take(1).toLowerCase + m.id.value.drop(1)}'.",
+          ruleId = Some(RuleId.MethodShouldBeLowercase)
         )
       )
     checkTypeExpression(m.typeEx, m, parents)
@@ -3591,7 +3593,8 @@ case class ValidationPass(
             "Method argument names should begin with a lower case letter",
             arg.loc, // Fixed: use argument location, not method identifier location
             suggestion =
-              s"Start the argument name with a lower-case letter, e.g. '${arg.name.take(1).toLowerCase + arg.name.drop(1)}'."
+              s"Start the argument name with a lower-case letter, e.g. '${arg.name.take(1).toLowerCase + arg.name.drop(1)}'.",
+            ruleId = Some(RuleId.MethodArgShouldBeLowercase)
           )
         )
     checkMetadata(m)
@@ -4804,7 +4807,8 @@ case class ValidationPass(
           entity.errorLoc,
           s"${entity.identify} has only empty handlers",
           Messages.MissingWarning,
-          suggestion = "Add on-clauses to the entity's handlers, e.g. 'on command DoThing { ??? }'."
+          suggestion = "Add on-clauses to the entity's handlers, e.g. 'on command DoThing { ??? }'.",
+          ruleId = Some(RuleId.EntityEmptyHandlers)
         )
       )
     }
@@ -4815,7 +4819,8 @@ case class ValidationPass(
           s"${entity.identify} is declared as an fsm, but doesn't have at least two states",
           Messages.Error,
           suggestion =
-            "Define at least two states for the finite-state-machine entity (a state machine needs states to transition between)."
+            "Define at least two states for the finite-state-machine entity (a state machine needs states to transition between).",
+          ruleId = Some(RuleId.EntityFsmTooFewStates)
         )
       )
     }
@@ -4847,7 +4852,8 @@ case class ValidationPass(
             s"${state.identify} in ${entity.identify} has no handlers.",
             Messages.Error,
             suggestion =
-              s"Add a handler to ${state.identify} (or to ${entity.identify}) to process messages in this state."
+              s"Add a handler to ${state.identify} (or to ${entity.identify}) to process messages in this state.",
+            ruleId = Some(RuleId.EntityStateNoHandlers)
           )
         )
       end for
@@ -4859,7 +4865,8 @@ case class ValidationPass(
             "Add a handler to the entity or add a state with a handler.",
           Messages.Error,
           suggestion =
-            "Add a handler to the entity, or add a state containing a handler, so the entity can process messages."
+            "Add a handler to the entity, or add a state containing a handler, so the entity can process messages.",
+          ruleId = Some(RuleId.EntityNoHandlersOrStates)
         )
       )
     }
@@ -6962,7 +6969,8 @@ case class ValidationPass(
               s"${s.identify} do-step targets ${uncompensated.mkString(", ")} but the undo-step does not target the same; consider adding compensation",
               s.errorLoc,
               suggestion =
-                s"Add compensating revert statements targeting ${uncompensated.mkString(", ")} in the saga step's undo block."
+                s"Add compensating revert statements targeting ${uncompensated.mkString(", ")} in the saga step's undo block.",
+              ruleId = Some(RuleId.SagaStepUncompensated)
             )
           )
       }
@@ -7057,7 +7065,8 @@ case class ValidationPass(
             s.errorLoc,
             suggestion =
               "Split the saga step so each step's do-block has at most one potential failure point " +
-                "(send/tell/yield/put, or an embedded call/get)."
+                "(send/tell/yield/put, or an embedded call/get).",
+            ruleId = Some(RuleId.SagaStepTooManyFailPoints)
           )
         )
     }

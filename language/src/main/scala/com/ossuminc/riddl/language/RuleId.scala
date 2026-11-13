@@ -650,6 +650,20 @@ enum RuleId(
   case ClauseNoStatements extends RuleId("handler-clause-no-statements")
   case OutputShowsWrongKind extends RuleId("app-output-shows-wrong-kind")
   case InputSendsWrongKind extends RuleId("app-input-sends-wrong-kind")
+  // 2026-11-13: diagnostics that built a `Message(...)` (or called a `Messages.*` factory)
+  // directly, bypassing the `add*` helpers whose `ruleId` is required, so they had NO id.
+  // Found when synapify could not name "has only empty handlers". Texts and kinds unchanged;
+  // `DiagnosticCallSitesHaveRuleIdsTest` stops the bypass recurring. (The field-name site reuses
+  // `field-should-be-lowercase`: same rule, another site.)
+  case EntityEmptyHandlers extends RuleId("entity-empty-handlers")
+  case EntityFsmTooFewStates extends RuleId("entity-fsm-too-few-states")
+  case EntityStateNoHandlers extends RuleId("entity-state-no-handlers")
+  case EntityNoHandlersOrStates extends RuleId("entity-no-handlers-or-states")
+  case MethodShouldBeLowercase extends RuleId("field-method-should-be-lowercase")
+  case MethodArgShouldBeLowercase extends RuleId("field-method-arg-should-be-lowercase")
+  case PatternInvalidRegex extends RuleId("type-pattern-invalid-regex")
+  case SagaStepUncompensated extends RuleId("saga-step-uncompensated")
+  case SagaStepTooManyFailPoints extends RuleId("saga-step-too-many-fail-points")
 end RuleId
 
 object RuleId:
