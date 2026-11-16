@@ -144,27 +144,6 @@ Policy.
   deprecations, never errors, and all are mechanically fixable. Migration task files
   dropped in both corpora.
 
-- **[5.2]** **A streamlet cannot be REFERENCED by the keyword it is DECLARED with.**
-  Found while building [5.1], 2026-08-31; **pre-existing, not caused by it.**
-  `Keywords.streamlets` — the keyword set `streamletRef` accepts — is `source | sink |
-  merge | split | void`. So a streamlet declared `streamlet X is {…}` (or, before
-  [5.1], `processor X is {…}`) has **no keyword spelling that will parse as a
-  reference to it**: `tell M to streamlet X` and `tell M to processor X` both fail,
-  and the author must name a SHAPE that may have been derived rather than declared.
-  **`flow` and `router` are missing from that set too**, so even a `flow F is {…}`
-  cannot be referenced as `flow F`. Verified at `ReferenceParser.scala:131` and
-  `Keywords.scala:55`; the EBNF's `streamlet_ref` (:232) carries the same five.
-  **`Id(streamlet X)` already works** — `processor_kind` includes `streamlet` and
-  `TypeValidation.scala:289` maps a `Streamlet` to `Keyword.streamlet` — so the two
-  reference surfaces disagree about what a streamlet may be called.
-  **Fix is additive**: add `streamlet` (and `flow`, `router`) to `Keywords.streamlets`,
-  the EBNF rule, and a fixture. Nothing is deprecated and nothing breaks; the shape
-  keywords keep working as reference spellings even though they are deprecated as
-  DECLARATION spellings.
-  **Deliberately NOT done as part of [5.1]** — it is a second question (how a streamlet
-  is REFERENCED, not how it is DECLARED) and widening a reference keyword set changes
-  what parses, which wants its own corpus check.
-
 ### 0. Just before 2.0.0 is released
 
 Things deliberately deferred to the release itself, not to be done piecemeal.

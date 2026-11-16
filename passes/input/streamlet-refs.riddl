@@ -1,0 +1,30 @@
+domain StreamletRefs is {
+  user Operator is "someone who runs the pipeline"
+  command Cmd is { x: Integer }
+  application context Console is {
+    group Panel is { ??? }
+  }
+  context Pipeline is {
+    streamlet Transform as flow is {
+      inlet i is command Cmd
+      outlet o is command Cmd
+    }
+    streamlet Fanout as router is {
+      inlet i1 is command Cmd
+      inlet i2 is command Cmd
+      outlet o1 is command Cmd
+      outlet o2 is command Cmd
+    }
+    relationship ToTransform to flow Pipeline.Transform as 1:N
+    relationship ToFanout to router Pipeline.Fanout as 1:N
+    relationship ToStreamlet to streamlet Pipeline.Transform as 1:1
+    relationship ToProcessor to processor Pipeline.Transform as 1:1
+  }
+  epic Operate is {
+    user Operator wants to "push a command" so that "the pipeline runs"
+    case push is {
+      user Operator wants to "push a command" so that "the pipeline runs"
+      step send command Cmd from flow Console.Panel to streamlet Pipeline.Transform
+    }
+  }
+}

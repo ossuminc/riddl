@@ -128,9 +128,20 @@ private[parsing] trait ReferenceParser {
   }
 
   private def streamletRef[u: P]: P[StreamletRef] = {
-    P(Index ~ Keywords.streamlets ~ pathIdentifier ~~ Index).map {
-      case (start, streamlets, pid, end) =>
-        StreamletRef(at(start, end), streamlets, pid)
+    P(Index ~ Keywords.streamlets ~ pathIdentifier ~~ Index).map { case (start, keyword, pid, end) =>
+      // `processor` is the deprecated synonym of `streamlet` here as in a declaration
+      // (StreamingParser.processor): same rule, and CONSUMED, so prettify converges.
+      val kw =
+        if keyword == Keyword.processor then
+          deprecation(
+            at(start, start + Keyword.processor.length),
+            s"The `processor` keyword is deprecated; use `streamlet ${pid.format}` instead",
+            code = Option(RuleId.ProcessorKeyword),
+            autoFixable = true
+          )
+          Keyword.streamlet
+        else keyword
+      StreamletRef(at(start, end), kw, pid)
     }
   }
 
@@ -192,8 +203,18 @@ private[parsing] trait ReferenceParser {
     )
   }
 
+  /** `flow` is both a group alias and a streamlet reference keyword. Here, and only here, a
+    * reference may be either, and `flow X` was a GroupRef before `flow` named streamlets ([5.2]),
+    * so the group reading is tried first to keep that AST. A flow STREAMLET is `streamlet X` here.
+    */
+  private def flowGroupRef[u: P]: P[GroupRef] = {
+    P(Index ~ Keywords.keywords(Keyword.flow.!) ~ pathIdentifier ~~ Index).map {
+      case (start, keyword, pid, end) => GroupRef(at(start, end), keyword, pid)
+    }
+  }
+
   private def arbitraryInteractionRef[u: P]: P[Reference[Definition]] = {
-    P(processorRef | sagaRef | inputRef | outputRef | groupRef)
+    P(flowGroupRef | processorRef | sagaRef | inputRef | outputRef | groupRef)
   }
 
   def anyInteractionRef[u: P]: P[Reference[Definition]] = {

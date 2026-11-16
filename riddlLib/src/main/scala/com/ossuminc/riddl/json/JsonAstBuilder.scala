@@ -1762,14 +1762,17 @@ object JsonAstBuilder:
       case "projector"  => ProjectorRef(curAt, pathId(path))
       case "repository" => RepositoryRef(curAt, pathId(path))
       case "adaptor"    => AdaptorRef(curAt, pathId(path))
-      // A streamlet reference is named by its SHAPE, which doubles as the discriminator — it
-      // cannot collide with the kinds above.
-      case kw @ ("source" | "sink" | "merge" | "split" | "void") =>
+      // A streamlet reference is named by its keyword (a shape, or `streamlet`), which doubles as
+      // the discriminator -- it cannot collide with the kinds above. Must match
+      // Keywords.streamlets: `flow`, `router` and `streamlet` joined it in [5.2], and this second
+      // copy was found missing them by Root2JsonFixturesTest. `processor` never reaches JSON: the
+      // parser consumes it into `streamlet`.
+      case kw @ ("source" | "sink" | "merge" | "split" | "void" | "flow" | "router" | "streamlet") =>
         StreamletRef(curAt, kw, pathId(path))
       case other =>
         ctx.err(
-          s"unknown processor kind '$other' " +
-            "(expected entity|context|projector|repository|adaptor|source|sink|merge|split|void)"
+          s"unknown processor kind '$other' (expected entity|context|projector|repository|" +
+            "adaptor|source|sink|merge|split|void|flow|router|streamlet)"
         )
         EntityRef(curAt, pathId(path))
 

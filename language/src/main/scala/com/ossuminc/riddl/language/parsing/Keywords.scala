@@ -52,13 +52,22 @@ object Keywords {
     P(keywordsRule ~~ &(isNotKeywordChar))./
   }
 
+  /** The keywords that may lead a reference to a streamlet: every shape keyword, the canonical
+    * declaration keyword `streamlet`, and its deprecated synonym `processor`. Until [5.2]
+    * (2026-11-16) only `source | sink | merge | split | void` were here, so a `flow` or `router`
+    * streamlet -- or any streamlet named by the word it is declared with -- could not be referenced.
+    */
   def streamlets[u: P]: P[String] = keywords(
     StringIn(
       Keyword.source,
       Keyword.sink,
       Keyword.merge,
       Keyword.split,
-      Keyword.void
+      Keyword.void,
+      Keyword.flow,
+      Keyword.router,
+      Keyword.streamlet,
+      Keyword.processor
     ).!
   )
 

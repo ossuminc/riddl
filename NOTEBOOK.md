@@ -71,6 +71,31 @@ fixtures, not a task).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-16 (later) — [5.2]: a streamlet can be referenced by what it is
+
+BACKLOG [5.2] and synapify's 2026-11-15 task, done together. `streamletRef` took only
+`source | sink | merge | split | void`, so a `flow` or `router` streamlet, or any streamlet
+named by its declaration keyword, had no reference spelling. Added `flow`, `router`,
+`streamlet`, plus `processor` as a deprecated, CONSUMED synonym that reuses the
+declaration's `stream-processor-keyword` rule (Reid chose "Both"). No CM change: the CM
+says nothing about reference spellings, and no pass reads `StreamletRef.keyword`.
+
+**`flow` is also a group alias, and one position takes both.** The epic step `send M from
+<ref>` is `processorRef | … | groupRef`. Adding `flow` to the streamlet set would have
+turned today's `from flow G` (a GroupRef) into a StreamletRef: the same input, a different
+AST. A `flowGroupRef` arm tried first keeps it a group (Reid: "group wins"); a flow
+streamlet there is written `streamlet S`. Canary: drop that arm and the pin test reports
+`StreamletRef(...flow...)`. Zero corpus uses of any colliding form.
+
+**The JSON reader was a second copy of the keyword set**, `JsonAstBuilder.processorRef`'s
+`"source" | "sink" | …` discriminator. My own tests went green without it; the fixture
+sweep (`Root2JsonFixturesTest`, 121/122) caught it on the new fixture, which is the
+reflectivity rule doing its job. Grep found no third copy.
+
+Corpus census (riddl-models, 191 entry points, script calibrated on a known-bad model):
+old 2.6.0 and new builds identical, 0 errors each. TatSu 127/150 with the new fixture `✓`;
+reverting `streamlet_ref` fails exactly that fixture.
+
 ## 2026-11-16 — a contained group had never survived BAST
 
 synapify (task 2026-11-14, now in `task/done/`) reported that positions after a UI `group`

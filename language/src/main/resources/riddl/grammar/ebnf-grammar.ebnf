@@ -227,9 +227,12 @@ state_ref = "state" path_identifier ;
 context_ref = "context" path_identifier ;
 outlet_ref = "outlet" path_identifier ;
 inlet_ref = "inlet" path_identifier ;
-(* The keyword is the streamlet's SHAPE, mirroring Keywords.streamlets in the parser — not the
-   literal word "streamlets", which nothing accepts and no model writes. *)
-streamlet_ref = ("source" | "sink" | "merge" | "split" | "void") path_identifier ;
+(* The keyword is any streamlet SHAPE, or the declaration keyword "streamlet", or its deprecated
+   synonym "processor" -- mirroring Keywords.streamlets in the parser. "flow", "router",
+   "streamlet" and "processor" were added by BACKLOG [5.2]; before that a flow or router
+   streamlet had no reference spelling at all. *)
+streamlet_ref = ("source" | "sink" | "merge" | "split" | "void" | "flow" | "router"
+                | "streamlet" | "processor") path_identifier ;
 projector_ref = "projector" path_identifier ;
 repository_ref = "repository" path_identifier ;
 saga_ref = "saga" path_identifier ;
@@ -240,7 +243,11 @@ input_ref = input_aliases path_identifier ;
 group_ref = group_aliases path_identifier ;
 author_ref = "by" "author" path_identifier ;
 processor_ref = adaptor_ref | context_ref | entity_ref | projector_ref | repository_ref | streamlet_ref ;
-any_interaction_ref = processor_ref | saga_ref | input_ref | output_ref | group_ref | user_ref ;
+(* "flow" is both a group alias and a streamlet_ref keyword. Here, the one position admitting
+   both, "flow X" stays the GROUP reference it was before [5.2] -- so it is tried first. *)
+flow_group_ref = "flow" path_identifier ;
+any_interaction_ref = flow_group_ref | processor_ref | saga_ref | input_ref | output_ref
+                    | group_ref | user_ref ;
 
 (* Handlers *)
 handler = ["initial"] "handler" identifier is "{" handler_body "}" [with_metadata] ;
