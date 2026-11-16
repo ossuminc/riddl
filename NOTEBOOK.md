@@ -71,6 +71,34 @@ fixtures, not a task).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-16 — a contained group had never survived BAST
+
+synapify (task 2026-11-14, now in `task/done/`) reported that positions after a UI `group`
+come back shifted from BAST: `readGroupOrContainedGroupNode` peeked through an identifier
+with `readLocation` inside a seek-and-restore, and `seek` restores the byte cursor, not
+the delta base `lastLocation`. True. But the first test, which also held a `contains X as
+group Y`, did not fail on positions. It failed on DECODING: Group and ContainedGroup
+shared `NODE_GROUP` with different payloads, and the peek always chose Group, reading the
+contained group's identifier tag (65) as an alias string index. That branch was dead, so
+a contained group never round-tripped. It failed with "Invalid string table index" in
+small models and could read back silently as a wrong Group once the table held 66+
+strings. Fixed the CLAUDE.md way, one tag per wire shape: `NODE_CONTAINED_GROUP` (111),
+`FORMAT_REVISION` 31, the peek deleted. The other five peek sites read only a tag byte.
+
+**The canary earned its keep twice.** The first version of the test compared definition
+offsets only, and it stayed GREEN with the shift reinjected. Logging showed why: in a model
+without trailing metadata, the shift lands on the group's IDENTIFIER and the definitions
+read back right. Synapify keys on the identifier's position, which is why they saw it.
+Comparing `id.loc` too turns the canary red on all three groups. I did NOT reproduce
+synapify's claim that the shift spread into the group's contents (`output Note`), even with
+metadata added; the fix removes the mechanism either way, but the spread is unexplained.
+Also unexplained, from their report: a renderer-side round trip that wrote 602 bytes, not
+529, and showed no shift.
+
+**`bastify` records the input path as given**, so regenerating `NotImplemented.bast` from
+the repo root grew it 93 → 115 bytes (`language/input/import/NotImplemented.riddl`).
+Run it from the fixture's own directory; the diff is then the one revision byte.
+
 ## 2026-11-13 — ten diagnostics had no rule id, behind a guard that could not see them
 
 synapify asked for an id on "has only empty handlers" (task from 2026-11-11, now in

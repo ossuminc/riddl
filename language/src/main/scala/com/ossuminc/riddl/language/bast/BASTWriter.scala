@@ -1087,14 +1087,14 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeNodeTag(NODE_GROUP, g.metadata.nonEmpty)
     writeLocation(g.loc)
     writeString(g.alias)
-    writeIdentifier(g.id) // Keep tag to distinguish from ContainedGroup
+    writeIdentifier(g.id)
     writeContents(g.contents)
   }
 
   def writeContainedGroup(cg: ContainedGroup): Unit = {
-    writeNodeTag(NODE_GROUP, cg.metadata.nonEmpty)
+    writeNodeTag(NODE_CONTAINED_GROUP, cg.metadata.nonEmpty)
     writeLocation(cg.loc)
-    writeIdentifier(cg.id) // Keep tag to distinguish from Group
+    writeIdentifier(cg.id)
     writeGroupRef(cg.group)
   }
 

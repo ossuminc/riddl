@@ -173,7 +173,14 @@ package object bast {
     // dispatch -- the honest failure.
     // 30 (2026-09-23, B5) adds value tags 18-21 (collection predicate, filter, count,
     // membership). A revision-29 reader has no arm for any of them and throws at the dispatch.
-    30 // B5 collection predicates, filter, count and membership
+    // 31 (2026-11-16) gives ContainedGroup its own tag, NODE_CONTAINED_GROUP (111). It had shared
+    // NODE_GROUP with Group while writing a DIFFERENT payload (identifier then group ref, where
+    // Group writes alias then identifier), and the reader's peek to tell them apart could never
+    // pick ContainedGroup: it read the identifier's tag as an alias index and derailed. The same
+    // peek advanced the location base and did not restore it, shifting every later position after
+    // a Group (synapify). A revision-30 file holding a contained group was never readable.
+    31 // ContainedGroup gets its own tag
+    // 30 was B5 collection predicates, filter, count and membership
     // 23 was multi-line `do` / `prompt`
     // 22 was: `system` value: tag 13 in readValue/writeValue. A revision-21 reader hitting tag 13 throws
     // rather than misreading, which is what the revision gate is for.
@@ -194,6 +201,12 @@ package object bast {
     */
   val NODE_CONSTANT: Byte = 109
   val NODE_METHOD: Byte = 110
+
+  /** `contains X as group Y`. Shared NODE_GROUP with [[NODE_GROUP]]'s Group until revision 31 --
+    * one tag per WIRE SHAPE, and the two payloads differ (Group: alias, identifier, contents;
+    * ContainedGroup: identifier, group ref). The reader's peek to disambiguate never worked.
+    */
+  val NODE_CONTAINED_GROUP: Byte = 111
 
   /** Magic bytes for BAST file identification: "BAST" */
   val MAGIC_BYTES: Array[Byte] = Array('B'.toByte, 'A'.toByte, 'S'.toByte, 'T'.toByte)

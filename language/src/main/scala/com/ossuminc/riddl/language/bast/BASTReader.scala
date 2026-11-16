@@ -312,6 +312,7 @@ class BASTReader(
     case NODE_USER              => "User"
     case NODE_PIPE              => "Pipe"
     case NODE_GROUP             => "Group"
+    case NODE_CONTAINED_GROUP   => "ContainedGroup"
     case NODE_INPUT             => "Input"
     case NODE_OUTPUT            => "Output"
     case NODE_DESCRIPTION       => "Description"
@@ -458,7 +459,8 @@ class BASTReader(
         case NODE_PIPE => readPipeOrRelationshipOrInteraction()
 
         // UI Components
-        case NODE_GROUP  => readGroupOrContainedGroupNode()
+        case NODE_GROUP           => readGroupNode()
+        case NODE_CONTAINED_GROUP => readContainedGroupNode()
         case NODE_INPUT  => readInputNode()
         case NODE_OUTPUT => readOutputNode()
 
@@ -1600,30 +1602,24 @@ class BASTReader(
 
   // ========== UI Components ==========
 
-  private def readGroupOrContainedGroupNode(): RiddlValue = {
+  // Group and ContainedGroup have separate tags (revision 31). They once shared NODE_GROUP and
+  // this reader peeked ahead to tell them apart; the peek misread every ContainedGroup and, by
+  // calling readLocation inside a seek-and-restore, shifted every position after a Group.
+  private def readGroupNode(): Group = {
     val loc = readLocation()
-
-    // Check if this is Group (has alias) or ContainedGroup (has GroupRef)
-    val saved = reader.position
-    val aliasOrId = readString()
+    val alias = readString()
     val id = readIdentifier()
-    val nextTag = reader.peekU8()
-    reader.seek(saved)
+    val contents = readContentsDeferred[OccursInGroup]()
+    val metadata = readMetadataDeferred()
+    Group(loc, alias, id, contents, metadata)
+  }
 
-    if nextTag == NODE_GROUP then
-      // ContainedGroup
-      val id = readIdentifier()
-      val group = readGroupRef()
-      val metadata = readMetadataDeferred()
-      ContainedGroup(loc, id, group, metadata)
-    else
-      // Group
-      val alias = readString()
-      val id = readIdentifier()
-      val contents = readContentsDeferred[OccursInGroup]()
-      val metadata = readMetadataDeferred()
-      Group(loc, alias, id, contents, metadata)
-    end if
+  private def readContainedGroupNode(): ContainedGroup = {
+    val loc = readLocation()
+    val id = readIdentifier()
+    val group = readGroupRef()
+    val metadata = readMetadataDeferred()
+    ContainedGroup(loc, id, group, metadata)
   }
 
   private def readInputNode(): Input = {
@@ -2473,7 +2469,7 @@ class BASTReader(
   }
 
   private def readGroupRef(): GroupRef = {
-    val tag = reader.readU8() // Read NODE_GROUP tag
+    val tag = reader.readU8() // Read NODE_GROUP_REF tag
     val loc = readLocation()
     val keyword = readString()
     val pathId = readPathIdentifierInline()
