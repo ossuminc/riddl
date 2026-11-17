@@ -68,6 +68,42 @@ fixtures, not a task).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-17 (night) — undeliverable clauses; two rule ids that never fired
+
+Two task files, both done (`task/done/`), commits `8baddef3c` and
+`0ae940caa`.
+
+**riddl-models: a clause nothing can deliver to was silent.** Two new
+Completeness rules, both read from ONE delivery index (`deliveries` in
+`ValidationPass`): `msg-clause-undeliverable` (an `on X` clause no inlet or
+direct delivery can bring X to) and `stream-outlet-never-sent` (a connected
+outlet its owner never transmits on). Both abstain wherever the sender is
+opaque or a type is undetermined -- they report an ABSENCE, so a guess is a
+false positive. **Measuring on reactive-bbq found two false classes in my own
+index before commit**: an application context's `input ... acquires` leaves on
+its outlets with no `send` written, and an entity FOLDS what it yields. Both
+were indexing gaps, not rule questions. What remains (90 + 17 in reactive-bbq)
+was sampled by hand and is true. A third collision came from the test suite: a
+processor with NO inlet already draws the missing-inlet warning, so this rule
+skips it ([1.25]'s abstention).
+
+**ossum.tech: `repo-link-type-mismatch` and `value-membership-type-mismatch`
+were never emitted.** The link check could never fire because the resolver
+deliberately left `Schema.links` unresolved. Resolving them exposed a latent
+second bug: the check compared type expressions with `!=`, and that includes
+`At`, so every link between two `String` fields would have become an Error.
+**A check that has never fired has never been tested -- its comparison
+included.** The membership check ran all along under the generic id.
+
+**Consequence to watch:** link fields now resolve, so a link naming a field
+that does not exist is `ref-path-unresolved`. riddl-examples' ShopifyCart has
+one, which turns `RunRiddlcOnLocalTest` "validate shopify-cart" red (JVM and
+Native) until riddl-examples fixes it. `Schema.indices` are still unresolved.
+
+Verification: cold cache (`/tmp/sbt-t4`, 47M). All JVM, JS and Native suites
+are green except two: `RiddlModelsRoundTripTest` reactive-bbq (the known
+`Draft` errors) and shopify-cart (above).
+
 ## 2026-11-17 (evening) — three ossum.tech reports: run-on prettify, a domain's impossible fix, unchecked processor keywords
 
 All three came from ossum.tech documenting 2.7.0, and all three were confirmed on the released
