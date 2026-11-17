@@ -11,30 +11,29 @@ durable facts are in `CLAUDE.md` plus its two companions, `docs/claude/language-
 and `docs/claude/build-and-api.md` (split 2026-09-11; reference moved, traps stayed; equally
 authoritative). Ask `git` for branch, tree and unpushed span — never trust a written answer.
 
-### Build state — verified 2026-11-08 by running
+### Build state — verified 2026-11-16 by running
 
-- **2.6.0 is the latest release** (tag on `955374707`): R5
-  `entity-event-sourced-fold-nondeterministic` (Error), CM per-entity repository writes,
-  library upgrades, sbt 2.0.12 / sbt-ossuminc 3.2.0, and the macOS openssl pin. Published
-  to GitHub Packages and npm (`@ossuminc/riddl-lib@2.6.0`). The Homebrew formula is at 2.6.0
-  with `depends_on "openssl@3"`, matching the binary, as the release guard verified.
-- **MiMa baseline is 2.6.0** (`3a31717ab`). The 2.6.0 MiMa gate ran clean against 2.5.0
-  from an empty cache.
-- **`../bin/riddlc` and ivy are exactly `2.6.0`**, restaged 2026-11-11 from a checkout of
+- **2.7.0 is the latest release** (tag on `5238bf2cd`): `create` replaces `initiate`
+  (deprecated, consumed); streamlet refs take `flow`/`router`/`streamlet`/`processor`;
+  `find`/`dump` project values; the BAST ContainedGroup tag and group-position fix
+  (**FORMAT_REVISION 31**, so 2.6.0 `.bast` files must be regenerated). Published to GitHub
+  Packages and npm. The Homebrew formula is at 2.7.0 with `depends_on "openssl@3"`.
+- **MiMa baseline is 2.7.0** (`99e05a30c`). The 2.7.0 gate ran clean against 2.6.0 on all
+  six modules, and that gate is known to bite: it caught renaming the `AST.Initiate` class.
+- **`../bin/riddlc` and ivy are exactly `2.7.0`**, restaged 2026-11-16 from a checkout of
   the tag via `scripts/publish-and-stage.sh`. The LOCAL binary links `openssl@4` (this Mac's
   linked keg), unlike the released one, which links `@3`; that is fine on this machine.
-- **riddl 2.6.0 upgrade tasks are filed** in riddl-models, riddl-generator, ossum.tech,
-  riddl-idea-plugin, synapify, riddl-vscode and ossum.ai (`task/upgrade-riddl-2.6.0.md`).
-  riddlsim and riddl-mcp-server have no checkout here, so they got none.
-- **The corpus is GREEN**: census 0/191, `RiddlModelsRoundTripTest` 190/190 on JVM and
-  Native.
+- **riddl 2.7.0 upgrade tasks are filed** in synapify, riddl-generator, riddl-models and
+  ossum.tech. riddl-idea-plugin, riddl-vscode and ossum.ai still had their 2.6.0 task
+  pending, so it got a "target 2.7.0 instead" addendum rather than a new file. riddlsim and
+  riddl-mcp-server have no checkout here.
+- **The corpus is GREEN**: census 0/191, identical to 2.6.0.
 - **Toolchain**: sbt 2.0.12, sbt-ossuminc 3.2.0, Scala 3.9.0.
 
 ### In flight
 
-Nothing in riddl; `task/` is empty apart from `done/`. Otherwise
-nothing in riddl. riddl-generator holds
-`../riddl-generator/task/2026-10-21-tell-route-is-type-aware.md`. BACKLOG [5.9] stays
+Nothing in riddl; `task/` is empty apart from `done/`. **Owed at 3.0: BACKLOG [5.10]**
+(rename the `AST.Initiate` class to `Create`, drop the alias val). BACKLOG [5.9] stays
 DEFERRED by Reid.
 
 ### Traps a fresh session would hit
@@ -57,12 +56,10 @@ DEFERRED by Reid.
 
 ### Certainty
 
-Verified this session, cold cache (230M): JVM utils/language/passes/testkit/riddlLib/riddlc,
-JS utils/language/passes/testkit/riddlLib, Native utils/language/passes/testkit/riddlLib/
-riddlc, `riddlcNative/nativeLink` — all green. `commands` 171 passed, 186 failed, every
-failure the corpus round-trip. reactive-bbq with the staged binary: 34
-`msg-tell-no-route-for-type`, nothing else. **Assumed, not checked:** that riddl-models'
-fixes will be mostly deletions of redundant event tells — the task asks them to judge each.
+Verified 2026-11-16 for 2.7.0: tJVM, tJS and tNative with nativeLink green after `clean`
+(19 suite summaries); the same suites green from an empty sbt cache before tagging; MiMa clean;
+TatSu 128/151; riddl-models census identical to 2.6.0, with the census script calibrated on a
+known-bad model.
 
 ### task/
 
