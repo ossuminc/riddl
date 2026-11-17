@@ -79,6 +79,27 @@ object DeprecatedOptions:
     "external" -> Deprecation("the `external` context intention prefix", "2.0.0"),
     "wrapper" -> Deprecation("an adaptor", "2.0.0")
   )
+
+  /** A replacement that depends on WHERE the option is written, keyed by (option, parent kind).
+    *
+    * `registry` keys by option name alone, so every parent got the context wording -- and `option
+    * external` on a DOMAIN was told to use the `external` context intention prefix, which a domain
+    * cannot take (`context_intention` prefixes only `context`). Reported by ossum.tech 2026-11-17.
+    * An external domain is one whose contexts are all external, so that is the fix it names.
+    * Kept beside `registry` rather than as a field of [[Deprecation]] so the public case class's
+    * signature does not change (binary compatibility within 2.x).
+    */
+  val replacementByParent: Map[(String, String), String] = Map(
+    ("external", "Domain") -> "the `external` intention prefix on each of the domain's contexts"
+  )
+
+  /** The deprecation for `name` written on a definition of kind `parentKind`, with the replacement
+    * specific to that parent when there is one.
+    */
+  def forParent(name: String, parentKind: String): Option[Deprecation] =
+    registry.get(name).map { dep =>
+      replacementByParent.get((name, parentKind)).fold(dep)(r => dep.copy(replacement = r))
+    }
 end DeprecatedOptions
 
 /** Registry of recognized RIDDL option names with their specifications. Options not in this

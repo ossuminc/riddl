@@ -54,6 +54,27 @@ class OptionDeprecationTest extends AbstractValidatingTest {
       }
     }
 
+    "name a fix a DOMAIN can take for `option external` (ossum.tech, 2026-11-17)" in {
+      (td: TestData) =>
+        // A domain takes no intention prefix, so the context wording named a fix that does not
+        // parse there. The domain form names its contexts instead; the context form is unchanged.
+        def externalDeps(src: String): Seq[Messages.Message] =
+          Riddl.parseAndValidate(RiddlParserInput(src, td), shouldFailOnError = false) match
+            case Left(errors)  => fail(errors.format)
+            case Right(result) =>
+              result.messages.justDeprecations.filter(_.message.contains("'external'"))
+        val onDomain =
+          externalDeps("domain D is { context C is { ??? } } with { option external }")
+        onDomain.size mustBe 1
+        onDomain.head.message must include("each of the domain's contexts")
+        onDomain.head.message must not include ("context intention prefix")
+        val onContext = externalDeps(contextWithOption("external"))
+        onContext.size mustBe 1
+        onContext.head.message must include("context intention prefix")
+        // ... and the named fix parses and draws no deprecation.
+        externalDeps("domain D is { external context C is { ??? } }") mustBe empty
+    }
+
     "not emit a StyleWarning for a deprecated option" in { (td: TestData) =>
       val rpi = RiddlParserInput(contextWithOption("service"), td)
       Riddl.parseAndValidate(rpi, shouldFailOnError = false) match {

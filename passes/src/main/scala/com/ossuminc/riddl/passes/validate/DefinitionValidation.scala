@@ -566,7 +566,7 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
     identity: String,
     loc: At
   ): Unit =
-    DeprecatedOptions.registry.get(option.name).foreach { dep =>
+    DeprecatedOptions.forParent(option.name, identity.split(" ").head).foreach { dep =>
       messages.addDeprecation(
         option.loc,
         s"Option '${option.name}' in $identity is deprecated" +
