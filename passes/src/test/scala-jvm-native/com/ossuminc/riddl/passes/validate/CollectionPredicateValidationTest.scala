@@ -124,8 +124,14 @@ class CollectionPredicateValidationTest extends AbstractValidatingTest {
     "type-check membership against the element type" in { (td: TestData) =>
       val ok = diagnostics(model("""when Data.zips contains m.ticketId then do "x" end"""), td.name)
       withClue(ok.justErrors.format) { ok.justErrors mustBe empty }
-      of(diagnostics(model("""when Data.zips contains Data.howMany then do "x" end"""), td.name),
-        RuleId.ValueTypeMismatch).size mustBe 1
+      // `value-membership-type-mismatch`, the rule defined for this test -- it was never emitted
+      // until 2026-11-17 (ossum.tech); the generic `value-type-mismatch` carried it instead.
+      val bad = diagnostics(model("""when Data.zips contains Data.howMany then do "x" end"""), td.name)
+      of(bad, RuleId.MembershipTypeMismatch).size mustBe 1
+      of(bad, RuleId.ValueTypeMismatch) mustBe empty
+      // ossum.tech's own probe: a numeric literal tested against a String* collection.
+      of(diagnostics(model("""when Data.zips contains 5 then do "x" end"""), td.name),
+        RuleId.MembershipTypeMismatch).size mustBe 1
     }
 
     "count a filter" in { (td: TestData) =>

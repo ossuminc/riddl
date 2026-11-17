@@ -219,12 +219,17 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         // there is no corpus to surprise, and a key's target is exactly what B2's storage
         // statements will identify a row by.
         sc.keys.foreach(fr => associateUsage[Field](sc, resolveARef[Field](fr, parents)))
-      // `links` and `indices` are deliberately NOT resolved here yet. They hold FieldRefs, and
-      // resolving them surfaces references that have never been checked: `language/input/
-      // everything_full.riddl` alone has `link relationship as field agg.time to field agg.ident`
-      // where `agg` has no `ident` field. Turning that into a new class of error belongs in its
-      // own change, with the corpus checked first — not folded into a fix for unused-type false
-      // positives.
+        // A link's two ends ARE resolved (ossum.tech, 2026-11-17). Until then nothing put them in
+        // the refMap, so `repo-link-type-mismatch` looked both ends up, found neither, and fell
+        // through a `case _ => ()` -- the rule existed and could never fire. Resolving them also
+        // reports a link naming a field that does not exist, which `everything_full.riddl` had
+        // (`agg.ident`) for as long as the fixture existed.
+        sc.links.values.foreach { case (from, to) =>
+          associateUsage[Field](sc, resolveARef[Field](from, parents))
+          associateUsage[Field](sc, resolveARef[Field](to, parents))
+        }
+      // `indices` are still NOT resolved. They hold FieldRefs too, and resolving them is its own
+      // change: nothing asked for it, and no rule reads an index's field.
       case inv: Invariant =>
         // A28: resolve operand refs inside a structured BooleanExpression condition (a LiteralString
         // condition has none). A block condition carries BOTH statements and a predicate, and the

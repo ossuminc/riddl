@@ -35,7 +35,7 @@ context full is {
     inlet Incoming is command ACommand
     schema One is relational
       of a as type agg
-      link relationship as field agg.time to field agg.ident
+      link relationship as field agg.key to field agg.key
       index on field agg.id
     with { briefly as "This is how to store data" }
 

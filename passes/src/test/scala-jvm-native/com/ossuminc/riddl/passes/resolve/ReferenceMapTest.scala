@@ -61,7 +61,9 @@ class ReferenceMapTest extends AbstractValidatingTest {
       // `StoreIt.Incoming` and the `ProjectToStore` connector (whose two endpoint refs both
       // land in the map) so its projector's `tell` has a modelled channel -- A6 reachability
       // became an Error.
-      refMap.size must be(42)
+      // 2026-11-17: +1. Schema link ends now resolve; the fixture's link names `agg.key` at both
+      // ends, so the two references share one (path, parent) key.
+      refMap.size must be(43)
     }
 
     "have definitionOf(pathId:String) work" in { _ =>

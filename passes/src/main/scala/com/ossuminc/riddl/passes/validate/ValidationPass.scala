@@ -4471,11 +4471,13 @@ case class ValidationPass(
             ruleId = Some(RuleId.RelationalNoLinks)
           )
         schema.links.values.foreach { case (fromRef, toRef) =>
-          val fromType = resolvePath[Field](fromRef.pathId, parents).map(_.typeEx)
-          val toType = resolvePath[Field](toRef.pathId, parents).map(_.typeEx)
-          (fromType, toType) match {
+          // ResolutionPass records both ends since 2026-11-17; before that neither resolved and
+          // this rule never fired. An unresolved end is reported there, so it is skipped here.
+          val fromField = resolvePath[Field](fromRef.pathId, parents)
+          val toField = resolvePath[Field](toRef.pathId, parents)
+          (fromField.map(_.typeEx), toField.map(_.typeEx)) match {
             case (Some(ft), Some(tt)) =>
-              if ft != tt then
+              if !linkedTypesCompatible(ft, fromField, tt, toField, parents) then
                 messages.addError(
                   fromRef.loc,
                   s"Link in ${schema.identify} connects fields with incompatible types: ${fromRef.pathId.format} is ${ft.format} but ${toRef.pathId.format} is ${tt.format}",
@@ -4514,6 +4516,35 @@ case class ValidationPass(
     * uses, not audited here). A `with history` name that is not a data entry can only arrive by
     * JSON or BAST, and is reported rather than silently kept.
     */
+  /** May a link join fields of these two types? A link is a relationship, not an assignment, so
+    * the test is SYMMETRIC: either side assignable to the other. Both sides are compared through
+    * aliases and cardinality (`underlyingTypeExpr`), never with `==`: a TypeExpression's equality
+    * includes its location, so two `String` fields declared on different lines compared unequal --
+    * which the old `ft != tt` would have reported as a mismatch the moment links resolved.
+    *
+    * Two ids must name the SAME processor (resolved in the scope that declared each field, the
+    * `checkAssignable` lesson): `Id(Order)` to `Id(Customer)` is the mismatch this rule is for,
+    * and `isAssignmentCompatible` alone accepts any id for any id.
+    */
+  private def linkedTypesCompatible(
+    from: TypeExpression,
+    fromField: Option[Field],
+    to: TypeExpression,
+    toField: Option[Field],
+    parents: Parents
+  ): Boolean =
+    def idTarget(u: UniqueId, field: Option[Field]): Option[Processor[?]] =
+      val anchored: Parents = field.toSeq.flatMap(symbols.parentsOf)
+      resolvePath[Processor[?]](u.entityPath, anchored)
+        .orElse(resolvePath[Processor[?]](u.entityPath, parents))
+    (underlyingTypeExpr(from), underlyingTypeExpr(to)) match
+      case (fu: UniqueId, tu: UniqueId) =>
+        (idTarget(fu, fromField), idTarget(tu, toField)) match
+          case (Some(a), Some(b)) => a eq b
+          case _                  => true // unresolved: ref integrity reports it, not this rule
+      case (f, t) => f.isAssignmentCompatible(t) || t.isAssignmentCompatible(f)
+  end linkedTypesCompatible
+
   private def checkSchemaKeysAndHistory(schema: Schema, parents: Parents): Unit =
     val storedFields: Seq[Field] = schema.data.values.toSeq.flatMap { tr =>
       resolution.refMap.definitionOf[Type](tr.pathId, parents.head).toSeq.flatMap(t =>
@@ -9826,7 +9857,8 @@ case class ValidationPass(
     declaredIn: Option[Definition],
     parents: Parents,
     loc: At,
-    what: String
+    what: String,
+    mismatchRule: RuleId = RuleId.ValueTypeMismatch
   ): Unit =
     val e = underlyingTypeExpr(expected)
     val a = underlyingTypeExpr(actual)
@@ -9881,7 +9913,7 @@ case class ValidationPass(
             // arguments whose failures happened to be Id-vs-UUID; extending it to `put`/`return`/
             // `require` made it visible immediately. **A wrong id is worse than no id**: it is
             // exactly what a consumer filters and suppresses on.
-            ruleId = Some(RuleId.ValueTypeMismatch)
+            ruleId = Some(mismatchRule)
           )
   end checkAssignable
 
@@ -11097,7 +11129,13 @@ case class ValidationPass(
         validateOverCollection(mv.collection, None, None, "'contains'", parents, lets, elements)
           .foreach { elemType =>
             operandTypeExpr(mv.element, parents, lets, elements).foreach { actual =>
-              checkAssignable(elemType, actual, None, parents, mv.element.loc, "The tested value")
+              // Its OWN rule, not the generic `value-type-mismatch`: `value-membership-type-
+              // mismatch` was defined for exactly this test at B5 and never emitted (ossum.tech,
+              // 2026-11-17), so a consumer filtering on it saw nothing.
+              checkAssignable(
+                elemType, actual, None, parents, mv.element.loc, "The tested value",
+                RuleId.MembershipTypeMismatch
+              )
             }
           }
       case le: LogicalExpression =>
