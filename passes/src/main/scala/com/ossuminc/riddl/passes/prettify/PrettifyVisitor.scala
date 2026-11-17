@@ -8,7 +8,7 @@ package com.ossuminc.riddl.passes.prettify
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{Contents, *}
-import com.ossuminc.riddl.language.parsing.Keyword
+import com.ossuminc.riddl.language.parsing.{Keyword, Punctuation}
 import com.ossuminc.riddl.passes.PassVisitor
 import com.ossuminc.riddl.utils.PlatformContext
 
@@ -110,9 +110,16 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
 
   def closeFunction(function: Function, parents: Parents): Unit =
     state.withCurrent { rfe =>
+      // `???` is a content item that contributes nothing (FunctionParser.functionContent), so a
+      // body of only `requires`/`returns` (and comments) is indistinguishable from one marked
+      // `???` -- write the marker, or `requires … returns … ???` loses it on every round trip.
+      if function.contents.toSeq.forall {
+          case _: Requires | _: Returns => true
+          case c                        => c.isComment
+        }
+      then rfe.addLine(Punctuation.undefinedMark)
       rfe.decr.addIndent("}")
-      rfe.emitMetaData(function.metadata)
-      if function.metadata.isEmpty then rfe.nl
+      rfe.emitLeafMetaData(function.metadata)
     }
   end closeFunction
 
@@ -316,7 +323,7 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
   def doInlet(inlet: Inlet): Unit =
     state.withCurrent { rfe =>
       rfe.addIndent(inlet.format)
-      rfe.emitMetaData(inlet.metadata)
+      rfe.emitLeafMetaData(inlet.metadata)
     }
   end doInlet
 
@@ -342,7 +349,7 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
           val to = if connector.to.nonEmpty then s"to ${connector.to.format}" else "to empty"
           from + to
         }
-        .emitMetaData(connector.metadata)
+        .emitLeafMetaData(connector.metadata)
     }
   end doConnector
 
@@ -350,7 +357,7 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
     state.withCurrent { rfe =>
       rfe
         .addIndent(s"user ${user.id.format} is \"${user.is_a.s}\"")
-        .emitMetaData(user.metadata)
+        .emitLeafMetaData(user.metadata)
     }
   end doUser
 

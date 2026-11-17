@@ -140,6 +140,15 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     this
   end emitMetaData
 
+  /** A one-line LEAF ends its own line. `emitMetaData` ends the line only when there IS a `with { …
+    * }` block, so a metadata-less leaf ending in it left the line open and the next definition (or
+    * the container's `}`) was appended to it -- valid source that reads badly, so nothing caught it.
+    * `invariant`, `version`, `copyright`, `input` and `output` each grew this by hand; use this.
+    */
+  def emitLeafMetaData(meta: Contents[MetaData]): this.type =
+    if meta.isEmpty then nl else emitMetaData(meta)
+  end emitLeafMetaData
+
   def emitComment(comment: Comment): this.type =
     comment match
       case block: InlineComment =>
@@ -284,7 +293,7 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     emitTypeExpression(constant.typeEx)
     add(" = ")
     emitValue(constant.value)
-    emitMetaData(constant.metadata)
+    emitLeafMetaData(constant.metadata)
   end emitConstant
 
   /** A20: render a [[Value]] for actual round-trip SOURCE, as opposed to `.format`'s error-message
