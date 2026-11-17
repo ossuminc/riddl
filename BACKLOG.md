@@ -30,15 +30,29 @@ is worse than no handle**, because it fails exactly when it is being relied on.
 
 ### 5. Post-2.0 — the 3.x line
 
+- **[5.11]** **A `create` argument's NAME is not checked against `on init`'s parameters**
+  (ossum.tech's 2.7.0 audit, 2026-11-17, probed on `../bin/riddlc` 2.7.0). With `on init(code:
+  String)`, `create entity Order(5, "x")` correctly draws `handler-clause-wrong-arity`, but
+  `create entity Order(nope = "6")` draws nothing although no parameter is named `nope`. Named
+  arguments elsewhere (constructors) are checked against the record's fields, so this is the
+  missing half of the same rule. Not yet verified whether a mistyped VALUE for a correctly named
+  parameter is caught. Small: one check beside the arity check, plus a test.
+
 - **[5.10]** **AT 3.0: rename the class `AST.Initiate` to `Create` and drop the alias val**
   (Reid, 2026-11-16). The `initiate` value became `create` in 2.7.0, but the JVM CLASS kept
   the name `Initiate`: renaming it removed `AST$Initiate` from the binary, and MiMa against
   2.6.0 showed a consumer compiled against it would fail at run time. So today
   `type Create = Initiate` and `val Create: Initiate.type = Initiate` (`AST.scala`, beside the
   case class) are the names riddl's code uses. At 3.0, where a binary break is allowed: make
-  `Create` the case class, and REMOVE the `val Create` alias. Whether `Initiate` then survives as
-  a deprecated source alias is the compatibility policy's call (old spellings stay). Do the
-  same for `JsonModel.InitiateValueDto` / `CreateValueDto`. JS already exports both names.
+  `Create` the case class, and REMOVE the `val Create` alias. Do the same for
+  `JsonModel.InitiateValueDto` / `CreateValueDto`. JS already exports both names.
+  **3.0 is also where every deprecation may END** (Reid, 2026-11-17: a deprecation lasts until
+  the next major, for spellings and API alike — CLAUDE.md rule 3). So this item is the 3.0
+  REMOVAL LIST, not just the class rename: list `RuleId.deprecations` at the time, decide per
+  spelling whether to drop it (each dropped one becomes a parse error naming the replacement, or
+  simply unparseable), retire `Initiate`/`InitiateValueDto`, the JSON reader's `"initiate"`, and
+  every `@deprecated` public API member. Rule-id CODES are NOT on the list: a published code keeps
+  its meaning forever, and a removed rule's code goes to `RuleId.retired`.
 
 - **[5.9]** **DEFERRED — duplicate emissions that CONVERGE downstream through different
   outlets** (Reid, 2026-10-16). Case 4 of riddl-generator's "incognito duplicate" task: one
@@ -124,12 +138,11 @@ is worse than no handle**, because it fails exactly when it is being relied on.
 once it ships. Section 5 is where they go; sections 0-4 are 2.0 history and stay
 struck.
 
-**The compatibility rule changed with this line and it constrains every item
-here.** From 3.0 onward, **deprecate and rename freely, but never DELETE the old
-name** (Reid, 2026-08-31). 2.0 was allowed to remove things — it took out
-`Grammar.loadGbnfGrammar*` on the reasoning that an unshipped major is the
-removal window. That window is closed. See CLAUDE.md § Backward Compatibility
-Policy.
+**The compatibility rule constrains every item here.** Within 2.x, deprecate
+and rename freely but never DELETE the old name or break API/ABI; at 3.0 anything
+deprecated may be removed (Reid, 2026-11-17, replacing a 2026-08-31 "never
+delete from 3.0" rule). Removals owed at 3.0 are collected in [5.10]. See
+CLAUDE.md § Backward Compatibility Policy.
 
 - ~~**[5.1]** **Deprecate the `processor` keyword in favour of `streamlet`.**~~ —
   **DONE 2026-08-31.** Both spellings run through ONE parser and build the identical

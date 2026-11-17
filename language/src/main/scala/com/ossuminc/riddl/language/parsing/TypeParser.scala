@@ -43,8 +43,8 @@ private[parsing] trait TypeParser {
     * fail. Consequence: these converge to `Id(entity X)` rather than to the bare `Id(X)`.
     *
     * `Id` itself is NOT deprecated — it is the permanent, canonical form — and neither is the
-    * `UniqueId` AST node. Only this spelling is, and under the 3.0 compatibility rule it keeps
-    * parsing indefinitely.
+    * `UniqueId` AST node. Only this spelling is; it keeps parsing through 2.x and may be removed
+    * in 3.0.
     */
   private def entityReferenceType[u: P]: P[UniqueId] = {
     P(

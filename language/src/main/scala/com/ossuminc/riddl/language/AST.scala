@@ -6477,8 +6477,8 @@ object AST:
     // since this and `RiddlFileEmitter.openDef` are the dual dispatch this repo keeps being bitten
     // by. `effectiveShape.keyword` emitted source/sink/flow -- the spellings 2.0 deprecated -- and
     // showed a shape that may have been DERIVED from arity rather than declared. `processor`, the
-    // previous canonical spelling, is itself deprecated as of 2.0; it goes on parsing forever but
-    // is never EMITTED.
+    // previous canonical spelling, is itself deprecated as of 2.0; it parses through 2.x but is
+    // never EMITTED.
     def format: String =
       Keyword.streamlet + " " + id.format + Declaration.ascription(this)
   }

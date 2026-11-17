@@ -20,7 +20,7 @@ import org.scalatest.TestData
   *
   * It was `initiate`, which named the creation after its second half: CREATION sets aside the
   * instance and gives it an `Id`, and INITIALIZATION is the `on init` clause creation then runs.
-  * `initiate` stays a deprecated spelling forever (the compatibility policy), CONSUMED into the
+  * `initiate` stays a deprecated spelling through 2.x (the compatibility policy), CONSUMED into the
   * same `Create` node so prettify converges and the `--fix` codemod is honest. `Create` is an
   * alias: the JVM class keeps the name `Initiate` so code compiled against 2.6.0 still links.
   */

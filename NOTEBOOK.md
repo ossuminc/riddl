@@ -68,11 +68,33 @@ fixtures, not a task).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-17 — a deprecation lasts until the next major, not forever
+
+Reid's ruling, which ossum.tech's 2.7.0 docs audit brought to light: deprecated spellings
+*"only last until the next major release"*. For API: *"API and binary compatibility must not
+change until the next major release but then anything is fair game."* This REPLACES the
+2026-08-31 "FOREVER from 3.0" rule. `CLAUDE.md` rule 3 is rewritten, eleven comments across
+code, the grammar and tests are corrected, and BACKLOG [5.10] becomes the 3.0 removal list.
+Rule-id CODES are a separate policy and still mean the same thing forever.
+
+**The 2.7.0 release I wrote a day earlier had the old rule baked in.** The notes say
+`initiate` "still parses and always will". That was faithful to `CLAUDE.md` at the time, and
+it shows why the rule had to change before anything else built on it: ossum.tech was about
+to "correct" seven accurate doc sentences that said "slated for removal in 3.0".
+
+**Two rules emitted as deprecations lacked `deprecates = true`** (`type-reference-to-is-id`,
+`opt-deprecated`), so `RuleId.deprecations` silently omitted them. That is the exact failure
+the flag was introduced to prevent, reached by a new road: the flag is derived, but declaring
+it was still manual. `DiagnosticCallSitesHaveRuleIdsTest` now scans every deprecation
+call site and requires the flag. `type-reference-to-is-id` also claimed `autoFixable` while
+having no fix; it now has a computed one (`Id(entity P)`).
+
 ## 2026-11-16 (evening) — `initiate` is `create`; `find` can select values
 
 riddl-generator's task, on Reid's ruling: the value that brings an instance into being is
 `create`. CREATION is instantiation; INITIALIZATION is the `on init` clause it then runs.
-`initiate` parses forever as a deprecation (`value-initiate-keyword`, `--fix`-able), consumed
+`initiate` parses as a deprecation (through 2.x — *"forever"* was written here first, and
+was wrong; see 2026-11-17) (`value-initiate-keyword`, `--fix`-able), consumed
 into the same node. `stmt-initiate-id-unused` keeps its code: published codes never change.
 
 **3.0 CHANGE OWED — BACKLOG [5.10] (Reid asked for this note).** The JVM class is still
@@ -1647,7 +1669,8 @@ does the whole thing.
 small; the fifth reshaped how entity instances are referenced. Before any of them, Reid
 set the constraint they all had to satisfy: **from 3.0 onward a deprecated name is never
 deleted** — rename freely, deprecate freely, but the old spelling keeps working forever.
-That is now `CLAUDE.md` § Backward Compatibility rule 3, and `[5.1]` (deprecate
+*(SUPERSEDED 2026-11-17: Reid ruled a deprecation lasts only until the next major, for
+spellings and API alike. Kept here as history.)* That became `CLAUDE.md` § Backward Compatibility rule 3, and `[5.1]` (deprecate
 `processor` in favour of `streamlet`) is the first item filed under it.
 
 **Every one of the five was BIGGER than the report said it was.** That is the reusable

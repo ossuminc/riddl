@@ -14,7 +14,7 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
 /** The `create` value (renamed from `initiate`, Reid 2026-11-16) on the JSON surface. The writer
-  * says `"value": "create"`; the reader also accepts `"initiate"`, forever, so JSON written before
+  * says `"value": "create"`; the reader also accepts `"initiate"` through 2.x, so JSON written before
   * the rename keeps loading.
   */
 class CreateValueJsonTest extends AnyWordSpec with Matchers {

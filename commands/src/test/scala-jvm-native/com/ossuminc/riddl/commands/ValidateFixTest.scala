@@ -186,6 +186,32 @@ class ValidateFixTest extends AnyWordSpec with Matchers {
       }
     }
 
+    "rewrite a deprecated `reference to` type as `Id(entity …)`" in {
+      // `type-reference-to-is-id` was emitted autoFixable while carrying NO mechanicalFix, so
+      // `--fix` reported "no mechanical fix" and left the file alone (ossum.tech, probing 2.7.0).
+      // All three spellings converge on the form the parser builds: keyword `entity`.
+      val model =
+        """domain D is {
+          |  context C is {
+          |    entity E is { ??? }
+          |    record R is {
+          |      a: reference to entity C.E,
+          |      b: reference to C.E,
+          |      c: reference C.E
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      withModel(model) { (run, read) =>
+        run(ValidateCommand.Options(fix = true, fixRule = Some(RuleId.ReferenceToIsId.code)))
+        val after = read()
+        after mustNot include("reference")
+        after must include("a: Id(entity C.E)")
+        after must include("b: Id(entity C.E)")
+        after must include("c: Id(entity C.E)")
+      }
+    }
+
     "not appear in the constant-replacement map, which cannot carry it" in {
       // The published Map[String, String] is handed to consumers that apply replacements blindly.
       // A computed fix has no constant text, so omitting it is the honest answer rather than

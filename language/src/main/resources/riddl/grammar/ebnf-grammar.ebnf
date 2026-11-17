@@ -164,8 +164,8 @@ alternation = "one" ["of"] "{" alternation_contents "}" ;
    At least one bar is required, so a lone type reference is not an alternation. *)
 infix_alternation = aliased_type_expression {"|" aliased_type_expression}+ ;
 alternation_contents = undefined | [aliased_type_expression {("|" | "or" | ",") aliased_type_expression}] ;
-(* DEPRECATED in 2.0, and it keeps parsing forever -- from 3.0 onward a deprecated
-   spelling is never deleted. This is the same concept as `unique_id_type` above: a
+(* DEPRECATED in 2.0; it keeps parsing through 2.x and may be removed in 3.0 (a
+   deprecation lasts until the next major). This is the same concept as `unique_id_type` above: a
    pointer to an INSTANCE of an entity. Both now build the identical AST node
    (UniqueId), with the keyword recorded as "entity", so a field spelled this way is
    usable as a `tell` address exactly as `Id(entity X)` is. The prettifier emits
@@ -632,7 +632,7 @@ relationship_cardinality = "1:1" | "1:N" | "N:1" | "N:N" ;
 (* Streamlet-related *)
 as_shape = "as" ( "void" | "source" | "sink" | "flow" | "cascade" | "merge" | "fanin" | "split" | "broadcast" | "fanout" | "router" ) ;
 (* `streamlet` is the CANONICAL spelling from 2.0 on; `processor` is the deprecated original *)
-(* and keeps parsing forever, per the 3.0 never-delete rule. Both build the identical AST     *)
+(* and keeps parsing through 2.x; it may be removed in 3.0. Both build the identical AST      *)
 (* node -- which has always been called Streamlet -- and the prettifier emits `streamlet`, so *)
 (* the old spelling converges on the new one. The rule keeps its NAME because `streamlet` is  *)
 (* already taken below by the alternation over all the streamlet forms; a rule name is not a  *)

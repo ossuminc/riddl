@@ -186,7 +186,7 @@ enum RuleId(
   case FigmaFrameDrift extends RuleId("doc-figma-frame-drift")
 
   // ---- opt: options -------------------------------------------------------------------------
-  case OptionDeprecated extends RuleId("opt-deprecated")
+  case OptionDeprecated extends RuleId("opt-deprecated", deprecates = true)
   case UnusedDefinition extends RuleId("use-unused-definition")
   case OnlyUsedInPath extends RuleId("use-only-in-path-identifiers")
 
@@ -204,13 +204,13 @@ enum RuleId(
   // The generic streaming processor is spelled `streamlet` from 2.0 on -- matching the AST node
   // it has always produced, and its siblings (entity, repository, projector, adaptor), each of
   // which names a thing rather than the abstraction. A pure span replacement, so `--fix` handles
-  // it; under the 3.0 rule `processor` goes on parsing indefinitely.
+  // it; `processor` keeps parsing through 2.x and may be removed in 3.0.
   case ProcessorKeyword
       extends RuleId("stream-processor-keyword", mechanicalFix = Some(Fix.Constant("streamlet")), deprecates = true)
   case AbstractType extends RuleId("abstract-type", mechanicalFix = Some(Fix.Constant("Anything")), deprecates = true)
   // The value that brings an instance into being is spelled `create` (Reid, 2026-11-16): creation
   // is instantiation, and INITIALIZATION is the `on init` clause it then runs. A pure span
-  // replacement, so `--fix` handles it; `initiate` goes on parsing indefinitely.
+  // replacement, so `--fix` handles it; `initiate` keeps parsing through 2.x and may be removed in 3.0.
   case InitiateKeyword
       extends RuleId("value-initiate-keyword", mechanicalFix = Some(Fix.Constant("create")), deprecates = true)
   case SingleAlternation extends RuleId("single-alternation", deprecates = true)
@@ -491,7 +491,19 @@ enum RuleId(
   case AddressAmbiguous extends RuleId("msg-address-ambiguous")
   case TargetCrossesBoundary extends RuleId("msg-target-crosses-boundary")
   case CodeNotPortable extends RuleId("stmt-code-not-portable")
-  case ReferenceToIsId extends RuleId("type-reference-to-is-id")
+  // `reference [to] [entity] P` becomes `Id(entity P)` -- the node the parser already builds, with
+  // the keyword `entity` recorded even where the author omitted it. The span is the whole type
+  // expression, so this is a pure span replacement; COMPUTED because it keeps the matched path.
+  case ReferenceToIsId
+      extends RuleId(
+        "type-reference-to-is-id",
+        mechanicalFix = Some(Fix.Computed { m =>
+          val words = m.trim.split("\\s+").toList.drop(1) // `reference`
+          val path = words.dropWhile(w => w == "to" || w == "entity").mkString(" ")
+          s"Id(entity $path)"
+        }),
+        deprecates = true
+      )
   case NoAddressField extends RuleId("msg-no-address-field")
   case ClauseNoParameters extends RuleId("handler-clause-no-parameters")
   case ClauseWrongArity extends RuleId("handler-clause-wrong-arity")

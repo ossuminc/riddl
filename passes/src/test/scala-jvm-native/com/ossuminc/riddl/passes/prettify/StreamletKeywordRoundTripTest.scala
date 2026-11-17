@@ -24,7 +24,7 @@ import org.scalatest.*
   * always produced. The old spelling is CONSUMED rather than tolerated: both build the identical
   * `Streamlet`, so prettify converges and `autoFixable` is honest.
   *
-  * Under the 3.0 never-delete rule `processor` goes on parsing indefinitely. A test that only
+  * `processor` keeps parsing through 2.x (it may be removed in 3.0). A test that only
   * pinned the new spelling would not notice the old one being dropped, which is the failure this
   * suite exists to prevent.
   */
@@ -100,7 +100,7 @@ class StreamletKeywordRoundTripTest extends AbstractValidatingTest {
 
   "the deprecated `processor` keyword" should {
 
-    "still parse -- from 3.0 on a deprecated spelling is never deleted" in { (td: TestData) =>
+    "still parse -- a deprecated spelling lasts until the next major" in { (td: TestData) =>
       streamletOf(parse(model("processor"), "processor"), "S").id.value mustBe "S"
     }
 

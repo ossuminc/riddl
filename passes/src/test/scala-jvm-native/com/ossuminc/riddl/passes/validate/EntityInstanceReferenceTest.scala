@@ -26,7 +26,7 @@ import org.scalatest.TestData
   * a `tell` address despite denoting exactly that. Unifying the node fixes all of them at once.
   *
   * `Id` is NOT deprecated — it is the permanent canonical form. Only the `reference` spelling is,
-  * and it keeps parsing forever under the 3.0 compatibility rule.
+  * and it keeps parsing through 2.x (it may be removed in 3.0).
   */
 class EntityInstanceReferenceTest extends AbstractValidatingTest {
 

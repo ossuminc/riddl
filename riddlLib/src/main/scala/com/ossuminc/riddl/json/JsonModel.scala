@@ -1937,7 +1937,7 @@ object JsonModel:
         AskValueDto(m("query").str, m("processor").str, m("processorKind").str)
       case "self" => SelfValueDto(m.get("field").map(_.str))
       case "system" => SystemValueDto(m.get("field").map(_.str))
-      // `initiate` is the spelling JSON written before 2026-11-16 carries; read it forever.
+      // `initiate` is the spelling JSON written before 2026-11-16 carries; read it through 2.x.
       case "create" | "initiate" =>
         val args = m
           .get("args")

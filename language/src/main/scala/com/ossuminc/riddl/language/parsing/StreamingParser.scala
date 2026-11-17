@@ -192,8 +192,8 @@ private[parsing] trait StreamingParser {
       // loc must be surface-independent (parser/BAST/JSON all use At.empty).
       val shape = keywordToKind(keyword, At.empty)
       // The dedicated shape keywords (source/sink/flow/merge/split/router) are
-      // deprecated in favor of the generic `processor <id> as <shape>` form.
-      // `void` has no `processor` equivalent, so it is not deprecated.
+      // deprecated in favor of the generic `streamlet <id> as <shape>` form.
+      // `void` is not deprecated.
       if keyword != Keyword.void then
         val kwLoc = at(start, start + keyword.length)
         deprecation(
@@ -266,8 +266,8 @@ private[parsing] trait StreamingParser {
     *
     * Two spellings, ONE parser. `streamlet` is canonical from 2.0; `processor` is the deprecated
     * original and is CONSUMED here rather than merely tolerated -- the AST node is identical, so
-    * prettify converges on `streamlet` and `autoFixable` is honest. Under the 3.0 rule the old
-    * spelling never stops parsing.
+    * prettify converges on `streamlet` and `autoFixable` is honest. The old spelling keeps
+    * parsing through 2.x and may be removed in 3.0.
     *
     * The alternation is FACTORED -- one `.!` capture across both keywords, not two `processor`-like
     * branches -- because `Keywords.keyword` ends in a cut, so whichever branch matched first would

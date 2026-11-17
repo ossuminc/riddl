@@ -84,4 +84,34 @@ class DiagnosticCallSitesHaveRuleIdsTest extends AbstractTestingBasis {
       }
     }
   }
+
+  "Every rule emitted as a deprecation" should {
+    "be declared `deprecates = true`, so RuleId.deprecations derives it" in {
+      // `type-reference-to-is-id` and `opt-deprecated` were emitted as deprecations but declared
+      // without the flag, so `RuleId.deprecations` (and `DeprecationCode.all`) omitted both -- the
+      // hand-maintained-list failure the flag exists to prevent, reached by a different road.
+      // Found by ossum.tech's 2.7.0 docs audit, 2026-11-17.
+      val roots = Seq(Paths.get("language/src/main/scala"), root)
+      roots.foreach(r => Files.isDirectory(r) mustBe true)
+      val files = roots.flatMap(r =>
+        Files.walk(r).iterator().asScala.filter(_.toString.endsWith(".scala")).toSeq
+      )
+      val deprecationCall = """(addDeprecation|deprecation)\(""".r
+      val ruleName = """RuleId\.([A-Za-z]+)""".r
+      val emitted = (for
+        file <- files
+        text = Files.readString(file)
+        m <- deprecationCall.findAllMatchIn(text)
+        if m.start == 0 || !(text(m.start - 1).isLetterOrDigit || text(m.start - 1) == '_')
+        lineSoFar = text.substring(text.lastIndexOf('\n', m.start) + 1, m.start).trim
+        if !(lineSoFar.startsWith("*") || lineSoFar.startsWith("//") || lineSoFar.contains("def "))
+        name <- ruleName.findAllMatchIn(callText(text, m.start, m.end)).map(_.group(1))
+      yield name).distinct
+      emitted.size must be > 10 // the scan found the deprecation sites, not nothing
+      val unflagged = emitted.filterNot(n => com.ossuminc.riddl.language.RuleId.valueOf(n).deprecates)
+      withClue(s"emitted as deprecations but not `deprecates = true`: ${unflagged.mkString(", ")}") {
+        unflagged mustBe empty
+      }
+    }
+  }
 }

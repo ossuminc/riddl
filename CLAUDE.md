@@ -19,20 +19,26 @@ incompatible changes** to public APIs:
 1. **No removal of public API.** Retire with `@deprecated(msg, "version")`.
 2. **No breaking signature changes** — no changed parameter or return types, no
    new required parameters. New parameters must have defaults.
-3. **Deprecation is FOREVER from 3.0 onward — nothing is ever deleted**
-   (Reid, 2026-08-31). Through 1.x the rule allowed removal in the next major,
-   and 2.0.0 exercised it (`Grammar.loadGbnfGrammar*`) on the reasoning that an
-   unshipped major IS the removal window (*"that's the deal with RCs, things
-   could disappear"*). **That window is now CLOSED**: rename freely, deprecate
-   freely, but the OLD SPELLING STAYS. Stricter than semver allows,
-   deliberately — RIDDL models are authored artifacts that outlive the tool, and
-   a modeller who wrote valid RIDDL should never have to rewrite it to move
-   forward. A 3.0 that breaks a consumer's model or build is not one we ship.
-4. **Additive changes only.** When in doubt, **add, don't change**.
+3. **A deprecation lasts until the NEXT MAJOR release, and no longer** (Reid,
+   2026-11-17: *"Deprecated spellings do not propagate forever, they only last
+   until the next major release"*; and for API: *"API and binary compatibility
+   must not change until the next major release but then anything is fair game.
+   Users must adapt for using a new major release."*). Within a major, neither a
+   language spelling nor public API/ABI may break — MiMa against `V.previous`
+   enforces the binary half. At the next major, anything deprecated may be
+   removed, and users adapt. 2.0.0 exercised this (`Grammar.loadGbnfGrammar*`).
+   **This REPLACES a 2026-08-31 "deprecation is FOREVER from 3.0" rule** — do
+   not restore it; text saying a spelling "parses forever" or "indefinitely" is
+   stale. A deprecation message should name the major it goes away in ("will be
+   removed in 3.0"). Removals owed at 3.0 are collected in BACKLOG [5.10].
+   **Separate and unchanged: a published rule-id CODE means the same thing
+   forever** — that is about a code's identity, not how long a spelling lives.
+4. **Additive changes only** within a major. When in doubt, **add, don't
+   change**.
 
 **What this means for the LANGUAGE**, since the above reads as an API rule: a
-retired keyword or spelling must still PARSE, still produce the same AST, and
-emit a `Deprecation` message naming its replacement. Worked examples:
+retired keyword or spelling must still PARSE until the next major, still produce
+the same AST, and emit a `Deprecation` message naming its replacement. Worked examples:
 `Abstract`→`Anything`, `option persistent`→the connector intention, the shape
 keywords→`as <shape>`, `state X is <record>`→`of`, `prompt`→`do`. Several are
 CONSUMED by the parser into the new form, which is what makes prettify converge
@@ -44,7 +50,7 @@ who wrote valid RIDDL. It does not protect a spelling that broke a rule the
 language always had. The worked example is `empty`'s optional *expression*
 ascription (`empty T?`). It contradicted the founding rule that every value is
 typed by a type NAME, so it was approved by mistake. That makes it an Error
-naming the fix, not a deprecation kept forever. Do not "soften" it back. The
+naming the fix, not a deprecation kept until 3.0. Do not "soften" it back. The
 test is whether the spelling contradicted a rule in force when it was admitted,
 not whether it is merely being replaced.
 

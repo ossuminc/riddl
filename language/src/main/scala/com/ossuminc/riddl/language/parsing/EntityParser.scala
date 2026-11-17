@@ -51,7 +51,7 @@ private[parsing] trait EntityParser {
           loc,
           s"Use `of` to introduce a state's record reference: `state ${id.value} of " +
             s"${typRef.format} is { … }`. Introducing it with `is` (or with nothing) is deprecated " +
-            "and will be removed in a future major version, because `is` introduces a definition's " +
+            "and will be removed in 3.0, because `is` introduces a definition's " +
             "BODY everywhere else in the language.",
           code = Option(RuleId.StateIsRecord),
           autoFixable = true
