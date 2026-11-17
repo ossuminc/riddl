@@ -68,6 +68,44 @@ fixtures, not a task).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-17 (evening) — three ossum.tech reports: run-on prettify, a domain's impossible fix, unchecked processor keywords
+
+All three came from ossum.tech documenting 2.7.0, and all three were confirmed on the released
+binary before any change.
+
+**Prettify** (`7572f83fc`). Four one-line leaves (`user`, `constant`, `inlet`, `connector`) ended
+in `emitMetaData`, which ends the line only when a `with` block exists, so with no metadata the
+next definition — or the container's `}` — landed on the same line. Five other leaves had been
+fixed one at a time over the months; the shape now has one helper, `emitLeafMetaData`, and the
+test checks by shape (no run of 3+ blanks between tokens on any line), not by a list of leaves.
+A function's `???` is a content item that contributes nothing, so `requires … returns … ???` lost
+it; prettify writes it back whenever the body holds only clauses. Lossless: the AST was identical.
+
+**`option external` on a Domain** (`bdb7ae3ed`) named the context intention prefix, which a domain
+cannot take. It now names the prefix on each of the domain's contexts. Added beside
+`DeprecatedOptions.registry` (`replacementByParent`/`forParent`), not as a field of the public
+`Deprecation` case class, so MiMa stays clean.
+
+**Processor-reference keywords** (`244bb0706`). Callers resolve a `processor_ref` as a generic
+Processor, so the keyword was compared with nothing — `to repository F` naming a streamlet was
+clean. `checkRef` now applies `ref-wrong-keyword` to every `ProcessorRef` (exhaustive, no wildcard)
+and to a `GroupRef`. **Ruled here, for the epic position**: `flow X` in an interaction endpoint is
+a GroupRef first, and may name a group OR a streamlet; anything else is the error. Two defects
+surfaced by the new check, both of the "silent" family:
+- `checkTellAddressing` re-ran `checkRef` on a tell target, so every diagnostic on a tell target
+  had been reported TWICE. It now resolves without reporting. Visible only because the new check
+  was the first whose test counted exactly one.
+- A `SendMessageInteraction`'s endpoints were checked under `parents.head`, where interaction refs
+  are never keyed (the `ArbitraryInteraction` arm's comment already said so), so a qualified path
+  never resolved and every check on those endpoints did nothing. Keyed under the UseCase now.
+
+Corpus census over 191 entry points: no new findings. Cold-cache run: every suite green except
+`RiddlModelsRoundTripTest` on reactive-bbq, the two `value-ref-not-a-value` lines riddl-models has
+not yet fixed (its task is still pending there).
+
+Still open from the same check-tasks pass: riddl-models'
+`2026-11-17-a-clause-no-connector-can-feed-is-silent.md`, not started.
+
 ## 2026-11-17 (later) — saga steps see `requires`; a value reference must name a value
 
 Two synapify tasks, both about where a value reference lands.
