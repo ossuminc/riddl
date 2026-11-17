@@ -435,3 +435,5 @@ saga-step-uncompensated
 saga-step-too-many-fail-points
 value-initiate-keyword
 value-ref-not-a-value
+msg-clause-undeliverable
+stream-outlet-never-sent

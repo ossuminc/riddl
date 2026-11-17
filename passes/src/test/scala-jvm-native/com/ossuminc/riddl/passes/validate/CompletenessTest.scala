@@ -1272,11 +1272,14 @@ class CompletenessTest extends AbstractValidatingTest {
           |    event Evt is { data: String }
           |    result DataResult is { data: String }
           |    query GetData replies result D.C.DataResult is { id: C.EId }
+          |    // 2026-11-17: the inlet admits the query too. `ein` admitted only `Cmd`, so the `on
+          |    // query` clause below could never be delivered (`msg-clause-undeliverable`).
+          |    type Request is one of { C.Cmd or C.GetData }
           |
-          |    source Ingress is { outlet out is type Cmd }
+          |    source Ingress is { outlet out is type Request }
           |
           |    entity E is {
-          |      inlet ein is type Cmd
+          |      inlet ein is type Request
           |      outlet eout is type Evt
           |      record Fields is { data: String }
           |      state Main of record E.Fields

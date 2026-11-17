@@ -286,6 +286,9 @@ enum RuleId(
   // Reid, 2026-10-21: a connector path joins sender and target, but none CARRIES the told type --
   // no inlet on the way admits it, or nothing on the way passes it on. Undeliverable as modelled.
   case TellNoRouteForType extends RuleId("msg-tell-no-route-for-type")
+  // riddl-models, 2026-11-17: an `on X` clause nothing can deliver X to -- the receiving end of
+  // the question `msg-tell-no-route-for-type` asks from the sending end.
+  case ClauseUndeliverable extends RuleId("msg-clause-undeliverable")
   case CommandNoFields extends RuleId("msg-command-no-fields")
   case EventNeverEmitted extends RuleId("msg-event-never-emitted")
   case YieldUndeclared extends RuleId("msg-yield-undeclared")
@@ -295,6 +298,8 @@ enum RuleId(
 
   // ---- more stream --------------------------------------------------------------------------
   case InletNotReceived extends RuleId("stream-inlet-not-received")
+  // riddl-models, 2026-11-17: an outlet with a connector that its owner never transmits on.
+  case OutletNeverSent extends RuleId("stream-outlet-never-sent")
   case PortletTypeMismatch extends RuleId("stream-portlet-type-mismatch")
   case ConflictingIntentions extends RuleId("stream-conflicting-intentions")
   case ConnectorTypeMismatch extends RuleId("stream-connector-type-mismatch")

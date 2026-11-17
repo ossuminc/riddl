@@ -172,6 +172,9 @@ case class ValidationPass(
       checkAskReachability()
       checkTellDeliverability()
       checkInletsAreReceived(root)
+      val delivered = deliveries(root)
+      checkClausesAreDeliverable(delivered)
+      checkConnectedOutletsAreSent(delivered)
       checkEventSourcingAdvisories(root)
       // MUST precede checkCompletenessPostProcess, which asks whether each event is emitted.
       emittedEventTypes = emittedMessageTypes(root)
@@ -9487,6 +9490,248 @@ case class ValidationPass(
       }
     }
   end checkMessageLoops
+
+  /** What a model DELIVERS, read from the sending end: the two completeness rules riddl-models
+    * asked for on 2026-11-17, after reactive-bbq twice lost the only `send` feeding a boundary
+    * clause and validated clean both times.
+    *
+    * A load is `Option[Type]`: `None` is a transmission whose operand type cannot be determined,
+    * and is treated as possibly carrying ANYTHING -- the conservative reading, since both rules
+    * report an ABSENCE.
+    *
+    * @param onOutlet
+    *   what each outlet's owner puts on it: `send`/`forward` naming the outlet, and every `yield`
+    *   or `reply` on each of the owner's outlets that admits it (a yield names no outlet)
+    * @param direct
+    *   what reaches a processor without riding one of the model's connectors as written: `tell`,
+    *   `ask`, `forward` to a processor, the deprecated `send ... to inlet`, an asked query's
+    *   `replies` back to its asker, and a UI `input`'s type to its application context
+    * @param riding
+    *   per sender, the types its `tell`/`ask`/`forward`-to-processor transmit. Those travel on
+    *   "the outlet connected to the target's inlet" (A6) without naming it, so an outlet admitting
+    *   one is in use
+    * @param opaque
+    *   senders no rule may reason about: no clauses, a `???` body, predefined, an external
+    *   context, or one whose `send` names a portlet that does not resolve
+    */
+  private case class Deliveries(
+    onOutlet: Map[ByIdentity[Outlet], Seq[Option[Type]]],
+    direct: Map[ByIdentity[Processor[?]], Seq[Option[Type]]],
+    riding: Map[ByIdentity[Processor[?]], Seq[Option[Type]]],
+    opaque: scala.collection.immutable.Set[ByIdentity[Processor[?]]]
+  )
+
+  /** Can a message of `load` type be one of `t`? Either may be an alternation, so the question is
+    * whether their member sets overlap; an undetermined load may be anything.
+    */
+  private def mayCarry(load: Option[Type], t: Type): Boolean = load match
+    case None => true
+    case Some(x) =>
+      typeMembers(x).exists(m => typeAdmits(t, m)) || typeMembers(t).exists(m => typeAdmits(x, m))
+
+  private def isOpaqueProcessor(p: Processor[?]): Boolean =
+    p.isEmpty || isPredefined(p) || handlerClausesOf(p).isEmpty || (p match
+      case c: Context => isExternalContext(c)
+      case _          => false)
+
+  private def deliveries(root: PassRoot): Deliveries =
+    val onOutlet = mutable.Map.empty[ByIdentity[Outlet], mutable.ListBuffer[Option[Type]]]
+    val direct = mutable.Map.empty[ByIdentity[Processor[?]], mutable.ListBuffer[Option[Type]]]
+    val riding = mutable.Map.empty[ByIdentity[Processor[?]], mutable.ListBuffer[Option[Type]]]
+    val opaque = mutable.Set.empty[ByIdentity[Processor[?]]]
+    def load(o: Outlet, t: Option[Type]): Unit =
+      onOutlet.getOrElseUpdate(ByIdentity(o), mutable.ListBuffer.empty) += t
+    def deliver(p: Processor[?], t: Option[Type]): Unit =
+      direct.getOrElseUpdate(ByIdentity[Processor[?]](p), mutable.ListBuffer.empty) += t
+    def ride(p: Processor[?], t: Option[Type]): Unit =
+      riding.getOrElseUpdate(ByIdentity[Processor[?]](p), mutable.ListBuffer.empty) += t
+    def outletType(o: Outlet): Option[Type] = resolution.refMap.definitionOf[Type](o.type_.pathId)
+    def repliesOf(query: Type): Option[Type] = query.typEx match
+      case auc: AggregateUseCaseTypeExpression =>
+        auc.yields.flatMap(r => resolution.refMap.definitionOf[Type](r.pathId))
+      case _ => None
+
+    processors.foreach { p =>
+      if isOpaqueProcessor(p) then opaque += ByIdentity[Processor[?]](p)
+      handlerClausesOf(p).foreach { clause =>
+        val clauseParents: Parents = clause +: symbols.parentsOf(clause)
+        val handled: Option[Type] = clause match
+          case omc: OnMessageLikeClause if omc.msg.nonEmpty =>
+            resolution.refMap.definitionOf[Type](omc.msg.pathId)
+          case _ => None
+        def viaPortlet(ref: PortletRef[?], t: Option[Type]): Unit =
+          resolution.refMap
+            .definitionOf[Portlet](ref.pathId, clause)
+            .orElse(resolution.refMap.definitionOf[Portlet](ref.pathId)) match
+            case Some(o: Outlet) => load(o, t)
+            case Some(i: Inlet) =>
+              symbols.parentsOf(i).collectFirst { case q: Processor[?] => q }.foreach(deliver(_, t))
+            case _ => opaque += ByIdentity[Processor[?]](p) // unresolved: reported elsewhere
+        def onOwnOutlets(t: Option[Type]): Unit =
+          p.outlets.foreach { o =>
+            if outletType(o).forall(ot => mayCarry(t, ot)) then load(o, t)
+          }
+        walkStatements(clause.contents) {
+          case s: SendStatement => viaPortlet(s.portlet, clauseOperandType(s.msg, clause))
+          case s: ForwardStatement =>
+            val t = clauseOperandType(s.msg, clause).orElse(handled)
+            s.target match
+              case pr: PortletRef[?] => viaPortlet(pr, t)
+              case pr: ProcessorRef[?] =>
+                ride(p, t)
+                TellTarget.processorOf(pr, clauseParents, resolution.refMap, symbols).foreach(deliver(_, t))
+          case s: YieldStatement =>
+            // A yielded event is FOLDED by the processor that yields it (an entity's own `on event`
+            // clause), as well as published on its outlets.
+            val t = clauseOperandType(s.msg, clause)
+            deliver(p, t)
+            onOwnOutlets(t)
+          case s: ReplyStatement => onOwnOutlets(clauseOperandType(s.msg, clause))
+          case _                 => ()
+        }
+      }
+    }
+    // Tells and asks are collected wherever they occur (saga steps included), with their target.
+    collectedTells.foreach { case (ts, target, sender) =>
+      val t = tellOperandTypes.get(ByIdentity[Statement](ts))
+      deliver(target, t)
+      sender.foreach(ride(_, t))
+    }
+    collectedAsks.foreach { case (ask, target, asker) =>
+      val q = resolution.refMap.definitionOf[Type](ask.query.pathId)
+      deliver(target, q)
+      asker.foreach { a =>
+        ride(a, q)
+        q.flatMap(repliesOf).foreach(r => deliver(a, Some(r)))
+      }
+    }
+    // A UI `input` is where a user's message ENTERS: its type reaches the enclosing context, and
+    // leaves on that context's outlets with no `send` written anywhere -- an application context
+    // originates its commands this way (reactive-bbq's `RestaurantApp` has eight such outlets).
+    Finder(root.contents).recursiveFindByType[Input].foreach { in =>
+      val t = resolution.refMap.definitionOf[Type](in.takeIn.pathId)
+      symbols.parentsOf(in).collectFirst { case c: Context => c }.foreach { c =>
+        deliver(c, t)
+        c.outlets.foreach { o =>
+          if outletType(o).forall(ot => mayCarry(t, ot)) then load(o, t)
+        }
+      }
+    }
+    Deliveries(
+      onOutlet.map((k, v) => k -> v.toSeq).toMap,
+      direct.map((k, v) => k -> v.toSeq).toMap,
+      riding.map((k, v) => k -> v.toSeq).toMap,
+      opaque.toSet
+    )
+  end deliveries
+
+  /** `msg-clause-undeliverable` (riddl-models, 2026-11-17): an `on X` clause nothing can deliver
+    * X to. The receiving end of the question `msg-tell-no-route-for-type` asks from the sending
+    * end. X reaches processor Q only through Q's own inlets (CM §17) or a direct delivery; this
+    * reports a clause where every inlet admitting X is fed by connectors whose senders are all
+    * known and none puts X on the outlet, and no `tell`/`ask`/`forward` delivers X.
+    *
+    * It ABSTAINS rather than guess: an inlet admitting X with no connector at all
+    * (`stream-portlet-unconnected` reports that), an opaque sender upstream, or an operand whose
+    * type is undetermined all count as "might deliver". Exempt as always: a `???` clause or
+    * processor, predefined definitions, and external contexts, which the model does not implement.
+    */
+  private def checkClausesAreDeliverable(d: Deliveries): Unit =
+    val Deliveries(onOutlet, direct, _, opaque) = d
+    // Which outlets feed each inlet, through the declared connectors.
+    val feeders = mutable.Map.empty[ByIdentity[Inlet], mutable.ListBuffer[Outlet]]
+    connectors.filterNot(_.isEmpty).foreach { connector =>
+      val connParents = symbols.parentsOf(connector)
+      for
+        fromEnd <- connectorFrom(connector, connParents)
+        outlet <- Some(fromEnd.portlet).collect { case o: Outlet => o }
+        toEnd <- connectorTo(connector, connParents)
+        inlet <- Some(toEnd.portlet).collect { case i: Inlet => i }
+      do feeders.getOrElseUpdate(ByIdentity(inlet), mutable.ListBuffer.empty) += outlet
+    }
+    def ownerOf(o: Outlet): Option[Processor[?]] =
+      symbols.parentsOf(o).collectFirst { case p: Processor[?] => p }
+
+    // A processor declaring NO dataflow inlet is skipped: `stream-processor-no-inlet` /
+    // `entity-no-inlet` already reports "handles X but declares no inlet", and [1.25]'s rule is
+    // that every other rule abstains on the side a missing port leaves unreadable.
+    processors.filterNot(q => isOpaqueProcessor(q) || q.dataflowInlets.isEmpty).foreach { q =>
+      handlerClausesOf(q).foreach {
+        case omc: OnMessageLikeClause if omc.msg.nonEmpty && omc.contents.nonEmpty =>
+          resolution.refMap.definitionOf[Type](omc.msg.pathId).foreach { x =>
+            val directly = direct.getOrElse(ByIdentity[Processor[?]](q), Seq.empty).exists(mayCarry(_, x))
+            val admitting = q.dataflowInlets.filter { i =>
+              resolution.refMap.definitionOf[Type](i.type_.pathId).forall(it => mayCarry(Some(it), x))
+            }
+            val viaInlets = admitting.exists { i =>
+              feeders.get(ByIdentity(i)) match
+                case None => true // unconnected: `stream-portlet-unconnected`'s report, not this one's
+                case Some(outs) =>
+                  outs.exists { o =>
+                    ownerOf(o).forall(p => opaque.contains(ByIdentity[Processor[?]](p))) ||
+                    onOutlet.getOrElse(ByIdentity(o), Seq.empty).exists(mayCarry(_, x))
+                  }
+            }
+            if !directly && !viaInlets then
+              val why =
+                if admitting.isEmpty then s"no inlet of ${q.identify} admits it"
+                else
+                  s"no processor connected to ${admitting.map(_.identify).mkString(", ")} " +
+                    s"transmits it on the outlet that feeds it"
+              messages.addCompleteness(
+                omc.errorLoc,
+                s"${omc.identify} of ${q.identify} handles ${x.identify}, but nothing can deliver " +
+                  s"one: $why, and no 'tell', 'ask' or 'forward' sends it to ${q.identify}",
+                suggestion = s"Have the processor upstream 'send' ${x.identify} on the outlet " +
+                  s"connected to ${q.identify}, connect an outlet that carries it, or remove the " +
+                  "clause if it is no longer needed.",
+                ruleId = Some(RuleId.ClauseUndeliverable)
+              )
+            end if
+          }
+        case _ => () // on other/init/term/activate/passivate/quiescence, or a `???` clause
+      }
+    }
+  end checkClausesAreDeliverable
+
+  /** `stream-outlet-never-sent` (riddl-models, 2026-11-17): an outlet with a connector that its
+    * owner never transmits on. Narrower than [[checkClausesAreDeliverable]] and the one riddl-
+    * models' second regression tripped: the channel is declared and wired, and nothing uses it.
+    *
+    * "Transmits on" counts a `send`/`forward` naming it, a `yield`/`reply` it admits, and a
+    * `tell`/`ask`/`forward`-to-processor whose type it admits (those ride the connected outlet
+    * without naming it). Exempt: an opaque owner, a `???` body, predefined definitions.
+    */
+  private def checkConnectedOutletsAreSent(d: Deliveries): Unit =
+    val Deliveries(onOutlet, _, riding, opaque) = d
+    val connected = mutable.LinkedHashMap.empty[ByIdentity[Outlet], Outlet]
+    connectors.filterNot(_.isEmpty).foreach { connector =>
+      connectorFrom(connector, symbols.parentsOf(connector)).foreach { end =>
+        end.portlet match
+          case o: Outlet => connected(ByIdentity(o)) = o
+          case _         => ()
+      }
+    }
+    connected.values.toSeq.sortBy(_.loc.offset).foreach { o =>
+      symbols.parentsOf(o).collectFirst { case p: Processor[?] => p }.foreach { p =>
+        if !opaque.contains(ByIdentity[Processor[?]](p)) && !isPredefined(o) then
+          val ot = resolution.refMap.definitionOf[Type](o.type_.pathId)
+          val used = onOutlet.contains(ByIdentity(o)) ||
+            riding.getOrElse(ByIdentity[Processor[?]](p), Seq.empty)
+              .exists(t => ot.forall(mayCarry(t, _)))
+          if !used then
+            messages.addCompleteness(
+              o.errorLoc,
+              s"${o.identify} of ${p.identify} is connected, but ${p.identify} never transmits on " +
+                "it, so nothing ever travels its connectors",
+              suggestion = s"Add the 'send ... to outlet ${o.id.value}' that ${p.identify} should " +
+                "make, or remove the outlet and its connectors.",
+              ruleId = Some(RuleId.OutletNeverSent)
+            )
+          end if
+      }
+    }
+  end checkConnectedOutletsAreSent
 
   private def validateAsk(ask: Ask, parents: Parents): Unit =
     // 1. The target must resolve, and it must be a query. The ref TYPE makes the kind structural
