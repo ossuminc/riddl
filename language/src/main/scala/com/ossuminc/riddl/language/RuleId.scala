@@ -350,8 +350,16 @@ enum RuleId(
   case MultipleInitialStates extends RuleId("entity-multiple-initial-states")
   case EntityMultipleInitialHandlers extends RuleId("entity-multiple-initial-handlers")
   case FsmSingleState extends RuleId("entity-fsm-single-state")
+  // NOT EMITTED since 2.8.0. Both asked for an `on init` in EVERY state, but only the initial state's
+  // ever ran, so they demanded dead code. Kept as cases (a published code means the same thing
+  // forever, and the enum is public API); the per-entity rules below replace them.
   case StateNoInit extends RuleId("entity-state-no-init")
   case StateInitSetsNothing extends RuleId("entity-state-init-sets-nothing")
+  // 2.8.0 (Reid, 2026-11-17): `on init` is CREATION, once per entity, and it morphs into the state
+  // the entity starts in. There is no initial state. All three keep the old meaning until 3.0.
+  case InitialStateMarker extends RuleId("entity-initial-state-marker", deprecates = true)
+  case InitInState extends RuleId("entity-init-in-state", deprecates = true)
+  case InitNoMorph extends RuleId("entity-init-no-morph", deprecates = true)
   case EntityNoHandlers extends RuleId("entity-no-handlers")
   case EntityNoQueryClause extends RuleId("entity-no-query-clause")
   // ONE rule, TWO spellings, deliberately ([1.25], 2026-09-11). "Handles messages but declares no

@@ -36,6 +36,9 @@ class SagaValidatorTest extends AbstractValidatingTest {
        |    record QState is { total: Integer }
        |    entity e is { sink tank is { inlet inn is command Go } }
        |    entity q is {
+       |      handler Life is {
+       |        on init is { morph entity d.c.q to state d.c.q.S with record d.c.QState(total = 0) }
+       |      }
        |      state S of record d.c.QState is {
        |        handler H is { on query d.c.Ask is { reply result d.c.Answer } }
        |      }

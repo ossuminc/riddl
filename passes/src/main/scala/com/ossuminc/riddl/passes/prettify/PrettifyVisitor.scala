@@ -400,8 +400,15 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
 
   def openState(riddl_state: State, parents: Parents): Unit =
     state.withCurrent { rfe =>
-      // Shared with `State.format` and `openDef` -- one implementation of the declaration.
-      val prefix = Declaration.prefix(riddl_state)
+      // Shared with `State.format` and `openDef` -- one implementation of the declaration -- EXCEPT
+      // where the parser would re-derive `initial` by itself: the entity's first direct state, when
+      // no `on init` morphs. Writing it there would turn every multi-state entity's round trip into
+      // the `initial state` marker deprecated in 2.8.0, while omitting it recovers the same AST.
+      val redundantInitial = riddl_state.isInitial && parents.collectFirst { case e: Entity => e }
+        .exists { e =>
+          !e.initMorphs && e.contents.toSeq.collectFirst { case s: State => s }.exists(_ eq riddl_state)
+        }
+      val prefix = if redundantInitial then "" else Declaration.prefix(riddl_state)
       if riddl_state.contents.isEmpty then
         rfe.addLine(
           s"$prefix${keyword(riddl_state)} ${riddl_state.id.format} of ${riddl_state.typ.format}"

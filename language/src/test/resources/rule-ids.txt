@@ -437,3 +437,6 @@ value-initiate-keyword
 value-ref-not-a-value
 msg-clause-undeliverable
 stream-outlet-never-sent
+entity-initial-state-marker
+entity-init-in-state
+entity-init-no-morph

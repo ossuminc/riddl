@@ -4754,7 +4754,10 @@ case class ValidationPass(
         walkStatements(clause.contents) {
           case m: MorphStatement =>
             entityTargetOf(m.entity.pathId, parents).foreach { target =>
-              if statesOf(target) < 2 then
+              // A `morph` in this entity's own `on init` is not a TRANSITION but creation choosing
+              // where the entity starts (2.8.0), so a single-state entity morphs into its only state.
+              val creating = clause.isInstanceOf[OnInitializationClause] && (target eq entity)
+              if statesOf(target) < 2 && !creating then
                 messages.addError(
                   m.loc,
                   s"'morph' cannot move ${target.identify}: it declares " +
@@ -4904,38 +4907,50 @@ case class ValidationPass(
         )
       )
     }
-    // Completeness 4a: each state should have on-init with set statement.
-    // NOT for an event-sourced entity: R3 forbids `set` outside an `on event` clause, because
-    // initial state must come from replaying an event like any other state change. Asking for a
-    // `set` in `on init` there would demand exactly what checkEventSourcing rejects.
-    if entity.states.nonEmpty && !entity.isEmpty && !entity.isEventSourced then
+    // 2.8.0 (Reid, 2026-11-17): `on init` is CREATION. It runs once, at `create`, it belongs to the
+    // ENTITY rather than to any state, and it `morph`s into the state the entity starts in, chosen
+    // from its arguments. There is no initial state, so declaration order means nothing. These
+    // REPLACE the old per-state 4a rules (`entity-state-no-init`, `entity-state-init-sets-nothing`),
+    // which asked for an `on init` in EVERY state although only the initial state's ever ran. Both
+    // forms below were legal 2.x, so they are Deprecations that keep their meaning until 3.0. A
+    // stateless entity has nothing to morph into and is exempt. Event-sourced entities are NOT
+    // exempt: the `on init` invocation is the first journal event (see checkEventSourcing).
+    if entity.nonEmpty then
       entity.states.foreach { state =>
-        val allHandlers = state.handlers ++ entity.handlers
-        val onInits = allHandlers.flatMap(_.clauses.collect { case oic: OnInitializationClause =>
-          oic
-        })
-        if onInits.isEmpty then
-          messages.addCompleteness(
-            state.errorLoc,
-            s"${state.identify} in ${entity.identify} has no 'on init' clause to initialize its state",
-            suggestion =
-              s"Add an 'on init' clause to a handler of ${state.identify} to initialize its fields.",
-            ruleId = Some(RuleId.StateNoInit)
-          )
-        else
-          val hasSet = onInits.exists { oic =>
-            val finder = Finder(oic.contents)
-            finder.recursiveFindByType[SetStatement].nonEmpty
-          }
-          if !hasSet then
-            messages.addCompleteness(
-              state.errorLoc,
-              s"${state.identify} in ${entity.identify} has an 'on init' clause but no 'set' statement to initialize state values",
-              suggestion =
-                "Add 'set' statements in the 'on init' clause to initialize the state's fields.",
-              ruleId = Some(RuleId.StateInitSetsNothing)
+        state.handlers.flatMap(_.clauses).foreach {
+          case oic: OnInitializationClause =>
+            messages.addDeprecation(
+              oic.loc,
+              s"'on init' in ${state.identify} of ${entity.identify} is deprecated and will be " +
+                "removed in 3.0: 'on init' is the entity's creation clause and belongs to the " +
+                (if state.isInitial then "entity, not to a state"
+                 else "entity, not to a state; here it never runs, since only the initial state's did"),
+              suggestion = s"Move it to an entity-level handler of ${entity.identify}, and 'morph' " +
+                "into the state the entity starts in. A per-state action belongs in an 'on entry' " +
+                "clause, which runs when a morph enters that state.",
+              ruleId = Some(RuleId.InitInState)
             )
+          case _ => ()
+        }
       }
+      if entity.states.nonEmpty && !entity.initMorphs then
+        val starts = entity.states.find(_.isInitial).orElse(entity.states.headOption)
+        val why = starts.map { s =>
+          s"so it starts in ${s.identify} because that state " +
+            (if entity.contents.toSeq.collectFirst { case st: State => st }.exists(_ eq s) then
+               "is declared first"
+             else "is marked 'initial'")
+        }.getOrElse("")
+        messages.addDeprecation(
+          entity.errorLoc,
+          s"${entity.identify} has states but no 'on init' that morphs into one, $why; choosing a " +
+            "starting state by declaration is deprecated and will be removed in 3.0",
+          suggestion = s"Give ${entity.identify} an entity-level 'on init' that 'morph's into the " +
+            "state it starts in, chosen from the creation arguments.",
+          ruleId = Some(RuleId.InitNoMorph)
+        )
+      end if
+    end if
     // Completeness 4f: entity with no handlers at all
     if entity.nonEmpty && entity.handlers.isEmpty && entity.states.forall(_.handlers.isEmpty) then
       messages.addCompleteness(
@@ -5209,12 +5224,16 @@ case class ValidationPass(
       }
     }
 
-    // R3 + R4. A mutation is legal only while applying one of the entity's OWN events.
+    // R3 + R4. A mutation is legal only while applying one of the entity's OWN events -- or in its
+    // `on init` (Reid, 2026-11-17): the `on init` invocation, with its arguments, IS the instance's
+    // first journal entry, and replay re-runs it exactly as it re-runs a fold, so a `set`/`morph`
+    // there is reproduced like any other.
     allClauses.foreach { clause =>
-      val ownEventClause = clause match
-        case oec: OnEventClause => isDeclaredInEntity(oec.msg.pathId, entity)
-        case _                  => false
-      if !ownEventClause then
+      val replayable = clause match
+        case oec: OnEventClause          => isDeclaredInEntity(oec.msg.pathId, entity)
+        case _: OnInitializationClause   => true
+        case _                           => false
+      if !replayable then
         val why = clause match
           case _: OnEventClause =>
             "an event declared outside it, which must be turned into one of its own events first"
@@ -5244,8 +5263,16 @@ case class ValidationPass(
     // reason `now` was admitted at all (`SystemValue` scaladoc): read it in the command handler and
     // CARRY it on the yielded event. Folds of FOREIGN events are excluded -- R3/R4 already forbid
     // them to mutate, so nothing they compute reaches replayed state except through an own event.
-    allClauses.foreach {
+    // `on init` too (2026-11-17): it is replayed as the first journal entry, so a creation
+    // timestamp must arrive as one of its PARAMETERS, supplied by whoever creates the instance.
+    def replayed(c: OnClause): Option[(OnClause, String)] = c match
       case oec: OnEventClause if isDeclaredInEntity(oec.msg.pathId, entity) =>
+        Some(oec -> s"carry it as a field of '${oec.msg.format}', and read that field here.")
+      case oic: OnInitializationClause =>
+        Some(oic -> "pass it to 'create' as an 'on init' parameter, and read the parameter here.")
+      case _ => None
+    allClauses.flatMap(replayed).foreach {
+      case (oec, carry) =>
         walkStatements(oec.contents) { stmt =>
           statementValues(stmt).flatMap(systemValuesIn).foreach { sv =>
             sv.field.map(_.value).filter(nonReplayableSystemMembers.contains).foreach { member =>
@@ -5259,14 +5286,12 @@ case class ValidationPass(
                 sv.loc,
                 s"${entity.identify} is event-sourced, so 'system.$member' may not be read in " +
                   s"${oec.identify}: the clause runs again on every replay and " + consequence,
-                suggestion = s"Read 'system.$member' in the command handler, carry it as a field of " +
-                  s"'${oec.msg.format}', and read that field here.",
+                suggestion = s"Read 'system.$member' where the message originates and " + carry,
                 ruleId = Some(RuleId.EventSourcedFoldNondeterministic)
               )
             }
           }
         }
-      case _ => ()
     }
   }
 

@@ -176,8 +176,8 @@ case class EntityLifecyclePass(
     }
   }
 
-  /** Detect initial state by searching for `set state X` inside `on init` clauses. Falls back to
-    * first declared state.
+  /** Where creation puts the entity: the target of a `morph` in its `on init` (2.8.0), else the
+    * deprecated forms -- `set state X` in `on init`, a state marked initial, the first declared.
     */
   private def detectInitialState(
     entity: Entity,
@@ -200,7 +200,17 @@ case class EntityLifecyclePass(
       }
       .flatten
 
-    initStateOpt.orElse(states.headOption)
+    // 2.8.0: the state an `on init` MORPHS into is where creation puts the entity -- the first such
+    // target when its arguments choose among several. Then the deprecated forms: a state marked (or
+    // defaulted) initial, the `set state` form above, and finally declaration order.
+    val morphTarget = entity.initClauses.iterator
+      .flatMap(oic => Finder(oic.contents).recursiveFindByType[MorphStatement])
+      .flatMap(m => resolveState(m.state, entity))
+      .nextOption()
+    morphTarget
+      .orElse(initStateOpt)
+      .orElse(states.find(_.isInitial))
+      .orElse(states.headOption)
   }
 
   private def extractTransitions(

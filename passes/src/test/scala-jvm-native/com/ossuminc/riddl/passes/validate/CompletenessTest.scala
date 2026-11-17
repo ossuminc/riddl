@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.passes.validate
 
-import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.language.{Messages, RuleId}
 import com.ossuminc.riddl.language.Messages.CompletenessWarning
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.utils.{CommonOptions, pc, ec}
@@ -179,7 +179,7 @@ class CompletenessTest extends AbstractValidatingTest {
   }
 
   "CompletenessWarning" should {
-    "warn when entity state has no on-init clause" in { (td: TestData) =>
+    "deprecate, per entity, a state with no on init to morph into it" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
@@ -206,13 +206,16 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
+      // 2.8.0: the per-state `entity-state-no-init` is retired (it asked for an `on init` in every
+      // state, though only the initial one ever ran). What replaces it is per ENTITY: one that has
+      // states and no `on init` morphing into one is a Deprecation.
       parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
-        val cw = completenessWarnings(msgs)
-        cw.exists(_.message.contains("no 'on init' clause")) mustBe true
+        completenessWarnings(msgs).exists(_.message.contains("no 'on init' clause")) mustBe false
+        msgs.exists(_.ruleId.contains(RuleId.InitNoMorph)) mustBe true
       }
     }
 
-    "warn when entity state has on-init but no set statement" in { (td: TestData) =>
+    "deprecate an on init that does not morph into a state" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain D is {
           |  context C is {
@@ -242,9 +245,11 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
+      // 2.8.0: `entity-state-init-sets-nothing` is retired; an `on init` that does not `morph` into
+      // a state is what is reported now, per entity.
       parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
-        val cw = completenessWarnings(msgs)
-        cw.exists(_.message.contains("no 'set' statement")) mustBe true
+        completenessWarnings(msgs).exists(_.message.contains("no 'set' statement")) mustBe false
+        msgs.exists(_.ruleId.contains(RuleId.InitNoMorph)) mustBe true
       }
     }
 

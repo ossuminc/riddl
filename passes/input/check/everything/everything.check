@@ -73,9 +73,9 @@ passes/input/check/everything/everything.riddl(40:10->18):
 passes/input/check/everything/everything.riddl(42:5->21):
  Entity 'Something' should have a description:
      entity Something is {
-passes/input/check/everything/everything.riddl(48:7->22):
- State 'someState' in Entity 'Something' has no 'on init' clause to initialize its state:
-       state someState of record Everything.StateType
+passes/input/check/everything/everything.riddl(42:5->21):
+ Entity 'Something' has states but no 'on init' that morphs into one, so it starts in State 'someState' because that state is declared first; choosing a starting state by declaration is deprecated and will be removed in 3.0:
+     entity Something is {
 passes/input/check/everything/everything.riddl(42:5->21):
  Entity 'Something' has no 'on query' clause; information cannot be extracted from it:
      entity Something is {
@@ -135,9 +135,9 @@ passes/input/check/everything/everything.riddl(66:5->26):
 passes/input/check/everything/everything.riddl(66:5->26):
  Entity 'SomeOtherThing' should have a description:
      entity SomeOtherThing is {
-passes/input/check/everything/everything.riddl(69:7->28):
- State 'otherThingState' in Entity 'SomeOtherThing' has no 'on init' clause to initialize its state:
-       state otherThingState of record Everything.StateType
+passes/input/check/everything/everything.riddl(66:5->26):
+ Entity 'SomeOtherThing' has states but no 'on init' that morphs into one, so it starts in State 'otherThingState' because that state is declared first; choosing a starting state by declaration is deprecated and will be removed in 3.0:
+     entity SomeOtherThing is {
 passes/input/check/everything/everything.riddl(66:5->26):
  Entity 'SomeOtherThing' has no 'on query' clause; information cannot be extracted from it:
      entity SomeOtherThing is {

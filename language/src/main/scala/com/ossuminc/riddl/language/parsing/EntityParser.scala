@@ -46,6 +46,19 @@ private[parsing] trait EntityParser {
       Index ~ Keywords.maybeInitial ~ Keywords.state ~ identifier ~/ stateRecordIntro ~ recordRef ~/
         stateBody.? ~ withMetaData ~ Index
     )./.map { case (start, isInitial, id, notOf, typRef, body, descriptives, end) =>
+      // 2.8.0 (Reid, 2026-11-17): there is no initial STATE any more. An entity is created without
+      // one and its `on init` morphs into the state its arguments call for, so which state comes
+      // first in the source carries no meaning. The marker keeps parsing, with its old meaning,
+      // until 3.0.
+      if isInitial then
+        deprecation(
+          at(start, end),
+          s"`initial state ${id.value}` is deprecated and will be removed in 3.0: an entity no " +
+            "longer has an initial state. Its `on init` should `morph` into the state it starts " +
+            "in, chosen from the creation arguments.",
+          code = Option(RuleId.InitialStateMarker),
+          autoFixable = false
+        )
       notOf.foreach { loc =>
         deprecation(
           loc,
@@ -117,8 +130,13 @@ private[parsing] trait EntityParser {
     */
   private def defaultEntityInitials(contents: Seq[EntityContents]): Seq[EntityContents] = {
     val states = throughWrappers[State](contents)
+    // No default when creation chooses the state: an `on init` that morphs says where the entity
+    // starts, and marking the first-declared state would contradict it (2.8.0).
+    val initClauses = (throughWrappers[Handler](contents) ++ states.flatMap(_.handlers))
+      .flatMap(_.clauses)
+      .collect { case oic: OnInitializationClause => oic }
     val withState =
-      if states.isEmpty || states.exists(_.isInitial) then contents
+      if states.isEmpty || states.exists(_.isInitial) || initClausesMorph(initClauses) then contents
       else {
         var done = false
         contents.map {

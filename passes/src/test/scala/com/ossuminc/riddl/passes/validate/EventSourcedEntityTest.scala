@@ -124,7 +124,10 @@ class EventSourcedEntityTest extends AbstractValidatingTest {
       }
     }
 
-    "be an error in an `on init` clause -- no lifecycle exemption" in { (td: TestData) =>
+    // REVERSED 2026-11-17 (Reid): this case used to pin "an error in `on init` -- no lifecycle
+    // exemption". The `on init` invocation, with its arguments, is the instance's FIRST journal
+    // entry and replay re-runs it, so a mutation there is reproduced like a fold's.
+    "be allowed in an `on init` clause, which is the first journal entry" in { (td: TestData) =>
       val src = conforming
         .replace("entity Order", "event-sourced entity Order")
         .replace(
@@ -132,7 +135,7 @@ class EventSourcedEntityTest extends AbstractValidatingTest {
           """on init { set field Main.total to "0" } with { briefly "h1" }"""
         )
       val msgs = messagesFor(src, td)
-      withClue(s"messages were: ${clue(msgs)}") { mutation(msgs) must not be empty }
+      withClue(s"messages were: ${clue(msgs)}") { mutation(msgs) mustBe empty }
     }
 
     "cover `morph` as well as `set`" in { (td: TestData) =>

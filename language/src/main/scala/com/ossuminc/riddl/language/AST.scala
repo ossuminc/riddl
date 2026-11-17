@@ -5808,7 +5808,28 @@ object AST:
 
     /** The entity's state is rebuilt by replaying its events, so the event-sourcing rules apply. */
     def isEventSourced: Boolean = hasIntention(EntityIntention.EventSourced)
+
+    /** Every `on init` clause of this entity, wherever written: in an entity-level handler or (the
+      * deprecated placement, 2.8.0) in a handler of one of its states.
+      */
+    def initClauses: Seq[OnInitializationClause] =
+      (handlers ++ states.flatMap(_.handlers)).flatMap(_.clauses).collect {
+        case oic: OnInitializationClause => oic
+      }
+
+    /** Does creation CHOOSE the entity's state? True when some `on init` contains a `morph`
+      * (Reid, 2026-11-17): an entity is created without a state and its `on init` morphs into
+      * one. When false, the entity keeps the deprecated "first-declared state is initial" meaning.
+      */
+    def initMorphs: Boolean = initClausesMorph(initClauses)
   end Entity
+
+  /** Does any of these `on init` clauses contain a `morph`, at any depth? The ONE test the parser
+    * (defaulting the first state to initial) and the prettifier (omitting a redundant `initial`)
+    * share, so the two cannot disagree about when the old default applies.
+    */
+  def initClausesMorph(clauses: Seq[OnInitializationClause]): Boolean =
+    clauses.exists(c => Finder(c.contents).recursiveFindByType[MorphStatement].nonEmpty)
 
   /** A reference to an entity
     *

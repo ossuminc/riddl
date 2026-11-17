@@ -47,7 +47,8 @@ class PrettifyEmitsNoDeprecationsTest extends AbstractValidatingTest {
       .state
       .filesAsString
 
-  /** Every state spelling: bodied and body-less, initial and not. The bodied form is the one that
+  /** Every state spelling: bodied and body-less. (`initial` was here too until 2.8.0 deprecated it;
+    * the entity now starts in `AlsoBodied` because its `on init` morphs there.) The bodied form is the one that
     * regressed, and the body-less one is the branch that was already correct — both are here so a
     * fix cannot trade one for the other.
     */
@@ -56,10 +57,13 @@ class PrettifyEmitsNoDeprecationsTest extends AbstractValidatingTest {
       |  context Ctx is {
       |    entity Ent is {
       |      record Data is { x: Integer }
+      |      handler Life is {
+      |        on init is { morph entity Dom.Ctx.Ent to state Dom.Ctx.Ent.AlsoBodied with record Dom.Ctx.Ent.Data(x = 1) }
+      |      }
       |      state Bodied of record Dom.Ctx.Ent.Data is {
       |        handler H is { on other is { do "x" } }
       |      }
-      |      initial state AlsoBodied of record Dom.Ctx.Ent.Data is {
+      |      state AlsoBodied of record Dom.Ctx.Ent.Data is {
       |        handler H2 is { on other is { do "y" } }
       |      }
       |      state Bodyless of record Dom.Ctx.Ent.Data with { briefly "no body" }
