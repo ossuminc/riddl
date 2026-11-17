@@ -1028,7 +1028,7 @@ object JsonModel:
     */
   case class SystemValueDto(field: Option[String] = None) extends ValueDto
 
-  /** `{ "value": "initiate", "processor": "<path>", "processorKind": "<kind>", "args":
+  /** `{ "value": "create", "processor": "<path>", "processorKind": "<kind>", "args":
     * [<constructorArg>] }` — A70/instance-identity: bring an instance into being and yield its
     * identity. No answer type is carried: it is always the synthesized `Id(<processor>)`, so
     * storing it would be a second place for the same fact to go stale (mirrors `AskValueDto`).
@@ -1038,6 +1038,15 @@ object JsonModel:
     processorKind: String,
     args: Seq[ConstructorArgDto]
   ) extends ValueDto
+
+  /** The name to write for the `create` value's DTO. The CLASS keeps its pre-2.7.0 name for binary
+    * compatibility, exactly like `AST.Create`/`AST.Initiate`. The JSON says `"create"` and the
+    * reader also accepts `"initiate"`.
+    */
+  type CreateValueDto = InitiateValueDto
+
+  /** Companion alias of [[InitiateValueDto]] under the name [[CreateValueDto]]. */
+  val CreateValueDto: InitiateValueDto.type = InitiateValueDto
 
   /** `{ "name"?: "<field>", "value": <value> }` — a positional or named constructor argument. */
   case class ConstructorArgDto(name: Option[String], value: ValueDto)
@@ -1053,7 +1062,7 @@ object JsonModel:
     *
     * **The `processor`/`processorKind` pair was REPLACED by `target` on 2026-08-15**, when
     * `terminate` stopped naming a processor type and started naming an instance: `target` is a
-    * value whose type must be `Id(entity E)`. This is NOT the same shape as [[InitiateValueDto]]
+    * value whose type must be `Id(entity E)`. This is NOT the same shape as [[CreateValueDto]]
     * any more -- `initiate` still names a type, because the instance does not exist yet.
     *
     * A producer still emitting `processor`/`processorKind` gets them SILENTLY DROPPED and a
@@ -1928,7 +1937,8 @@ object JsonModel:
         AskValueDto(m("query").str, m("processor").str, m("processorKind").str)
       case "self" => SelfValueDto(m.get("field").map(_.str))
       case "system" => SystemValueDto(m.get("field").map(_.str))
-      case "initiate" =>
+      // `initiate` is the spelling JSON written before 2026-11-16 carries; read it forever.
+      case "create" | "initiate" =>
         val args = m
           .get("args")
           .map(
@@ -1937,7 +1947,7 @@ object JsonModel:
               .toSeq
           )
           .getOrElse(Nil)
-        InitiateValueDto(m("processor").str, m("processorKind").str, args)
+        CreateValueDto(m("processor").str, m("processorKind").str, args)
       case other => throw new IllegalArgumentException(s"Unknown value kind: '$other'")
   end readValueObj
 
@@ -2085,9 +2095,9 @@ object JsonModel:
           Seq[(String, ujson.Value)]("value" -> ujson.Str("system"))
             ++ field.map(f => "field" -> (ujson.Str(f): ujson.Value))
         )
-      case InitiateValueDto(processor, processorKind, args) =>
+      case CreateValueDto(processor, processorKind, args) =>
         ujson.Obj(
-          "value" -> ujson.Str("initiate"),
+          "value" -> ujson.Str("create"),
           "processor" -> ujson.Str(processor),
           "processorKind" -> ujson.Str(processorKind),
           "args" -> ujson.Arr.from(args.map { a =>

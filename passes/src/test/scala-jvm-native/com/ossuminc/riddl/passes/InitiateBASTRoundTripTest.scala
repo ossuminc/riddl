@@ -19,7 +19,7 @@ import org.scalatest.matchers.must.Matchers
   * reflectivity proof rather than relying on the coarse domain/context/entity-level
   * [[DeepASTComparison]] (which does not descend into statement-level Value nodes) or
   * [[com.ossuminc.riddl.language.Finder]] (whose `recursiveFindByType` does not descend into a
-  * `LetStatement`'s `expression` field). Walked to the `Initiate` node directly and compared
+  * `LetStatement`'s `expression` field). Walked to the `Create` node directly and compared
   * field-by-field, mirroring `BASTRoundTripTest`'s style.
   *
   * JVM-only, like `BASTRoundTripTest` itself (BAST I/O has no Native-friendly harness in this test
@@ -42,7 +42,7 @@ class InitiateBASTRoundTripTest extends AnyWordSpec with Matchers {
       |    entity Caller is {
       |      state CS of record R is {
       |        handler CH is {
-      |          on init { let oid = initiate entity Order("5") }
+      |          on init { let oid = create entity Order("5") }
       |        } with { briefly "ch" }
       |      } with { briefly "cs" }
       |    } with { briefly "ce" }
@@ -55,11 +55,11 @@ class InitiateBASTRoundTripTest extends AnyWordSpec with Matchers {
       case Right(root) => root
       case Left(msgs)  => fail(s"parse of $origin failed:\n${msgs.format}")
 
-  /** Walk down to the `Caller` entity's `on init` clause and pull out its single `let`'s `Initiate`
+  /** Walk down to the `Caller` entity's `on init` clause and pull out its single `let`'s `Create`
     * expression -- mirrors `InitiateFileTest`'s direct walk, for the same reason (Finder does not
     * descend into LetStatement).
     */
-  private def initiateIn(root: Root): Initiate =
+  private def initiateIn(root: Root): Create =
     val domain =
       root.contents.toSeq.collectFirst { case d: Domain => d }.getOrElse(fail("no domain"))
     val context =
@@ -78,8 +78,8 @@ class InitiateBASTRoundTripTest extends AnyWordSpec with Matchers {
       .collectFirst { case ls: LetStatement => ls }
       .getOrElse(fail("no let statement"))
     let.expression match
-      case init: Initiate => init
-      case other          => fail(s"expected an Initiate, got $other")
+      case init: Create => init
+      case other          => fail(s"expected an Create, got $other")
 
   "initiate" should {
     "round-trip through BAST (write tag 8, read it back)" in {
@@ -113,8 +113,8 @@ class InitiateBASTRoundTripTest extends AnyWordSpec with Matchers {
             .collectFirst { case ls: LetStatement => ls }
             .getOrElse(fail("no let statement"))
           val reconstructedInit = let.expression match
-            case init: Initiate => init
-            case other          => fail(s"expected an Initiate, got $other")
+            case init: Create => init
+            case other          => fail(s"expected an Create, got $other")
 
           reconstructedInit.processor.pathId.format mustBe originalInit.processor.pathId.format
           reconstructedInit.args.size mustBe originalInit.args.size

@@ -162,7 +162,7 @@ class SendAtTest extends AbstractValidatingTest {
       msgs.justErrors.map(_.format) mustBe empty
     }
 
-    "count the instant among the statement's values: an `initiate` hidden in it is a fold effect" in {
+    "count the instant among the statement's values: a `create` hidden in it is a fold effect" in {
       (td: TestData) =>
         // `statementValues` must yield the `at` operand, or the value walks (`initiatesIn` here)
         // cannot see into it. A correlation FOLD is the scope used because it admits `send` at the
@@ -183,7 +183,7 @@ class SendAtTest extends AbstractValidatingTest {
             |      record Row is { id: String } with { briefly "r" }
             |      correlation Join by id yields command Done is {
             |        handler Folds is {
-            |          on event A is { send event Ping(n = 1) to outlet Out at initiate entity Worker }
+            |          on event A is { send event Ping(n = 1) to outlet Out at create entity Worker }
             |          on event B is { set field Done.id to "b" }
             |        }
             |      } times out after "30 days" { do "give up" }
@@ -193,7 +193,7 @@ class SendAtTest extends AbstractValidatingTest {
             |""".stripMargin
         val msgs = diagnostics(src, "at-value-walk")
         val foldEffects = errorsOf(msgs, RuleId.FoldEffect)
-        foldEffects.exists(_.message.contains("'initiate'")) mustBe true
+        foldEffects.exists(_.message.contains("'create'")) mustBe true
     }
   }
 }

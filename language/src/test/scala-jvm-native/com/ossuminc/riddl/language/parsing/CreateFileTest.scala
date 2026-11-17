@@ -16,7 +16,7 @@ import java.nio.file.Path
 import scala.concurrent.duration.DurationInt
 
 /** Parity guard for Task 4's `initiate` value: the corpus fixture
-  * `language/input/initiate-value.riddl` is validated against the EBNF grammar by the TatSu
+  * `language/input/create-value.riddl` is validated against the EBNF grammar by the TatSu
   * validator (which scans every input-directory riddl file). This test proves fastparse accepts the
   * SAME file -- both the parenthesized (with arguments) and bare (no parameters) forms -- so the
   * documented grammar and the implementation stay in sync (see CLAUDE.md "Parser/EBNF
@@ -26,11 +26,11 @@ import scala.concurrent.duration.DurationInt
   * `consider` walk only descends `Container`/`When`/`Match`/`Foreach`/`SagaStep`), so this test
   * walks the two `let` statements directly instead of relying on it.
   */
-class InitiateFileTest extends AnyWordSpec with Matchers {
+class CreateFileTest extends AnyWordSpec with Matchers {
 
-  "initiate-value.riddl" should {
+  "create-value.riddl" should {
     "parse with fastparse (parity with the EBNF grammar)" in {
-      val url = PathUtils.urlFromCwdPath(Path.of("language/input/initiate-value.riddl"))
+      val url = PathUtils.urlFromCwdPath(Path.of("language/input/create-value.riddl"))
       val future = RiddlParserInput.fromURL(url).map { rpi =>
         TopLevelParser.parseInput(rpi) match
           case Left(messages) => fail(messages.format)
@@ -47,16 +47,16 @@ class InitiateFileTest extends AnyWordSpec with Matchers {
             lets.size mustBe 2
 
             lets.head.expression match
-              case init: Initiate =>
+              case init: Create =>
                 init.processor mustBe a[EntityRef]
                 init.args.size mustBe 1
-              case other => fail(s"expected an Initiate, got $other")
+              case other => fail(s"expected a Create, got $other")
 
             lets(1).expression match
-              case init: Initiate =>
+              case init: Create =>
                 init.processor mustBe a[EntityRef]
                 init.args mustBe empty
-              case other => fail(s"expected an Initiate, got $other")
+              case other => fail(s"expected a Create, got $other")
       }
       Await.result(future, 10.seconds)
     }

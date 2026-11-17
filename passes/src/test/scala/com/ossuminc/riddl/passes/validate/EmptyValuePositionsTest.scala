@@ -127,7 +127,7 @@ class EmptyValuePositionsTest extends AbstractValidatingTest {
       (td: TestData) =>
         val found = emptyErrors(
           entityModel(
-            "let t = initiate entity Target(seed = empty, must = empty)\n          do \"used\""
+            "let t = create entity Target(seed = empty, must = empty)\n          do \"used\""
           ),
           td.name
         )

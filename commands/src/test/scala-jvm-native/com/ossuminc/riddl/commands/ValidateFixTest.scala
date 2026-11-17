@@ -65,6 +65,38 @@ class ValidateFixTest extends AnyWordSpec with Matchers {
       }
     }
 
+    "rewrite the deprecated `initiate` value keyword to `create`" in {
+      // `value-initiate-keyword` (2026-11-16) carries `Fix.Constant("create")`: the keyword alone is
+      // replaced, the rest of the line is untouched.
+      val withInitiate =
+        """domain D is {
+          |  context C is {
+          |    command Go is { why: String }
+          |    record R is { total: String }
+          |    entity W is {
+          |      state S of record R is {
+          |        handler H is { on init { do "start" } }
+          |      }
+          |    }
+          |    entity Caller is {
+          |      state S of record R is {
+          |        handler H is {
+          |          on command Go { let w = initiate entity W }
+          |        }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      withModel(withInitiate) { (run, read) =>
+        run(ValidateCommand.Options(fix = true, fixRule = Some(RuleId.InitiateKeyword.code)))
+        val after = read()
+        after must include("let w = create entity W")
+        after mustNot include("initiate")
+        after mustBe withInitiate.replace("initiate entity W", "create entity W")
+      }
+    }
+
     "leave a model with nothing to fix byte-identical" in {
       // The no-op path writes nothing at all. Asserting byte equality catches a fixer that
       // "successfully" rewrites a file to itself with, say, different line endings.

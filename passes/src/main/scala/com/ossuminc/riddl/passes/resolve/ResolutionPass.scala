@@ -568,7 +568,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
           parents.head,
           resolveARef[Processor[?]](ask.processor, parents)
         )
-      case init: Initiate =>
+      case init: Create =>
         // A70/instance-identity: resolve the target processor and recurse into argument values,
         // exactly as a Constructor/Call does. `init`'s type (the newly minted `Id(P)`) is
         // synthesized entirely in ValidationPass.valueTypeExpr, mirroring `self`.

@@ -1,0 +1,28 @@
+// The DEPRECATED spelling of the `create` value. `initiate` was renamed `create` on 2026-11-16
+// (creation is instantiation; initialization is the `on init` clause it runs) and goes on parsing
+// forever, with a `value-initiate-keyword` deprecation, consumed into the same node. This fixture
+// keeps the old spelling under the EBNF/TatSu validator's coverage.
+domain InitiateDeprecated is {
+  context Orders is {
+    command Go is { why: String } with { briefly "go" }
+    record Fields is { total: String } with { briefly "order totals" }
+    entity Widget is {
+      state S of record Fields is {
+        handler H is {
+          on init {
+            do "no parameters"
+          }
+        } with { briefly "h" }
+      } with { briefly "s" }
+    } with { briefly "e" }
+    entity Caller is {
+      state CS of record Fields is {
+        handler CH is {
+          on command Go {
+            let widgetId = initiate entity Widget
+          }
+        } with { briefly "ch" }
+      } with { briefly "cs" }
+    } with { briefly "ce" }
+  } with { briefly "c" }
+} with { briefly "d" }

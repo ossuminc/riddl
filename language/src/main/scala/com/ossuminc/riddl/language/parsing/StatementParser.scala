@@ -633,7 +633,7 @@ private[parsing] trait StatementParser {
       StringIn(
         "set", "tell", "send", "forward", "yield", "reply", "morph", "become", "do", "prompt",
         "let", "call", "foreach", "when", "match", "error", "require", "put", "return", "terminate",
-        "code", "focus", "stop", "read", "write", "ask", "initiate", "if", "else", "append", "remove",
+        "code", "focus", "stop", "read", "write", "ask", "create", "initiate", "if", "else", "append", "remove",
         "log", "store", "upsert", "update", "delete"
       ) ~~ &(Keywords.isNotKeywordChar)
     )
@@ -734,7 +734,7 @@ private[parsing] trait StatementParser {
       promptValue.map(pv => pv: Value) |
         callValue.map(c => c: Value) | // A24: `call function F(args)` (keyword-led)
         askValue.map(a => a: Value) | // `ask query Q of <processor>` (keyword-led)
-        initiateValue.map(i => i: Value) | // `initiate <processor>[(args)]` (keyword-led)
+        createValue.map(i => i: Value) | // `create <processor>[(args)]`, or deprecated `initiate`
         // B2: BEFORE `constructor`, whose `queryRef` would cut on the `query` keyword.
         queryValue.map(qv => qv: Value) |
         constructor.map(c => c: Value) |
@@ -1106,13 +1106,24 @@ private[parsing] trait StatementParser {
     * chain, so the argument diagnostics live in ValidationPass, which is also the only place that
     * has resolved `on init`.
     */
-  private def initiateValue[u: P]: P[Initiate] = {
+  private def createValue[u: P]: P[Create] = {
+    // `create` is canonical (Reid, 2026-11-16); `initiate` is its deprecated spelling, CONSUMED
+    // into the same node. The alternation is FACTORED -- one `.!` capture across both keywords --
+    // because `Keywords.keyword` ends in a cut (the `streamlet`/`processor` lesson).
     P(
-      Index ~ Keywords.initiate ~/ processorRef ~
+      Index ~ (Keywords.create | Keywords.initiate).! ~/ processorRef ~
         (Punctuation.roundOpen ~/ constructorArg.rep(0, Punctuation.comma) ~
           Punctuation.roundClose).? ~/ Index
-    )./.map { case (start, pRef, args, end) =>
-      Initiate(at(start, end), pRef, args.map(_.toSeq).getOrElse(Seq.empty))
+    )./.map { case (start, kw, pRef, args, end) =>
+      if kw.trim == Keyword.initiate then
+        deprecation(
+          at(start, start + Keyword.initiate.length),
+          s"The `initiate` keyword is deprecated; use `create ${pRef.format}` instead",
+          code = Option(RuleId.InitiateKeyword),
+          autoFixable = true
+        )
+      end if
+      Create(at(start, end), pRef, args.map(_.toSeq).getOrElse(Seq.empty))
     }
   }
 

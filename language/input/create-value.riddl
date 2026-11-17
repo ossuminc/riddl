@@ -1,9 +1,9 @@
-// Corpus fixture exercising `initiate` (Task 4, processor-instance identity): `initiate` mints an
+// Corpus fixture exercising `create` (spelled `initiate` until 2026-11-16): `create` mints an
 // instance and evaluates to the newly minted `Id(<processor>)`. Parens are OPTIONAL and present
 // exactly when there are arguments -- both forms are exercised here. Exercised by both fastparse
-// (InitiateFileTest) and the EBNF/TatSu grammar (ebnf_tatsu_validator.py, which scans every
+// (CreateFileTest) and the EBNF/TatSu grammar (ebnf_tatsu_validator.py, which scans every
 // input-directory riddl file).
-domain InitiateValue is {
+domain CreateValue is {
   context Orders is {
     command Go is { why: String } with { briefly "go" }
     record Fields is { total: String } with { briefly "order totals" }
@@ -29,8 +29,8 @@ domain InitiateValue is {
       state CS of record Fields is {
         handler CH is {
           on command Go {
-            let orderId = initiate entity Order("5")
-            let widgetId = initiate entity Widget
+            let orderId = create entity Order("5")
+            let widgetId = create entity Widget
           }
         } with { briefly "ch" }
       } with { briefly "cs" }

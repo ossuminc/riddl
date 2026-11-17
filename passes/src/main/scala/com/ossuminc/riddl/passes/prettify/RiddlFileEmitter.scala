@@ -302,7 +302,7 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     *
     * As of 2026-08-15's whole-branch review, `emitValue` is TOTAL over every [[Value]] shape that
     * can CONTAIN a nested `PromptValue`, not merely over `PromptValue` itself — a `Constructor`/
-    * `Call`/`Initiate` argument, an `InvariantCondition`'s `with` argument, and a
+    * `Call`/`Create` argument, an `InvariantCondition`'s `with` argument, and a
     * `LogicalExpression`/`NotExpression` operand all recurse back through `emitValue` (via
     * `emitConstructorArg(s)`/`emitLogicalOperand`) rather than falling to `.format`. Every
     * `emitStatement` site whose operand can reach a `PromptValue` — `send`/`tell`/`yield`/`reply`
@@ -364,8 +364,8 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         add(s"call ${function.format}(")
         emitConstructorArgs(args)
         add(")")
-      case Initiate(_, processor, args) =>
-        add(s"initiate ${processor.format}")
+      case Create(_, processor, args) =>
+        add(s"create ${processor.format}")
         if args.nonEmpty then add("(").emitConstructorArgs(args).add(")") else this
       case InvariantCondition(_, ref, argument) =>
         add(ref.format)
@@ -469,7 +469,7 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
       case Some(id) => add(s"${id.format} = ").emitValue(arg.value)
       case None     => emitValue(arg.value)
 
-  /** A comma-separated `ConstructorArg` list, shared by `Constructor`/`Call`/`Initiate` and
+  /** A comma-separated `ConstructorArg` list, shared by `Constructor`/`Call`/`Create` and
     * `TerminateStatement`.
     */
   private def emitConstructorArgs(args: Seq[ConstructorArg]): this.type =

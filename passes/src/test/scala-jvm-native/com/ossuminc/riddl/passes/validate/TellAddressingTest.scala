@@ -69,7 +69,7 @@ class TellAddressingTest extends AbstractValidatingTest {
       val msgs = diagnostics(
         model(
           "orderId: Id(entity Order)",
-          """let oid = initiate entity Order
+          """let oid = create entity Order
                 |            tell command Ship(orderId = oid) to entity Order""".stripMargin
         ),
         "addr-derived"
@@ -85,7 +85,7 @@ class TellAddressingTest extends AbstractValidatingTest {
       val msgs = diagnostics(
         model(
           "orderId: Id(entity Order), from: Id(entity Caller)",
-          """let oid = initiate entity Order
+          """let oid = create entity Order
                 |            tell command Ship(orderId = oid, from = self.id) to entity Order""".stripMargin
         ),
         "addr-replyto"
@@ -151,8 +151,8 @@ class TellAddressingTest extends AbstractValidatingTest {
       diagnostics(
         model(
           "fromOrder: Id(entity Order), toOrder: Id(entity Order)",
-          """let f = initiate entity Order
-                |            let t = initiate entity Order
+          """let f = create entity Order
+                |            let t = create entity Order
                 |            tell command Ship(fromOrder = f, toOrder = t) to entity Order by toOrder""".stripMargin
         ),
         "addr-by"
@@ -285,8 +285,8 @@ class TellAddressingTest extends AbstractValidatingTest {
             |      state CS of record RB is {
             |        handler CH is {
             |          on command Go {
-            |            let foreignOid = initiate entity CtxA.Order
-            |            let oid = initiate entity CtxB.Order
+            |            let foreignOid = create entity CtxA.Order
+            |            let oid = create entity CtxB.Order
             |            tell command Ship(foreignId = foreignOid, orderId = oid) to entity CtxB.Order
             |          }
             |        } with { briefly "ch" }
@@ -335,8 +335,8 @@ class TellAddressingTest extends AbstractValidatingTest {
             |      state CS of record RB is {
             |        handler CH is {
             |          on command Go {
-            |            let f = initiate entity CtxA.Order
-            |            let t = initiate entity CtxA.Order
+            |            let f = create entity CtxA.Order
+            |            let t = create entity CtxA.Order
             |            tell command Ship(fromForeign = f, toForeign = t) to entity CtxB.Order
             |          }
             |        } with { briefly "ch" }

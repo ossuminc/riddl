@@ -386,14 +386,14 @@ class TypedHoleValidationTest extends AbstractValidatingTest {
 
     "be an Error on an INITIATE argument whose ascription contradicts the parameter" in {
       (td: TestData) =>
-        val src = argModel("""let i = initiate entity Target(seed = prompt("s") as Other)""")
+        val src = argModel("""let i = create entity Target(seed = prompt("s") as Other)""")
         errorsFor(src, td.name).map(_.message).mkString("\n") must include("contradicts")
     }
 
     "be an Error on a TERMINATE argument whose ascription contradicts the parameter" in {
       (td: TestData) =>
         val src = argModel(
-          """let i = initiate entity Target(seed = prompt("s") as Score)
+          """let i = create entity Target(seed = prompt("s") as Score)
             |            terminate i with (why = prompt("w") as Other)""".stripMargin
         )
         errorsFor(src, td.name).map(_.message).mkString("\n") must include("contradicts")

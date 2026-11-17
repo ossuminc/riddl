@@ -2534,7 +2534,7 @@ case class ValidationPass(
       (statement match
         case ts: TerminateStatement => Seq(ts.loc -> "terminate")
         case _                      => Seq.empty
-      ) ++ statementValues(statement).flatMap(initiatesIn).map(init => init.loc -> "initiate")
+      ) ++ statementValues(statement).flatMap(initiatesIn).map(init => init.loc -> "create")
 
     if offenders.nonEmpty then
       val banned: Option[String] = parents.head match
@@ -2592,13 +2592,13 @@ case class ValidationPass(
     */
   private def checkUnusedInitiateId(ls: LetStatement, scope: Seq[Statement]): Unit =
     ls.expression match
-      case _: Initiate =>
+      case _: Create =>
         val name = ls.identifier.value
         val used = scope.exists(s => !(s eq ls) && mentionsName(s.format, name))
         if !used then
           messages.addWarning(
             ls.loc,
-            s"'$name' holds the identity of the instance this 'initiate' creates, but nothing " +
+            s"'$name' holds the identity of the instance this 'create' makes, but nothing " +
               "else in this clause refers to it",
             suggestion = s"Refer to '$name' — address the new instance ('tell … to …'), keep it " +
               s"('set field … to $name'), pass it in a message, or 'terminate' it — or leave it " +
@@ -5566,7 +5566,7 @@ case class ValidationPass(
           // `initiate` was not.
           val offenders: Seq[(At, String)] =
             effect.map(kw => statement.loc -> kw).toSeq ++
-              statementValues(statement).flatMap(initiatesIn).map(init => init.loc -> "initiate")
+              statementValues(statement).flatMap(initiatesIn).map(init => init.loc -> "create")
           offenders.foreach { case (loc, kw) =>
             messages.addError(
               loc,
@@ -8018,7 +8018,7 @@ case class ValidationPass(
     // A70/instance-identity: `initiate` invokes `on init` and mints an instance -- it can fail
     // exactly as `call`/`ask` can, so it counts itself (1) PLUS its argument values, exactly like
     // `call` immediately above.
-    case init: Initiate => 1 + init.args.map(a => countValueFailPoints(a.value)).sum
+    case init: Create => 1 + init.args.map(a => countValueFailPoints(a.value)).sum
     case _: GetValue    => 1
     case lv: LookupValue =>
       countValueFailPoints(lv.collection) + lv.indices.map(countValueFailPoints).sum
@@ -8143,7 +8143,7 @@ case class ValidationPass(
     case c: Constructor  => c.args.toSeq.flatMap(a => stateReadsIn(a.value))
     // `initiate`'s arguments are full Values, exactly like a constructor's or a call's, so a
     // `get from state` can hide inside one and this must recurse rather than stop.
-    case init: Initiate           => init.args.toSeq.flatMap(a => stateReadsIn(a.value))
+    case init: Create           => init.args.toSeq.flatMap(a => stateReadsIn(a.value))
     case le: LogicalExpression    => stateReadsIn(le.left) ++ stateReadsIn(le.right)
     case ne: NotExpression        => stateReadsIn(ne.expr)
     case ce: ComparisonExpression => stateReadsIn(ce.left) ++ stateReadsIn(ce.right)
@@ -8190,9 +8190,9 @@ case class ValidationPass(
       )
   end stateReadsIn
 
-  /** Every [[Initiate]] embedded in a value expression, at any depth -- the top-level `Initiate`
+  /** Every [[Create]] embedded in a value expression, at any depth -- the top-level `Create`
     * itself PLUS any nested inside its own arguments (`initiate entity Order(x = initiate entity
-    * Foo)`), exactly as `stateReadsIn` recurses into `Initiate.args` looking for a
+    * Foo)`), exactly as `stateReadsIn` recurses into `Create.args` looking for a
     * `get from state`.
     *
     * Enumerated over the same arms as `stateReadsIn`/`asksIn` and for the same reason: a new value
@@ -8202,8 +8202,8 @@ case class ValidationPass(
     * [[LetStatement]], not a `TerminateStatement`-shaped statement a simple `case` match would
     * catch.
     */
-  private def initiatesIn(v: RiddlValue): Seq[Initiate] = v match
-    case init: Initiate           => Seq(init) ++ init.args.toSeq.flatMap(a => initiatesIn(a.value))
+  private def initiatesIn(v: RiddlValue): Seq[Create] = v match
+    case init: Create           => Seq(init) ++ init.args.toSeq.flatMap(a => initiatesIn(a.value))
     case lv: LookupValue          => initiatesIn(lv.collection) ++ lv.indices.flatMap(initiatesIn)
     case call: Call               => call.args.toSeq.flatMap(a => initiatesIn(a.value))
     case c: Constructor           => c.args.toSeq.flatMap(a => initiatesIn(a.value))
@@ -8235,7 +8235,7 @@ case class ValidationPass(
     case other =>
       throw new IllegalStateException(
         s"initiatesIn has no arm for ${other.getClass.getSimpleName} at ${other.loc}; " +
-          "decide whether it can contain an 'initiate' rather than assuming it cannot"
+          "decide whether it can contain a 'create' rather than assuming it cannot"
       )
   end initiatesIn
 
@@ -8275,7 +8275,7 @@ case class ValidationPass(
     case lv: LookupValue          => systemValuesIn(lv.collection) ++ lv.indices.flatMap(systemValuesIn)
     case call: Call               => call.args.toSeq.flatMap(a => systemValuesIn(a.value))
     case c: Constructor           => c.args.toSeq.flatMap(a => systemValuesIn(a.value))
-    case init: Initiate           => init.args.toSeq.flatMap(a => systemValuesIn(a.value))
+    case init: Create           => init.args.toSeq.flatMap(a => systemValuesIn(a.value))
     case le: LogicalExpression    => systemValuesIn(le.left) ++ systemValuesIn(le.right)
     case ne: NotExpression        => systemValuesIn(ne.expr)
     case ce: ComparisonExpression => systemValuesIn(ce.left) ++ systemValuesIn(ce.right)
@@ -8305,7 +8305,7 @@ case class ValidationPass(
     case c: Constructor  => c.args.toSeq.flatMap(a => asksIn(a.value))
     // `initiate`'s arguments are full Values, exactly like a constructor's or a call's, so an
     // `ask` can hide inside one -- and a saga step is exactly where that must not go unnoticed.
-    case init: Initiate           => init.args.toSeq.flatMap(a => asksIn(a.value))
+    case init: Create           => init.args.toSeq.flatMap(a => asksIn(a.value))
     case le: LogicalExpression    => asksIn(le.left) ++ asksIn(le.right)
     case ne: NotExpression        => asksIn(ne.expr)
     case ce: ComparisonExpression => asksIn(ce.left) ++ asksIn(ce.right)
@@ -9632,7 +9632,7 @@ case class ValidationPass(
 
   /** A70/instance-identity: `initiate <processor>[(args)]`. See [[checkLifecycleInvocation]]. */
   private def checkInitiate(
-    init: Initiate,
+    init: Create,
     parents: Parents,
     lets: Seq[LetStatement],
     elements: Map[String, TypeExpression]
@@ -9644,13 +9644,13 @@ case class ValidationPass(
           e,
           init.args,
           s"${Keyword.on} ${Keyword.init}",
-          s"${Keyword.initiate} ${init.processor.format}",
+          s"${Keyword.create} ${init.processor.format}",
           parents,
           lets,
           elements
         ) { case oic: OnInitializationClause => oic.parameters }
       case p =>
-        reportNotInstantiable(init.loc, p, Keyword.initiate)
+        reportNotInstantiable(init.loc, p, Keyword.create)
         init.args.foreach(arg => validateValue(arg.value, parents, lets, elements))
     }
   end checkInitiate
@@ -10256,8 +10256,8 @@ case class ValidationPass(
       // this arm exists only so the match stays exhaustive.
       case _: SelfValue => None
       // `initiate`'s type is a SYNTHESIZED UniqueId, not a named Type -- same reasoning as `self`,
-      // immediately above. `valueTypeExpr` computes it (see its `Initiate` arm).
-      case _: Initiate => None
+      // immediately above. `valueTypeExpr` computes it (see its `Create` arm).
+      case _: Create => None
       // A numeric literal denotes no NAMED Type -- it is a raw literal, not a reference to a
       // declaration. Best-effort numeric type-compatibility checking (matching it against a
       // field's declared numeric type) is Task 5's job and reads `.isInteger`/`.asBigDecimal`
@@ -10823,7 +10823,7 @@ case class ValidationPass(
       // identifies the resolved processor. `kindKeyword` is left `None`, exactly as the `self.id`
       // field's `UniqueId` is: it disambiguates WRITTEN syntax, and this type is synthesized, not
       // written.
-      case init: Initiate =>
+      case init: Create =>
         resolution.refMap
           .definitionOf[Processor[?]](init.processor.pathId, parents.head)
           .map(p => UniqueId(At.empty, pathOf(p)))
@@ -10951,7 +10951,7 @@ case class ValidationPass(
       case c: Constructor => validateConstructor(c, parents, lets, elements)
       case call: Call     => validateCall(call, parents, lets, elements)
       case ask: Ask       => validateAsk(ask, parents)
-      case init: Initiate => checkInitiate(init, parents, lets, elements)
+      case init: Create => checkInitiate(init, parents, lets, elements)
       case vr: ValueRef =>
         checkStateRecordInScope(vr, parents)
         if !valueRefResolves(vr, parents, lets, elements) then

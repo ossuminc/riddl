@@ -78,7 +78,7 @@ class TerminateTargetTest extends AbstractValidatingTest {
       val errs = errorsIn(
         wrap(
           "",
-          """let oid = initiate entity Order
+          """let oid = create entity Order
                    |            terminate oid""".stripMargin
         ),
         td.name
@@ -93,7 +93,7 @@ class TerminateTargetTest extends AbstractValidatingTest {
       val errs = errorsIn(
         wrap(
           """command Close is { oid: OrderId } with { briefly "close" }""",
-          """let x: OrderId = initiate entity Order
+          """let x: OrderId = create entity Order
                |            terminate x""".stripMargin
         ),
         td.name
@@ -216,7 +216,7 @@ class TerminateTargetTest extends AbstractValidatingTest {
       val errs = errorsIn(
         wrap(
           "",
-          """let c = initiate context Ordering
+          """let c = create context Ordering
                    |            terminate c""".stripMargin
         ),
         td.name
@@ -243,7 +243,7 @@ class TerminateTargetTest extends AbstractValidatingTest {
           |      state CS of record R is {
           |        handler CH is {
           |          on init {
-          |            let oid = initiate entity Order
+          |            let oid = create entity Order
           |            terminate oid
           |          }
           |        } with { briefly "ch" }
@@ -272,7 +272,7 @@ class TerminateTargetTest extends AbstractValidatingTest {
           |      state CS of record R is {
           |        handler CH is {
           |          on init {
-          |            let oid = initiate entity Order
+          |            let oid = create entity Order
           |            terminate oid with ("done")
           |          }
           |        } with { briefly "ch" }

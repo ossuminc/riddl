@@ -1643,8 +1643,8 @@ object JsonAstBuilder:
         InvariantCondition(curAt, InvariantRef(curAt, pathId(inv)), argument.map(buildValue))
       case SelfValueDto(field) => SelfValue(curAt, field.map(f => Identifier(curAt, f)))
       case SystemValueDto(field) => SystemValue(curAt, field.map(f => Identifier(curAt, f)))
-      case i: InitiateValueDto => // A70/instance-identity
-        Initiate(
+      case i: CreateValueDto => // A70/instance-identity
+        Create(
           curAt,
           processorRef(i.processor, i.processorKind),
           i.args.map(a => ConstructorArg(curAt, a.name.map(ident), buildValue(a.value)))

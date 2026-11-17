@@ -44,7 +44,7 @@ class TerminateBASTRoundTripTest extends AnyWordSpec with Matchers {
       |      state CS of record R is {
       |        handler CH is {
       |          on init {
-      |            let oid = initiate entity Order
+      |            let oid = create entity Order
       |            terminate oid
       |          }
       |        } with { briefly "ch" }

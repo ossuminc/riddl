@@ -53,12 +53,12 @@ domain TerminateValue is {
       state CS of record Fields is {
         handler CH is {
           on init {
-            // `initiate` still names a TYPE -- the instance does not exist yet -- and yields the
+            // `create` still names a TYPE -- the instance does not exist yet -- and yields the
             // new instance's Id. `terminate` consumes that Id. The asymmetry is the design.
-            let orderId = initiate entity Order("5")
+            let orderId = create entity Order("5")
             terminate orderId
 
-            let widgetId = initiate entity Widget
+            let widgetId = create entity Widget
             terminate widgetId with ("done")
           }
           // An instance ending itself: `self.id` is an ordinary value of type Id(entity Caller).

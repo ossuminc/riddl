@@ -83,90 +83,7 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
     * reference field on every statement would broaden this well past the defect's shape without a
     * concrete use found for it.
     */
-  private def fieldChildren(v: RiddlValue): Seq[RiddlValue] = v match
-    // Statement blocks held in fields, not in `contents`
-    case ws: WhenStatement =>
-      Seq(ws.condition) ++ ws.thenStatements.toSeq ++ ws.elseStatements.toSeq
-    case ms: MatchStatement    => Seq(ms.expression) ++ ms.cases ++ ms.default.toSeq
-    case mc: MatchCase         => Seq(mc.pattern) ++ mc.guard.toSeq ++ mc.statements.toSeq
-    case cp: ComparisonPattern => Seq(cp.comparand)
-    case lp: LiteralPattern    => Seq(lp.literal)
-    // Same-shaped bare-LiteralString fields as `lp.literal` immediately above — added for
-    // audit consistency (review round 1, fix 2). A LiteralString is a leaf so these add no
-    // actual reachability, but a table claiming to be exhaustive should not have unexplained
-    // gaps next to a sibling it does cover.
-    case ps: DoStatement  => ps.what
-    case es: ErrorStatement   => Seq(es.message)
-    case cs: CodeStatement    => Seq(cs.language)
-    case fe: ForeachStatement => fe.doStatements.toSeq
-    case ss: SagaStep         => ss.doStatements.toSeq ++ ss.undoStatements.toSeq
-    case cr: Correlation => cr.timeoutStatements.toSeq // `.contents` already walked as a Container
-    case oq: OnQuiescenceClause => Seq(oq.window) // the window is a field; `.contents` is walked
-    case iv: Invariant   => iv.condition.toSeq
-    case ib: InvariantBlock => ib.statements.toSeq :+ ib.predicate
-
-    // Statement leaves holding a single Value/BooleanExpression/message operand in a field
-    case rq: RequireStatement => Seq(rq.condition) ++ rq.argument.toSeq
-    case st: SetStatement     => Seq(st.value)
-    case cs: CollectionStatement => Seq(cs.value)
-    case ls: LogStatement     => Seq(ls.value) // B7
-    // B2 (2026-09-22): the repository storage statements and the query value
-    case ss: StoreStatement   => Seq(ss.value, ss.table)
-    case us: UpsertStatement  => Seq(us.value, us.table)
-    case us: UpdateStatement  => (us.table +: us.assignments.map(_._2)) :+ us.where
-    case ds: DeleteStatement  => Seq(ds.table, ds.where)
-    case qv: QueryValue       => qv.table +: qv.where.toSeq
-    // B5 (2026-09-23): the collection kinds
-    case cp: CollectionPredicate => Seq(cp.collection, cp.predicate)
-    case cf: CollectionFilter    => Seq(cf.collection, cf.predicate)
-    case cv: CountValue          => Seq(cv.collection)
-    case mv: MembershipValue     => Seq(mv.collection, mv.element)
-    case lt: LetStatement     => Seq(lt.expression)
-    case pt: PutStatement     => Seq(pt.value)
-    case rt: ReturnStatement  => Seq(rt.value)
-    case sn: SendStatement    => Seq(sn.msg) ++ sn.at.toSeq // the `at` instant is a full Value
-    case tl: TellStatement    => Seq(tl.msg)
-    case yl: YieldStatement   => Seq(yl.msg)
-    case rp: ReplyStatement   => Seq(rp.msg)
-    case mo: MorphStatement   => Seq(mo.value)
-    // `target` is the instance address (a `Value`, since 2026-08-15) and must be walked with the
-    // args, or every `Finder` consumer goes blind to whatever the address is built from.
-    case tm: TerminateStatement => tm.target +: tm.args
-
-    // Value/BooleanExpression composition — needed so a condition tree's leaves (a NumericLiteral,
-    // a ValueRef, …) are reachable, not just the top-level condition node itself.
-    case ic: InvariantCondition   => ic.argument.toSeq
-    case ce: ComparisonExpression => Seq(ce.left, ce.right)
-    case le: LogicalExpression    => Seq(le.left, le.right)
-    case ne: NotExpression        => Seq(ne.expr)
-    case ct: Constructor          => ct.args
-    case cl: Call                 => cl.args
-    case in: Initiate             => in.args
-    case ca: ConstructorArg       => Seq(ca.value)
-    case gv: GetValue             => Seq(gv.source)
-    // B4 (2026-09-21): arithmetic composition, and the duration literal's amount. Found in the
-    // same survey, same defect class, one line each: a lookup's indices, an `empty` ascription and
-    // a constant's VALUE (a `Constant` is a Leaf whose value sits in a field) were unreachable too.
-    case ae: ArithmeticExpression => Seq(ae.left, ae.right)
-    case dl: DurationLiteral      => Seq(dl.amount)
-    case lv: LookupValue          => lv.collection +: lv.indices
-    case ev: EmptyValue           => ev.ascribedType.toSeq
-    case c: Constant              => Seq(c.value)
-
-    // Review round 1, fix 1: `PromptValue` (A20's `prompt("…") as T` typed hole) was the ONLY
-    // arm of `Value` holding a non-trivial nested structure and had NO case at all — not the
-    // `prompt` text, not the `as T` ascription. `PromptValue` legally sits in
-    // `WhenStatement.condition`, `LetStatement.expression`, `SetStatement.value`,
-    // `PutStatement.value`, `ReturnStatement.value` and `ConstantValue`, so a search for a
-    // `NumericLiteral`/`AliasedTypeExpression`/etc. reached through any of those missed it. The
-    // ascription's `TypeExpression` is surfaced here too (an `AliasedTypeExpression` — a NAMED
-    // type ascription — recurses one further level into its `PathIdentifier`, so `prompt("…") as
-    // SomeType` makes both the ascription node AND the path it names reachable).
-    case pv: PromptValue            => pv.prompt ++ pv.ascribedType.toSeq
-    case ate: AliasedTypeExpression => Seq(ate.pathId)
-
-    case _ => Seq.empty
-  end fieldChildren
+  private def fieldChildren(v: RiddlValue): Seq[RiddlValue] = Finder.fieldChildren(v)
 
   def recursiveFindByType[T <: AST.RiddlValue: ClassTag]: Seq[T] =
     import scala.reflect.classTag
@@ -302,6 +219,112 @@ object Finder:
     val container = SimpleContainer[CV](contents)
     Finder[CV](container)
   end apply
+
+  private[language] def fieldChildren(v: RiddlValue): Seq[RiddlValue] = v match
+    // Statement blocks held in fields, not in `contents`
+    case ws: WhenStatement =>
+      Seq(ws.condition) ++ ws.thenStatements.toSeq ++ ws.elseStatements.toSeq
+    case ms: MatchStatement    => Seq(ms.expression) ++ ms.cases ++ ms.default.toSeq
+    case mc: MatchCase         => Seq(mc.pattern) ++ mc.guard.toSeq ++ mc.statements.toSeq
+    case cp: ComparisonPattern => Seq(cp.comparand)
+    case lp: LiteralPattern    => Seq(lp.literal)
+    // Same-shaped bare-LiteralString fields as `lp.literal` immediately above — added for
+    // audit consistency (review round 1, fix 2). A LiteralString is a leaf so these add no
+    // actual reachability, but a table claiming to be exhaustive should not have unexplained
+    // gaps next to a sibling it does cover.
+    case ps: DoStatement  => ps.what
+    case es: ErrorStatement   => Seq(es.message)
+    case cs: CodeStatement    => Seq(cs.language)
+    case fe: ForeachStatement => fe.doStatements.toSeq
+    case ss: SagaStep         => ss.doStatements.toSeq ++ ss.undoStatements.toSeq
+    case cr: Correlation => cr.timeoutStatements.toSeq // `.contents` already walked as a Container
+    case oq: OnQuiescenceClause => Seq(oq.window) // the window is a field; `.contents` is walked
+    case iv: Invariant   => iv.condition.toSeq
+    case ib: InvariantBlock => ib.statements.toSeq :+ ib.predicate
+
+    // Statement leaves holding a single Value/BooleanExpression/message operand in a field
+    case rq: RequireStatement => Seq(rq.condition) ++ rq.argument.toSeq
+    case st: SetStatement     => Seq(st.value)
+    case cs: CollectionStatement => Seq(cs.value)
+    case ls: LogStatement     => Seq(ls.value) // B7
+    // B2 (2026-09-22): the repository storage statements and the query value
+    case ss: StoreStatement   => Seq(ss.value, ss.table)
+    case us: UpsertStatement  => Seq(us.value, us.table)
+    case us: UpdateStatement  => (us.table +: us.assignments.map(_._2)) :+ us.where
+    case ds: DeleteStatement  => Seq(ds.table, ds.where)
+    case qv: QueryValue       => qv.table +: qv.where.toSeq
+    // B5 (2026-09-23): the collection kinds
+    case cp: CollectionPredicate => Seq(cp.collection, cp.predicate)
+    case cf: CollectionFilter    => Seq(cf.collection, cf.predicate)
+    case cv: CountValue          => Seq(cv.collection)
+    case mv: MembershipValue     => Seq(mv.collection, mv.element)
+    case lt: LetStatement     => Seq(lt.expression)
+    case pt: PutStatement     => Seq(pt.value)
+    case rt: ReturnStatement  => Seq(rt.value)
+    case sn: SendStatement    => Seq(sn.msg) ++ sn.at.toSeq // the `at` instant is a full Value
+    case tl: TellStatement    => Seq(tl.msg)
+    case yl: YieldStatement   => Seq(yl.msg)
+    case rp: ReplyStatement   => Seq(rp.msg)
+    case mo: MorphStatement   => Seq(mo.value)
+    // `target` is the instance address (a `Value`, since 2026-08-15) and must be walked with the
+    // args, or every `Finder` consumer goes blind to whatever the address is built from.
+    case tm: TerminateStatement => tm.target +: tm.args
+
+    // Value/BooleanExpression composition — needed so a condition tree's leaves (a NumericLiteral,
+    // a ValueRef, …) are reachable, not just the top-level condition node itself.
+    case ic: InvariantCondition   => ic.argument.toSeq
+    case ce: ComparisonExpression => Seq(ce.left, ce.right)
+    case le: LogicalExpression    => Seq(le.left, le.right)
+    case ne: NotExpression        => Seq(ne.expr)
+    case ct: Constructor          => ct.args
+    case cl: Call                 => cl.args
+    case in: Create             => in.args
+    case ca: ConstructorArg       => Seq(ca.value)
+    case gv: GetValue             => Seq(gv.source)
+    // B4 (2026-09-21): arithmetic composition, and the duration literal's amount. Found in the
+    // same survey, same defect class, one line each: a lookup's indices, an `empty` ascription and
+    // a constant's VALUE (a `Constant` is a Leaf whose value sits in a field) were unreachable too.
+    case ae: ArithmeticExpression => Seq(ae.left, ae.right)
+    case dl: DurationLiteral      => Seq(dl.amount)
+    case lv: LookupValue          => lv.collection +: lv.indices
+    case ev: EmptyValue           => ev.ascribedType.toSeq
+    case c: Constant              => Seq(c.value)
+
+    // Review round 1, fix 1: `PromptValue` (A20's `prompt("…") as T` typed hole) was the ONLY
+    // arm of `Value` holding a non-trivial nested structure and had NO case at all — not the
+    // `prompt` text, not the `as T` ascription. `PromptValue` legally sits in
+    // `WhenStatement.condition`, `LetStatement.expression`, `SetStatement.value`,
+    // `PutStatement.value`, `ReturnStatement.value` and `ConstantValue`, so a search for a
+    // `NumericLiteral`/`AliasedTypeExpression`/etc. reached through any of those missed it. The
+    // ascription's `TypeExpression` is surfaced here too (an `AliasedTypeExpression` — a NAMED
+    // type ascription — recurses one further level into its `PathIdentifier`, so `prompt("…") as
+    // SomeType` makes both the ascription node AND the path it names reachable).
+    case pv: PromptValue            => pv.prompt ++ pv.ascribedType.toSeq
+    case ate: AliasedTypeExpression => Seq(ate.pathId)
+
+    case _ => Seq.empty
+  end fieldChildren
+
+  /** The VALUES a node holds in its fields, at any depth, stopping at nested statements.
+    *
+    * Built on [[fieldChildren]], the one table of field-held children, so a new field-held site
+    * added there is seen here too. A nested STATEMENT is not descended into: `Pass.traverse`
+    * visits statements itself (its arms for `when`/`match`/`foreach`/saga/correlation bodies), so
+    * a caller that asks this of every node it is handed sees each value exactly once.
+    *
+    * Added 2026-11-16 so `riddlc find` can select values (`create`, `ask`, `call`, …): the
+    * traversal never visits a value held in a field, so before this no value kind was selectable.
+    */
+  def nestedValues(v: RiddlValue): Seq[RiddlValue] =
+    fieldChildren(v).flatMap {
+      case _: Statement => Seq.empty
+      case child =>
+        val below = nestedValues(child)
+        child match
+          case value: Value => value +: below
+          case _            => below
+    }
+  end nestedValues
 
   /** Search the contents of each parent in a hierarchy chain for definitions of type `T`. Walks
     * from nearest parent to furthest (e.g., Entity → Context → Domain).

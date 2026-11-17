@@ -208,6 +208,11 @@ enum RuleId(
   case ProcessorKeyword
       extends RuleId("stream-processor-keyword", mechanicalFix = Some(Fix.Constant("streamlet")), deprecates = true)
   case AbstractType extends RuleId("abstract-type", mechanicalFix = Some(Fix.Constant("Anything")), deprecates = true)
+  // The value that brings an instance into being is spelled `create` (Reid, 2026-11-16): creation
+  // is instantiation, and INITIALIZATION is the `on init` clause it then runs. A pure span
+  // replacement, so `--fix` handles it; `initiate` goes on parsing indefinitely.
+  case InitiateKeyword
+      extends RuleId("value-initiate-keyword", mechanicalFix = Some(Fix.Constant("create")), deprecates = true)
   case SingleAlternation extends RuleId("single-alternation", deprecates = true)
   case EntityOptionToIntention extends RuleId("entity-option-to-intention", deprecates = true)
   case TypeFirstAggregate extends RuleId("type-first-aggregate", deprecates = true)

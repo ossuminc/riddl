@@ -433,3 +433,4 @@ field-method-arg-should-be-lowercase
 type-pattern-invalid-regex
 saga-step-uncompensated
 saga-step-too-many-fail-points
+value-initiate-keyword

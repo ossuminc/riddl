@@ -78,7 +78,7 @@ class InitiateTerminateTest extends AbstractValidatingTest {
       diagnostics(
         model(
           """on init(total: String) is { do "start" }""",
-          """let oid = initiate entity Order("1")"""
+          """let oid = create entity Order("1")"""
         ),
         "initiate-ok"
       ).justErrors mustBe empty
@@ -86,7 +86,7 @@ class InitiateTerminateTest extends AbstractValidatingTest {
 
     "accept the no-parens form when on init takes nothing" in { (td: TestData) =>
       diagnostics(
-        model("""on init is { do "start" }""", """let oid = initiate entity Order"""),
+        model("""on init is { do "start" }""", """let oid = create entity Order"""),
         "initiate-bare"
       ).justErrors mustBe empty
     }
@@ -95,7 +95,7 @@ class InitiateTerminateTest extends AbstractValidatingTest {
       val text = diagnostics(
         model(
           """on init(total: String) is { do "start" }""",
-          """let oid = initiate entity Order("1", "2")"""
+          """let oid = create entity Order("1", "2")"""
         ),
         "initiate-arity"
       ).justErrors.map(_.message).mkString("\n")
@@ -105,7 +105,7 @@ class InitiateTerminateTest extends AbstractValidatingTest {
 
     "REJECT parens where on init declares no parameters" in { (td: TestData) =>
       val text = diagnostics(
-        model("""on init is { do "start" }""", """let oid = initiate entity Order("1")"""),
+        model("""on init is { do "start" }""", """let oid = create entity Order("1")"""),
         "initiate-extra"
       ).justErrors.map(_.message).mkString("\n")
       text must include("no parameters")
@@ -122,7 +122,7 @@ class InitiateTerminateTest extends AbstractValidatingTest {
         val text = diagnostics(
           model(
             """on init(total: String) is { do "start" }""",
-            """when true then { let oid = initiate entity Order("1", "2") } end"""
+            """when true then { let oid = create entity Order("1", "2") } end"""
           ),
           "initiate-nested-when"
         ).justErrors.map(_.message).mkString("\n")
@@ -139,7 +139,7 @@ class InitiateTerminateTest extends AbstractValidatingTest {
         model(
           """on init is { do "start" }
                 |          on term is { do "end" }""".stripMargin,
-          """let oid = initiate entity Order
+          """let oid = create entity Order
                   |            terminate oid""".stripMargin
         ),
         "terminate-ok"
@@ -151,7 +151,7 @@ class InitiateTerminateTest extends AbstractValidatingTest {
         model(
           """on init is { do "start" }
                 |          on term(why: String) is { do "end" }""".stripMargin,
-          """let oid = initiate entity Order
+          """let oid = create entity Order
                   |            terminate oid""".stripMargin
         ),
         "terminate-arity"
@@ -171,7 +171,7 @@ class InitiateTerminateTest extends AbstractValidatingTest {
           model(
             """on init is { do "start" }
               |          on term(why: String) is { do "end" }""".stripMargin,
-            """let oid = initiate entity Order
+            """let oid = create entity Order
               |            when true then { terminate oid } end""".stripMargin
           ),
           "terminate-nested-when"
@@ -194,7 +194,7 @@ class InitiateTerminateTest extends AbstractValidatingTest {
   "a `???` target" should {
     "exempt `initiate` from the arity check" in { (td: TestData) =>
       diagnostics(
-        stubModel("""let oid = initiate entity Order("1")"""),
+        stubModel("""let oid = create entity Order("1")"""),
         "initiate-stub"
       ).justErrors mustBe empty
     }
@@ -203,7 +203,7 @@ class InitiateTerminateTest extends AbstractValidatingTest {
       // The stub exemption is about the CALLEE's `on term`, so the target must still be a real
       // Id -- here the one `initiate` mints for the stub entity.
       diagnostics(
-        stubModel("""let oid = initiate entity Order("1")
+        stubModel("""let oid = create entity Order("1")
                     |            terminate oid with ("1")""".stripMargin),
         "terminate-stub"
       ).justErrors mustBe empty
@@ -213,7 +213,7 @@ class InitiateTerminateTest extends AbstractValidatingTest {
       // The exemption is about the CALLEE. A name written at the call site either exists or it
       // does not, and the callee being a stub says nothing about that.
       val text = diagnostics(
-        stubModel("""let oid = initiate entity Order("1")
+        stubModel("""let oid = create entity Order("1")
                     |            terminate oid with (nosuchlocal)""".stripMargin),
         "stub-args"
       ).justErrors.map(_.message).mkString("\n")

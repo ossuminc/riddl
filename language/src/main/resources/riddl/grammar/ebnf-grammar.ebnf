@@ -376,7 +376,7 @@ let_statement = "let" identifier [":" type_ref] "=" value ;
    (B4, 2026-09-21: `"a" + b` and `5 * n` need them as operands). *)
 (* `empty_value` sits BEFORE boolean_expression: that rule's atom accepts a bare path and would
    otherwise swallow `empty` as a value_ref, leaving any ascription dangling. *)
-value = prompt_value | call | ask | initiate | query_value | constructor | get_value
+value = prompt_value | call | ask | create | query_value | constructor | get_value
       | empty_value | boolean_expression ;
 (* B2: reading the repository's own storage. `query one` is the first match or empty; without
    `one` it is every match, in UNSPECIFIED order. Tried before `constructor`, whose `query Q(…)`
@@ -431,8 +431,8 @@ reserved_word =
 statement_start = ( "set" | "tell" | "send" | "forward" | "yield" | "reply" | "morph" | "become"
                   | "do" | "prompt" | "let" | "call" | "foreach" | "when" | "match" | "error"
                   | "require" | "put" | "return" | "terminate" | "code" | "focus" | "stop"
-                  | "read" | "write" | "ask" | "initiate" | "if" | "else" | "append" | "remove"
-                  | "log" | "store" | "upsert" | "update" | "delete" ) ;
+                  | "read" | "write" | "ask" | "create" | "initiate" | "if" | "else" | "append"
+                  | "remove" | "log" | "store" | "upsert" | "update" | "delete" ) ;
 prompt_value = "prompt" "(" literal_string_block ")" [ "as" type_expression ] ;
 (* Numeric literals - integers and reals, written directly. No digit separators and no radix     *)
 (* prefixes: declined deliberately, and pure additions later if wanted.                           *)
@@ -470,7 +470,10 @@ ask = "ask" query_ref "of" processor_ref ;
    `Id(<processor>)`. Parens are OPTIONAL and present exactly when there are arguments -- one
    keyword, not two. Arity/argument-type checking is done in validation, which is the only place
    that has resolved the target's `on init` clause; a wrong count still PARSES. *)
-initiate = "initiate" processor_ref ["(" [constructor_arg {"," constructor_arg}] ")"] ;
+(* Spelled `create` since 2026-11-16 (Reid): creation is instantiation; initialization is the
+   `on init` clause it runs. `initiate` is the deprecated spelling of the same value, consumed by
+   the parser into the same node (rule `value-initiate-keyword`). *)
+create = ("create" | "initiate") processor_ref ["(" [constructor_arg {"," constructor_arg}] ")"] ;
 constructor = (message_ref | record_ref) "(" [constructor_arg {"," constructor_arg}] ")" ;
 constructor_arg = (identifier "=" value) | value ;
 get_value = "get" "from" (input_ref | state_ref) ;
@@ -556,7 +559,7 @@ return_statement = "return" value ;
    not a value: termination produces nothing.
 
    The target is a VALUE, not a processor_ref (Reid, 2026-08-15): it must be typed `Id(entity E)`,
-   and the entity terminated is DERIVED from that type. `initiate` still names a type, because the
+   and the entity terminated is DERIVED from that type. `create` still names a type, because the
    instance does not exist yet -- the asymmetry is the design, not an inconsistency.
 
    Arguments sit behind `with`, not bare parentheses, because `terminate order.id("x")` reads as a

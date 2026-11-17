@@ -182,7 +182,7 @@ is covered in that construct's phase. The builder emits references as
 | MembershipValue | ✅ B5 (2026-09-23) | `{ "value": "contains", "collection": <value>, "element": <value> }` |
 | QueryValue | ✅ B2 (2026-09-22) | `{ "value": "query", "table": …, "one"?: true, "where"?: <value> }` |
 | LogStatement | ✅ B7 (2026-09-21) | `{ "kind": "log", "value": <value> }` — record a value for humans; deterministic, not state |
-| TerminateStatement | ✅ 2.0 | `{ "kind": "terminate", "target": <value>, "args": [<arg>] }` — end the instance denoted by `target`, invoking its `on term`. **`target` REPLACED the `processor`/`processorKind` pair on 2026-08-15**: it is a value whose type must be `Id(entity E)`, so it names WHICH INSTANCE ends rather than which kind. **No longer the same shape as `Initiate`**, which still names a type because the instance does not exist yet. A producer still emitting the old pair has it silently dropped and gets a null `target` — the reader diffs no keys |
+| TerminateStatement | ✅ 2.0 | `{ "kind": "terminate", "target": <value>, "args": [<arg>] }` — end the instance denoted by `target`, invoking its `on term`. **`target` REPLACED the `processor`/`processorKind` pair on 2026-08-15**: it is a value whose type must be `Id(entity E)`, so it names WHICH INSTANCE ends rather than which kind. **No longer the same shape as `Create`**, which still names a type because the instance does not exist yet. A producer still emitting the old pair has it silently dropped and gets a null `target` — the reader diffs no keys |
 
 ## Values (A54)
 
@@ -212,7 +212,7 @@ message operands of `send`/`tell`/`yield`/`morph`, and constructor args via
 | LogicalExpression | ✅ A28 | `{ "value": "logical", "op": "and"\|"or", "left": <value>, "right": <value> }` |
 | NotExpression | ✅ A28 | `{ "value": "not", "expr": <value> }` |
 | SelfValue | ✅ 2.0 | `{ "value": "self", "field"?: "id"\|"version" }` — the running processor instance. The type is a SYNTHESIZED Aggregation (see `AST.SelfValue`), so nothing here names a path |
-| Initiate | ✅ 2.0 | `{ "value": "initiate", "processor": "<path>", "processorKind": "<kind>", "args": [<arg>] }` — bring an instance into being and yield its identity (task 4 of processor-instance-identity, 2026-08-13). No answer type is carried: it is always the synthesized `Id(<processor>)`, so storing it would be a second place for the same fact to drift |
+| Create | ✅ 2.0 | `{ "value": "create", "processor": "<path>", "processorKind": "<kind>", "args": [<arg>] }` — bring an instance into being and yield its identity (task 4 of processor-instance-identity, 2026-08-13). **Spelled `initiate` until 2026-11-16**: the writer says `"create"`, and the reader accepts `"initiate"` too, forever, so earlier JSON keeps loading (`CreateValueJsonTest`). No answer type is carried: it is always the synthesized `Id(<processor>)`, so storing it would be a second place for the same fact to drift |
 
 ## Metadata
 

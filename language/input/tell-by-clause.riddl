@@ -22,8 +22,8 @@ domain TellByClause is {
       state CS of record Fields is {
         handler CH is {
           on init {
-            let f = initiate entity Order
-            let t = initiate entity Order
+            let f = create entity Order
+            let t = create entity Order
             tell command Ship(fromOrder = f, toOrder = t) to entity Order by toOrder
           }
         } with { briefly "ch" }

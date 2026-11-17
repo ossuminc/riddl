@@ -64,7 +64,7 @@ class MessageOperandSourceConsumerFixTest extends AbstractValidatingTest {
           |      state CS of record R is {
           |        handler CH is {
           |          on command Go {
-          |            let oid = initiate entity Order
+          |            let oid = create entity Order
           |            let m = command Ship(orderId = oid)
           |            tell m to entity Order by nonexistentField
           |          }
@@ -96,8 +96,8 @@ class MessageOperandSourceConsumerFixTest extends AbstractValidatingTest {
           |      state CS of record R is {
           |        handler CH is {
           |          on command Go {
-          |            let f = initiate entity Order
-          |            let t = initiate entity Order
+          |            let f = create entity Order
+          |            let t = create entity Order
           |            let m = command Ship(fromOrder = f, toOrder = t)
           |            tell m to entity Order
           |          }

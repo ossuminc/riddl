@@ -47,7 +47,7 @@ class TerminateRoundTripTest extends AbstractValidatingTest {
       |      state CS of record R is {
       |        handler CH is {
       |          on init {
-      |            let oid = initiate entity Order
+      |            let oid = create entity Order
       |            terminate oid
       |          }
       |        } with { briefly "ch" }
@@ -114,7 +114,7 @@ class TerminateRoundTripTest extends AbstractValidatingTest {
           |    entity Caller is {
           |      handler CH is {
           |        on init {
-          |          let w = initiate entity Widget
+          |          let w = create entity Widget
           |          terminate w
           |        }
           |      } with { briefly "ch" }
@@ -144,7 +144,7 @@ class TerminateRoundTripTest extends AbstractValidatingTest {
           |    entity Caller is {
           |      handler CH is {
           |        on init {
-          |          let w = initiate entity Widget
+          |          let w = create entity Widget
           |          terminate w with ()
           |        }
           |      } with { briefly "ch" }

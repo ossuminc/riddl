@@ -71,6 +71,39 @@ fixtures, not a task).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-16 (evening) — `initiate` is `create`; `find` can select values
+
+riddl-generator's task, on Reid's ruling: the value that brings an instance into being is
+`create`. CREATION is instantiation; INITIALIZATION is the `on init` clause it then runs.
+`initiate` parses forever as a deprecation (`value-initiate-keyword`, `--fix`-able), consumed
+into the same node. `stmt-initiate-id-unused` keeps its code: published codes never change.
+
+**3.0 CHANGE OWED — BACKLOG [5.10] (Reid asked for this note).** The JVM class is still
+`AST.Initiate`; `type Create = Initiate` and `val Create: Initiate.type = Initiate` are what
+the code writes. At 3.0, rename the class itself to `Create` and REMOVE the `val Create`
+alias, and do the same for `JsonModel.InitiateValueDto`/`CreateValueDto`. The reason it waits:
+the plan renamed the class and kept `Initiate` as deprecated aliases, which was source-
+compatible, and MiMa against 2.6.0 refused it. `AST$Initiate` disappears from the binary, so
+a consumer compiled against 2.6.0 dies at run time. **Aliases protect SOURCE, never BINARY**,
+and the `Abstract`→`Anything` precedent the plan copied only got away with it because it
+landed in 2.0.0, a major release, before MiMa had a baseline.
+
+**`find` could not select a value of ANY kind**, which the plan had assumed it could.
+`Pass.traverse` visits definitions and statements, never a value held in a field, so
+`-type initiate` had matched nothing since the value existed, and `knownKinds` already listed
+value kinds (`query-value`, `arithmetic-expression`) that no query could ever have matched.
+Reid chose to fix it now. `Finder.fieldChildren` moved to the companion so the projection
+and `Finder` share ONE table of field-held children, and `Finder.nestedValues` walks it,
+stopping at nested statements (the traversal projects those). Every composite value is now a
+node; plain literals and `ValueRef` (which has its own `value-reference` record) are not.
+`-type initiate` maps to `create` (`FindPredicates.renamedKinds`).
+
+Verified: every new test canaried red, MiMa green on five modules, TatSu 128/151, tJVM/tJS/
+tNative from an empty cache, riddl-models census identical to 2.6.0. Three OLD tests had
+pinned the word `initiate` in output (a prettify string, a diagnostic, the JSON
+discriminator) and were updated. The CM carries the rename and synapify's companion ruling:
+creation runs `on init`, never `on activate`.
+
 ## 2026-11-16 (later) — [5.2]: a streamlet can be referenced by what it is
 
 BACKLOG [5.2] and synapify's 2026-11-15 task, done together. `streamletRef` took only

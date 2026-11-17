@@ -23,7 +23,7 @@ import org.scalatest.*
   * `InvariantCondition` `with` argument reached through a `LogicalExpression`/`NotExpression` --
   * because `emitValue`'s fallback for every OTHER `Value` shape was still `add(other.format)`,
   * which recurses back into the un-fixed `.format`/`ascriptionFormat` path one level down.
-  * `emitValue` is now total over these containers too (`Constructor`, `Call`, `Initiate`,
+  * `emitValue` is now total over these containers too (`Constructor`, `Call`, `Create`,
   * `InvariantCondition`, `LogicalExpression`, `NotExpression` all recurse back through
   * `emitValue`), and this file proves it the same way: parse -> prettify -> re-parse, asserting the
   * SAME broken-shape ascription survives at the same place.

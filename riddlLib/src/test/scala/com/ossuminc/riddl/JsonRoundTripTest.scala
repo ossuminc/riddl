@@ -625,7 +625,7 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       end match
     }
 
-    "round-trip an `initiate <processor>(args)` value (task 4, processor-instance identity) losslessly" in {
+    "round-trip a `create <processor>(args)` value (task 4, processor-instance identity) losslessly" in {
       val initiateModel =
         """domain d is {
           |  context Ctx is {
@@ -645,8 +645,8 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
           |      state CS of record R is {
           |        handler CH is {
           |          on command Go is {
-          |            let orderId = initiate entity Order("5")
-          |            let widgetId = initiate entity Widget
+          |            let orderId = create entity Order("5")
+          |            let widgetId = create entity Widget
           |          }
           |        }
           |      }
@@ -657,8 +657,9 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
       RiddlLib.parseString(initiateModel) match
         case RiddlResult.Success(root0) =>
           val json1 = RiddlLib.root2Json(root0)
-          // JsonifierPass emits the initiate discriminator, target processor, and args...
-          json1 must include("\"initiate\"")
+          // JsonifierPass emits the `create` discriminator (`initiate` until 2026-11-16), target
+          // processor, and args...
+          json1 must include("\"create\"")
           json1 must include("Order")
           // ...and JsonAstBuilder rebuilds it so the JSON is a fixed point.
           RiddlLib.parseJson(json1) match
@@ -693,7 +694,7 @@ class JsonRoundTripTest extends AnyWordSpec with Matchers {
           |      state CS of record R is {
           |        handler CH is {
           |          on command Go is {
-          |            let orderId = initiate entity Order
+          |            let orderId = create entity Order
           |            terminate orderId with ("cancelled")
           |          }
           |        }

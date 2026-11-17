@@ -30,6 +30,16 @@ is worse than no handle**, because it fails exactly when it is being relied on.
 
 ### 5. Post-2.0 — the 3.x line
 
+- **[5.10]** **AT 3.0: rename the class `AST.Initiate` to `Create` and drop the alias val**
+  (Reid, 2026-11-16). The `initiate` value became `create` in 2.7.0, but the JVM CLASS kept
+  the name `Initiate`: renaming it removed `AST$Initiate` from the binary, and MiMa against
+  2.6.0 showed a consumer compiled against it would fail at run time. So today
+  `type Create = Initiate` and `val Create: Initiate.type = Initiate` (`AST.scala`, beside the
+  case class) are the names riddl's code uses. At 3.0, where a binary break is allowed: make
+  `Create` the case class, and REMOVE the `val Create` alias. Whether `Initiate` then survives as
+  a deprecated source alias is the compatibility policy's call (old spellings stay). Do the
+  same for `JsonModel.InitiateValueDto` / `CreateValueDto`. JS already exports both names.
+
 - **[5.9]** **DEFERRED — duplicate emissions that CONVERGE downstream through different
   outlets** (Reid, 2026-10-16). Case 4 of riddl-generator's "incognito duplicate" task: one
   clause's two emissions of the same value leave by DIFFERENT outlets whose connector paths meet at

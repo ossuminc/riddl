@@ -12,7 +12,7 @@ import com.ossuminc.riddl.utils.{CommonOptions, pc}
 import org.scalatest.TestData
 
 /** Message-value-source plan, Task 5 (Reid, 2026-08-14: *"no further task is needed, just build
-  * it"*): `let x = initiate entity Order(…)` whose `x` is never referenced again.
+  * it"*): `let x = create entity Order(…)` whose `x` is never referenced again.
   *
   * `initiate` is the ONLY way an `Id(P)` value comes into being, so dropping the one it produces
   * usually means the author meant to address the new instance and forgot.
@@ -71,7 +71,7 @@ class UnusedInitiateIdTest extends AbstractValidatingTest {
   "an unreferenced `initiate` id" should {
 
     "draw a warning" in { (td: TestData) =>
-      val msgs = diagnostics(model("""let wid = initiate entity Worker("1")"""), "unused")
+      val msgs = diagnostics(model("""let wid = create entity Worker("1")"""), "unused")
       unusedWarnings(msgs).size mustBe 1
     }
 
@@ -80,7 +80,7 @@ class UnusedInitiateIdTest extends AbstractValidatingTest {
       * must remain something an author can live with.
       */
     "stay a Warning, never an Error, for a self-terminating worker" in { (td: TestData) =>
-      val msgs = diagnostics(model("""let wid = initiate entity Worker("1")"""), "self-term")
+      val msgs = diagnostics(model("""let wid = create entity Worker("1")"""), "self-term")
       unusedWarnings(msgs).size mustBe 1
       msgs.justErrors mustBe empty
     }
@@ -90,7 +90,7 @@ class UnusedInitiateIdTest extends AbstractValidatingTest {
 
     "stay silent when it is terminated" in { (td: TestData) =>
       val msgs = diagnostics(
-        model("""let wid = initiate entity Worker("1")
+        model("""let wid = create entity Worker("1")
                 |            terminate wid""".stripMargin),
         "used-terminate"
       )
@@ -99,7 +99,7 @@ class UnusedInitiateIdTest extends AbstractValidatingTest {
 
     "stay silent when it is kept in state" in { (td: TestData) =>
       val msgs = diagnostics(
-        model("""let wid = initiate entity Worker("1")
+        model("""let wid = create entity Worker("1")
                 |            set field Caller.CR.held to wid""".stripMargin),
         "used-set"
       )
@@ -108,7 +108,7 @@ class UnusedInitiateIdTest extends AbstractValidatingTest {
 
     "stay silent when it is passed in a message" in { (td: TestData) =>
       val msgs = diagnostics(
-        model("""let wid = initiate entity Worker("1")
+        model("""let wid = create entity Worker("1")
                 |            tell command Note(wid = wid) to entity Worker""".stripMargin),
         "used-message"
       )
@@ -127,7 +127,7 @@ class UnusedInitiateIdTest extends AbstractValidatingTest {
       */
     "survive a clause that also holds a `when prompt(…)` condition" in { (td: TestData) =>
       val msgs = diagnostics(
-        model("""let wid = initiate entity Worker("1")
+        model("""let wid = create entity Worker("1")
                 |            when prompt("the worker is stuck") then
                 |              terminate wid
                 |            end""".stripMargin),
@@ -141,7 +141,7 @@ class UnusedInitiateIdTest extends AbstractValidatingTest {
 
     "stay silent when the only use is nested inside a `when` body" in { (td: TestData) =>
       val msgs = diagnostics(
-        model("""let wid = initiate entity Worker("1")
+        model("""let wid = create entity Worker("1")
                 |            when "the worker is stuck" then
                 |              terminate wid
                 |            end""".stripMargin),

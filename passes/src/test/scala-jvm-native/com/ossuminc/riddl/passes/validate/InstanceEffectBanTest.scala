@@ -43,7 +43,7 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
   private def errorsIn(src: String, origin: String): String =
     diagnostics(src, origin).justErrors.map(_.message).mkString("\n")
 
-  /** Every model below declares the same `entity Order` so `initiate entity Order` resolves, and
+  /** Every model below declares the same `entity Order` so `create entity Order` resolves, and
     * declares `on term` so `terminate oid` resolves too; only the CONTEXT the offending statement
     * sits in differs, which is the variable under test.
     */
@@ -124,7 +124,7 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
        |        handler CollectH is {
        |          on e: event Started is { set field oid to e.oid }
        |        } with { briefly "folds" }
-       |      } times out after "1 hour" { let oid = initiate entity Order
+       |      } times out after "1 hour" { let oid = create entity Order
        |                                   $stmt }
        |    } with { briefly "proj" }""".stripMargin)
 
@@ -174,7 +174,7 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
 
   "initiate/terminate" should {
     "be BANNED in a function body" in { (td: TestData) =>
-      errorsIn(functionModel("""let x = initiate entity Order"""), "ban-fn") must
+      errorsIn(functionModel("""let x = create entity Order"""), "ban-fn") must
         include("function")
     }
 
@@ -182,7 +182,7 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
     // when/match/foreach FIELD-held statement lists), not by `validateStatement` (which does not).
     "be BANNED in a function body, nested inside a 'when' block" in { (td: TestData) =>
       errorsIn(
-        functionModel("""when true then { let x = initiate entity Order } end"""),
+        functionModel("""when true then { let x = create entity Order } end"""),
         "ban-fn-nested"
       ) must include("function")
     }
@@ -197,7 +197,7 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
     "be BANNED (terminate) in a function body" in { (td: TestData) =>
       val errors = errorsIn(
         functionModel(
-          """let x = initiate entity Order
+          """let x = create entity Order
             |      terminate x""".stripMargin
         ),
         "ban-fn-terminate"
@@ -207,17 +207,17 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
     }
 
     "be LEGAL in an ordinary entity handler" in { (td: TestData) =>
-      errorsIn(entityModel("""let x = initiate entity Order"""), "ok-entity") mustBe ""
+      errorsIn(entityModel("""let x = create entity Order"""), "ok-entity") mustBe ""
     }
 
     "be BANNED in an on activate clause" in { (td: TestData) =>
-      errorsIn(activateModel("""let x = initiate entity Order"""), "ban-activate") must
+      errorsIn(activateModel("""let x = create entity Order"""), "ban-activate") must
         include("activat")
     }
 
     "be BANNED in an on activate clause, nested inside a 'when' block" in { (td: TestData) =>
       errorsIn(
-        activateModel("""when true then { let x = initiate entity Order } end"""),
+        activateModel("""when true then { let x = create entity Order } end"""),
         "ban-activate-nested"
       ) must include("activat")
     }
@@ -225,7 +225,7 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
     "be BANNED (terminate) in an on activate clause" in { (td: TestData) =>
       val errors = errorsIn(
         activateModel(
-          """let x = initiate entity Order
+          """let x = create entity Order
             |      terminate x""".stripMargin
         ),
         "ban-activate-terminate"
@@ -237,7 +237,7 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
     "be BANNED in an on passivate clause" in { (td: TestData) =>
       // Pins the claim that the ban applies to BOTH clauses the message names, not just the one
       // ("on activate") every other case here happens to use.
-      errorsIn(passivateModel("""let x = initiate entity Order"""), "ban-passivate") must
+      errorsIn(passivateModel("""let x = create entity Order"""), "ban-passivate") must
         include("activat")
     }
 
@@ -249,7 +249,7 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
     // the fix. Exercised here in a function body, where the ban applies.
     "be BANNED when 'initiate' hides inside a 'require ... with' operand" in { (td: TestData) =>
       errorsIn(
-        functionModel("""require true with initiate entity Order"""),
+        functionModel("""require true with create entity Order"""),
         "ban-fn-require-with"
       ) must include("function")
     }
@@ -264,7 +264,7 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
       errorsIn(
         functionModel(
           """match a {
-            |        case "x" when invariant Inv with initiate entity Order {
+            |        case "x" when invariant Inv with create entity Order {
             |          do "case"
             |        }
             |      }""".stripMargin
@@ -274,7 +274,7 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
     }
 
     "be BANNED in a projector correlation fold" in { (td: TestData) =>
-      val errors = errorsIn(foldModel("""let x = initiate entity Order"""), "ban-fold")
+      val errors = errorsIn(foldModel("""let x = create entity Order"""), "ban-fold")
       errors must include("fold")
       // Exactly one error for the one offending statement -- proves `checkInstanceEffectScope`
       // (wired via `checkStatementScopes`, reached generically for every `OnClause` including a
@@ -343,7 +343,7 @@ class InstanceEffectBanTest extends AbstractValidatingTest {
       */
     "be LEGAL in a saga step (Reid's ruling, 2026-08-14)" in { (td: TestData) =>
       errorsIn(
-        sagaModel("""let wid = initiate entity Worker("1")
+        sagaModel("""let wid = create entity Worker("1")
                     |        terminate wid""".stripMargin),
         "ok-saga-step"
       ) mustBe ""

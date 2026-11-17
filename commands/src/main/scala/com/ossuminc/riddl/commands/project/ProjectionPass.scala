@@ -80,7 +80,24 @@ case class ProjectionPass(
       value match
         case s: Statement => valueReferenceNodes(s, ps).foreach(nodes.append)
         case _            => ()
+      valueNodes(value, ps).foreach(nodes.append)
   }
+
+  /** A node for every composite VALUE this node holds in a field (`create`, `ask`, `call`, a
+    * constructor, an expression, a query, …), so `-type create` selects one.
+    *
+    * The traversal visits definitions and statements, never a value held in a field, so until
+    * 2026-11-16 no value kind was selectable at all -- found when the `initiate` value was renamed
+    * `create` and `-type initiate` turned out to have matched nothing all along. Two kinds are left
+    * out on purpose: a [[ValueRef]] already has its own, richer `value-reference` node, and a plain
+    * LITERAL has no structure to select by and is already rendered as its statement's value --
+    * projecting every literal would add a node per string in the model and tell a query nothing.
+    */
+  private def valueNodes(value: RiddlValue, parents: Parents): Seq[ProjectedNode] =
+    Finder.nestedValues(value).collect {
+      case _: ValueRef | _: LiteralString | _: NumericLiteral | _: BooleanLiteral => None
+      case v => Some(ProjectedNode(v, parents, recordFor(v, parents)))
+    }.flatten
 
   override def postProcess(root: PassRoot): Unit = ()
 

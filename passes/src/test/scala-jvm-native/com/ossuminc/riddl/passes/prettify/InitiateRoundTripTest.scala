@@ -27,7 +27,7 @@ import org.scalatest.*
   *
   * `Finder.recursiveFindByType` does NOT descend into a `LetStatement`'s `expression` field (its
   * `consider` walk only descends `Container`/`When`/`Match`/`Foreach`/`SagaStep`), so this test
-  * walks the tree directly to the `Initiate` node instead of relying on it -- same reasoning as
+  * walks the tree directly to the `Create` node instead of relying on it -- same reasoning as
   * `InitiateFileTest`.
   */
 class InitiateRoundTripTest extends AbstractValidatingTest {
@@ -46,7 +46,7 @@ class InitiateRoundTripTest extends AbstractValidatingTest {
       |    entity Caller is {
       |      state CS of record R is {
       |        handler CH is {
-      |          on init { let oid = initiate entity Order("5") }
+      |          on init { let oid = create entity Order("5") }
       |        } with { briefly "ch" }
       |      } with { briefly "cs" }
       |    } with { briefly "ce" }
@@ -73,11 +73,11 @@ class InitiateRoundTripTest extends AbstractValidatingTest {
       .state
       .filesAsString
 
-  /** Walk down to the `Caller` entity's `on init` clause and pull out its single `let`'s `Initiate`
+  /** Walk down to the `Caller` entity's `on init` clause and pull out its single `let`'s `Create`
     * expression -- mirrors `InitiateFileTest`'s direct walk, for the same reason (Finder does not
     * descend into LetStatement).
     */
-  private def initiateIn(root: Root): Initiate =
+  private def initiateIn(root: Root): Create =
     val domain =
       root.contents.toSeq.collectFirst { case d: Domain => d }.getOrElse(fail("no domain"))
     val context =
@@ -96,8 +96,8 @@ class InitiateRoundTripTest extends AbstractValidatingTest {
       .collectFirst { case ls: LetStatement => ls }
       .getOrElse(fail("no let statement"))
     let.expression match
-      case init: Initiate => init
-      case other          => fail(s"expected an Initiate, got $other")
+      case init: Create => init
+      case other          => fail(s"expected an Create, got $other")
 
   "initiate" should {
     "round-trip through prettify (parse -> prettify -> re-parse)" in { (td: TestData) =>
@@ -105,7 +105,7 @@ class InitiateRoundTripTest extends AbstractValidatingTest {
       val originalInit = initiateIn(original)
 
       val pretty = prettify(original)
-      pretty must include("initiate")
+      pretty must include("create entity")
 
       val regen = parse(pretty, "regen")
       val regenInit = initiateIn(regen)
@@ -126,15 +126,15 @@ class InitiateRoundTripTest extends AbstractValidatingTest {
           |    } with { briefly "e" }
           |    entity Caller is {
           |      handler CH is {
-          |        on init { let oid = initiate entity Widget }
+          |        on init { let oid = create entity Widget }
           |      } with { briefly "ch" }
           |    } with { briefly "ce" }
           |  } with { briefly "c" }
           |} with { briefly "d" }
           |""".stripMargin
       val pretty = prettify(parse(bareSrc, "bare"))
-      pretty must include("initiate entity Widget")
-      pretty must not include "initiate entity Widget("
+      pretty must include("create entity Widget")
+      pretty must not include "create entity Widget("
     }
   }
 }

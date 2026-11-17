@@ -868,7 +868,7 @@ object AST:
     StreamletShape | AdaptorDirection | UserStory | MethodArgument | Schema | ShownBy |
     SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription | FileAttachment |
     StringAttachment | ULIDAttachment | Meta | Statement | Constructor | ConstructorArg | ValueRef |
-    GetValue | PromptValue | BooleanExpression | Call | Ask | SelfValue | SystemValue | Initiate |
+    GetValue | PromptValue | BooleanExpression | Call | Ask | SelfValue | SystemValue | Create |
     NumericLiteral | LookupValue | EmptyValue | ArithmeticExpression | DurationLiteral |
     QueryValue | TableRef | CollectionPredicate | CollectionFilter | CountValue |
     MembershipValue | Requires | Returns | InvariantBlock
@@ -3264,7 +3264,7 @@ object AST:
     */
   type Value =
     LiteralString | PromptValue | Constructor | ValueRef | GetValue | BooleanExpression | Call |
-      Ask | SelfValue | SystemValue | Initiate | NumericLiteral | LookupValue | EmptyValue |
+      Ask | SelfValue | SystemValue | Create | NumericLiteral | LookupValue | EmptyValue |
       ArithmeticExpression | DurationLiteral | ConstantRef | QueryValue | CollectionPredicate |
       CollectionFilter | CountValue | MembershipValue
 
@@ -3399,7 +3399,13 @@ object AST:
     def format: String = s"ask ${query.format} of ${processor.format}"
   end Ask
 
-  /** `initiate <processor>(args)` -- bring an instance into being and yield its identity.
+  /** `create <processor>(args)` -- bring an instance into being and yield its identity.
+    *
+    * Spelled `initiate` until 2026-11-16 (Reid): the name described the second half. CREATION is
+    * instantiation -- the instance is set aside, given a place for its values and an `Id`.
+    * INITIALIZATION is the job of its `on init` clause, which creation then runs. `initiate` still
+    * parses, as a deprecation consumed into this node. Write the node as [[Create]]; the class
+    * keeps its old name for binary compatibility (see [[Create]]).
     *
     * Creation still completes only when `on init` finishes, so this does NOT introduce a second way
     * for an instance to exist (CM line 999): it supplies the invocation that was missing. The value
@@ -3407,24 +3413,37 @@ object AST:
     * `on init`'s parameters and lives in state.
     *
     * @param loc
-    *   The location of the `initiate` in the source
+    *   The location of the `create` in the source
     * @param processor
     *   The processor to bring an instance of into being
     * @param args
     *   The arguments supplied to the target's `on init` parameters (empty when `on init` takes
-    *   none, in which case the parentheses are omitted -- see `StatementParser.initiateValue`)
+    *   none, in which case the parentheses are omitted -- see `StatementParser.createValue`)
     */
-  @JSExportTopLevel("Initiate")
+  @JSExportTopLevel("Create")
+  @JSExportTopLevel("Initiate") // the pre-2.7.0 JS name; kept for JS/TS API source compatibility
   case class Initiate(
     loc: At,
     processor: ProcessorRef[Processor[?]],
     args: Seq[ConstructorArg]
   ) extends RiddlValue:
-    override def kind: String = "Initiate"
+    override def kind: String = "Create"
     def format: String =
       val argList = if args.isEmpty then "" else args.map(_.format).mkString("(", ", ", ")")
-      s"initiate ${processor.format}$argList"
+      s"create ${processor.format}$argList"
   end Initiate
+
+  /** The name to write for the `create` value's node. The JVM CLASS is still [[Initiate]], and
+    * deliberately: renaming the class removes `AST$Initiate` from the binary, and MiMa against
+    * 2.6.0 showed that a consumer compiled against it would then fail at run time
+    * (Reid, 2026-11-16: keep the class, alias the name; rename the class itself at 3.0, where a
+    * binary break is allowed). `Create(...)`, `case Create(...)` and `case c: Create` all work
+    * through these aliases, and riddl's own code uses only `Create`.
+    */
+  type Create = Initiate
+
+  /** Companion alias of [[Initiate]] under the name [[Create]]. See [[Create]]. */
+  val Create: Initiate.type = Initiate
 
   /** `self` -- the currently executing processor instance, and `self.<field>` on it.
     *

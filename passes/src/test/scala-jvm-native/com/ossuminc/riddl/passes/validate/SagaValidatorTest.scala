@@ -265,7 +265,7 @@ class SagaValidatorTest extends AbstractValidatingTest {
 
     "accept `initiate` and `terminate` in a do-block" in { (td: TestData) =>
       instanceSaga(
-        """let oid = initiate entity d.c.Order
+        """let oid = create entity d.c.Order
           |        terminate oid""".stripMargin,
         """do "undo one"""",
         td
@@ -278,7 +278,7 @@ class SagaValidatorTest extends AbstractValidatingTest {
       // could reach one and not the other. Both halves are pinned.
       instanceSaga(
         """do "forward"""",
-        """let oid = initiate entity d.c.Order
+        """let oid = create entity d.c.Order
           |        terminate oid""".stripMargin,
         td
       )

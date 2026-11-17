@@ -52,6 +52,12 @@ object FindPredicates {
     "store-statement", "upsert-statement", "update-statement", "delete-statement", // B2
     "query-value", "table-reference",
     "collection-predicate", "collection-filter", "count-value", "membership-value", // B5
+    // VALUES, projected since 2026-11-16 (`Finder.nestedValues`): every member of `AST.Value`
+    // except the plain literals and `ValueRef`, which are not projected as value nodes. Derived
+    // from each class's `kind`, not only from what the corpus happens to contain.
+    "create", "ask", "call", "constructor", "prompt-value", "get-value", "self", "system",
+    "lookup-value", "empty-value", "constantref", "comparison-expression",
+    "logical-expression", "not-expression", "invariant-condition",
     "handler", "inlet", "input", "invariant", "item", "let-statement", "linecomment", "list",
     "match-statement", "method", "methodargument", "module", "morph-statement", "on-event",
     "on-init", "on-other", "on-quiescence", "on-term", "onmessageclause", "optional-interaction", "outlet",
@@ -367,10 +373,17 @@ object FindPredicates {
 
   private def ancestorPaths(n: ProjectedNode): Seq[String] = strings(n, "ancestors")
 
+  /** `-type` spellings that name a node kind which has since been RENAMED. A query written with
+    * the old name must keep selecting the nodes it always did: the node kind follows the AST's
+    * current name, so without this the old query would quietly match nothing. `initiate` became
+    * `create` on 2026-11-16 (the value's keyword and its AST node both).
+    */
+  private val renamedKinds: Map[String, String] = Map("initiate" -> "create")
+
   private def matchesType(n: ProjectedNode, want: String): Boolean =
     categories.get(want) match
       case Some(test) => test(n)
-      case None       => ProjectionPass.kindOf(n.value) == want
+      case None       => ProjectionPass.kindOf(n.value) == renamedKinds.getOrElse(want, want)
 
   private def isEmptyNode(n: ProjectedNode): Boolean = n.value match
     case c: Container[?] => c.isEmpty
