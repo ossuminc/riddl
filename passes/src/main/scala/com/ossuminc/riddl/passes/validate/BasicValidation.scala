@@ -9,6 +9,7 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.RuleId
+import com.ossuminc.riddl.language.parsing.Keyword
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.resolve.ResolutionOutput
@@ -111,8 +112,74 @@ trait BasicValidation(using pc: PlatformContext) {
           case t: Type => checkTypeRefKeyword(tr, t)
           case _       => ()
         }
-      case _ => ()
+      case pr: ProcessorRef[?] => resolved.foreach(checkProcessorRefKeyword(pr, _))
+      case gr: GroupRef        => resolved.foreach(checkGroupRefKeyword(gr, _))
+      case _                   => ()
     resolved
+  }
+
+  /** A processor reference's keyword must name the kind it resolves to (ossum.tech, 2026-11-17).
+    *
+    * The same rule as [[checkTypeRefKeyword]], for the keyword-led `processor_ref`: `entity X`,
+    * `repository X`, `streamlet X`, .... Callers resolve these as a generic `Processor`, so
+    * `tell … to repository F` with `F` a streamlet resolved, type-checked and validated clean --
+    * the keyword a reader trusts was never compared with anything.
+    *
+    * Every `streamlet_ref` keyword -- `streamlet`, the deprecated `processor`, and the shape words
+    * (`source`, `sink`, `flow`, …) -- is accepted for ANY streamlet: the shape keyword is a
+    * deprecated spelling of `streamlet` there, not an assertion about the arity.
+    *
+    * Exhaustive over the sealed family with NO wildcard, so a new reference kind is a compile
+    * error here (`passes` compiles with `-Werror`) rather than a silent pass.
+    */
+  /** A group reference must name a Group -- or, for `flow X` only, a Streamlet.
+    *
+    * In an epic step's endpoint (`any_interaction_ref`) the grammar tries `flow X` as a GROUP
+    * reference first, so `from flow F` naming a flow streamlet arrives here as a [[GroupRef]]. Both
+    * readings are legitimate and the text cannot tell them apart, so both are accepted (decided
+    * 2026-11-17, ossum.tech's processor-ref keyword task). What is NOT legitimate is `flow X`
+    * naming an entity: the endpoint is checked as a generic Definition, so it validated clean.
+    * Callers that ask for a `Group` get `None` for any other kind, so this cannot double-report.
+    */
+  private def checkGroupRefKeyword(ref: GroupRef, target: Definition): Unit =
+    target match
+      case _: Group                                     => ()
+      case _: Streamlet if ref.keyword == Keyword.flow => ()
+      case other =>
+        val declared = other.kind.toLowerCase
+        val name = ref.pathId.format
+        messages.addError(
+          ref.loc,
+          s"'$name' is declared ${article(declared)}, but this reference names it as " +
+            s"${article(ref.keyword)}",
+          suggestion = s"Write '${other.kind.toLowerCase} $name' if that is what is meant. A " +
+            s"'${ref.keyword}' reference names a group" +
+            (if ref.keyword == Keyword.flow then " or a streamlet." else "."),
+          ruleId = Some(RuleId.WrongKeyword)
+        )
+  end checkGroupRefKeyword
+
+  private def checkProcessorRefKeyword(ref: ProcessorRef[?], target: Definition): Unit = {
+    val (ok, written) = ref match
+      case _: AdaptorRef    => (target.isInstanceOf[Adaptor], "adaptor")
+      case _: ContextRef    => (target.isInstanceOf[Context], "context")
+      case _: EntityRef     => (target.isInstanceOf[Entity], "entity")
+      case _: ProjectorRef  => (target.isInstanceOf[Projector], "projector")
+      case _: RepositoryRef => (target.isInstanceOf[Repository], "repository")
+      case sr: StreamletRef => (target.isInstanceOf[Streamlet], sr.keyword)
+    if !ok then
+      val declared = target match
+        case _: Streamlet => "streamlet"
+        case other        => other.kind.toLowerCase
+      val name = ref.pathId.format
+      messages.addError(
+        ref.loc,
+        s"'$name' is declared ${article(declared)}, but this reference names it as " +
+          s"${article(written)}",
+        suggestion = s"Write '$declared $name'. A processor reference's keyword must name the " +
+          "kind of definition it refers to.",
+        ruleId = Some(RuleId.WrongKeyword)
+      )
   }
 
   /** A reference's prefix must name what the target was DECLARED as (Reid, 2026-08-24).

@@ -7834,8 +7834,11 @@ case class ValidationPass(
         checkRef[User](to, parents)
       case SendMessageInteraction(_, from, msg, to, _) =>
         checkMessageRef(msg, parents, Seq(msg.messageKind))
-        checkRef[Definition](from, parents)
-        checkRef[Processor[?]](to, parents)
+        // Keyed under the UseCase, as in the ArbitraryInteraction arm above: with `parents` alone
+        // a qualified path never resolved here, so these checks -- the keyword check among them --
+        // silently checked nothing.
+        checkRef[Definition](from, useCase +: parents)
+        checkRef[Processor[?]](to, useCase +: parents)
         checkUserInteractionBoundary(from, to)
       case vi @ VagueInteraction(_, from, relationship, to, _) =>
         // A40: every part of a vague step is free text, so all three contribute prose.
@@ -10125,7 +10128,9 @@ case class ValidationPass(
     val staticTarget: Option[ProcessorRef[Processor[?]]] = ts.target match
       case pr: ProcessorRef[?] => Some(pr.asInstanceOf[ProcessorRef[Processor[?]]])
       case _: Value            => None
-    staticTarget.flatMap(pr => checkRef[Processor[?]](pr, parents)).foreach { p =>
+    // RESOLVE, don't CHECK: `validateStatement` already `checkRef`s this target, and checking it
+    // again here reported every diagnostic on it twice.
+    staticTarget.flatMap(pr => resolvePath[Processor[?]](pr.pathId, parents)).foreach { p =>
       widenedOperandType(ts.msg, parents, lets, elements).foreach { mt =>
         val fieldsAndOwners = fieldsWithOwner(mt)
         if fieldsAndOwners.nonEmpty then
