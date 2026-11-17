@@ -10959,11 +10959,11 @@ case class ValidationPass(
             vr.loc,
             s"Value reference '${vr.path.format}' is not a 'let'-local, an 'on init'/'on term' " +
               "parameter, a 'foreach' element, a field of the handled message or entity state, " +
-              "or a function input in scope",
+              "or a function or saga input in scope",
             suggestion =
               "Bind it with a 'let', or reference an 'on init'/'on term' parameter, a 'foreach' " +
                 "element, or a field of the on-clause message, entity state, or the function's " +
-                "'requires' input.",
+                "or saga's 'requires' input.",
             ruleId = Some(RuleId.ValueRefUnresolved)
           )
       case gv: GetValue =>

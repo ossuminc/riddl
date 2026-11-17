@@ -948,7 +948,17 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
           case agg: Aggregation => agg.fields
         }
       }
-    (stateFields ++ messageFields ++ functionFields).find(_.id.value == name)
+    // A saga is an atomic function (CM §9.4): its `requires` fields are in scope in every step and
+    // `reverted by` block, as a function's are in its body. A SagaStep is a Leaf and is never
+    // pushed, so a step's statements resolve with the Saga itself among their parents.
+    val sagaFields: Seq[Field] =
+      parents.collectFirst { case s: Saga => s }.toSeq.flatMap { s =>
+        s.input.toSeq.flatMap {
+          case tr: TypeRef      => refMap.definitionOf[Type](tr.pathId).toSeq.flatMap(aggFields)
+          case agg: Aggregation => agg.fields
+        }
+      }
+    (stateFields ++ messageFields ++ functionFields ++ sagaFields).find(_.id.value == name)
   end valueScopeField
 
   /** A54: resolve a message/record operand — a bare ref (resolved as a Type) or a [[Constructor]]
