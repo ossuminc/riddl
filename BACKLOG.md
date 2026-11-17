@@ -30,6 +30,22 @@ is worse than no handle**, because it fails exactly when it is being relied on.
 
 ### 5. Post-2.0 — the 3.x line
 
+- **[5.12]** **A bare value reference can bind to a FIELD of an unrelated message, anywhere in the
+  model** (found 2026-11-17 while doing synapify's two value-reference tasks; probed on a JVM
+  build of `main`). `ResolutionPass.resolveValueRef` falls back to `resolveAPathId[Definition]`
+  when a name is in no value scope (not a binding, a parameter or a `valueScopeField`), and a
+  single-segment path searches the WHOLE symbol table. So in an `on command Go` clause,
+  `tell command Debit(account = sourceAcct)` resolves `sourceAcct` to `Elsewhere.sourceAcct`, a
+  field of a message nobody handles here. It validates clean, and is type-checked against that
+  stranger's type. `value-ref-not-a-value` (2026-11-17) does not catch it, because the target IS a
+  Field. The same happened with `source` in synapify's saga probe before the saga fix.
+  **What is wanted:** a field reached by that FALLBACK route (not through a scope anchor) is
+  `value-ref-unresolved`, unless the path is qualified through something that legitimately
+  denotes a value (an enumerator's `Type.Member` is one). **Measure first:** instrument which
+  references resolve by the fallback route, run the corpus, and classify them. The 2026-11-17
+  census counted 19,924 Field targets but did not record the ROUTE, and 19,894 of them are
+  2-segment paths, most presumably `binding.field`. Corpus impact is unknown until measured.
+
 - **[5.11]** **A `create` argument's NAME is not checked against `on init`'s parameters**
   (ossum.tech's 2.7.0 audit, 2026-11-17, probed on `../bin/riddlc` 2.7.0). With `on init(code:
   String)`, `create entity Order(5, "x")` correctly draws `handler-clause-wrong-arity`, but

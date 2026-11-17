@@ -434,3 +434,4 @@ type-pattern-invalid-regex
 saga-step-uncompensated
 saga-step-too-many-fail-points
 value-initiate-keyword
+value-ref-not-a-value

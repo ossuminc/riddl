@@ -533,6 +533,7 @@ enum RuleId(
   case SystemUnknownMember extends RuleId("value-system-unknown-member")
   case EmptyNeedsZeroCardinality extends RuleId("value-empty-needs-zero-cardinality")
   case ValueRefUnresolved extends RuleId("value-ref-unresolved")
+  case ValueRefNotAValue extends RuleId("value-ref-not-a-value")
   case SelfMisplaced extends RuleId("value-self-misplaced")
   case SelfUnknownField extends RuleId("value-self-unknown-field")
   case OperandNotBoolean extends RuleId("value-operand-not-boolean")

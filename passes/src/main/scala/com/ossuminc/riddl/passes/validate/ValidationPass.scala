@@ -10914,6 +10914,48 @@ case class ValidationPass(
           letIndexOf(names.head, lets) >= 0 || valueRefDefinition(vr, parents).nonEmpty
     }
 
+  /** A value reference must name a VALUE (synapify, 2026-11-17). The resolver's last resort for a
+    * name in no value scope is an ordinary lookup of ANY definition, so `s = Draft` bound to an
+    * unrelated entity STATE, validated clean, and the argument type check had nothing to compare
+    * (`valueTypeExpr` has no answer for a State) -- silence on both counts.
+    *
+    * The admitted kinds are the ones a 2026-11-17 census found the whole riddl-models corpus using
+    * (20,076 references): a Field (19,924), an Enumerator (47), a Type ONLY as an on-clause binding
+    * that names the whole message or envelope (26), plus lexical names that are not definitions.
+    * The only other targets were the two `Draft` States synapify reported. `Constant` is admitted
+    * by definition, though no corpus reference reached one.
+    */
+  private def checkValueRefTarget(
+    vr: ValueRef,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Unit =
+    val head = vr.path.value.head
+    val lexical = letIndexOf(head, lets) >= 0 || elements.contains(head)
+    def isClauseBinding: Boolean =
+      vr.path.value.sizeIs == 1 && parents.exists {
+        case omc: OnMessageLikeClause => omc.binding.exists(_.value == head)
+        case ooc: OnOtherClause       => ooc.binding.exists(_.value == head)
+        case _                        => false
+      }
+    if !lexical then
+      valueRefDefinition(vr, parents).foreach {
+        case _: Field | _: Enumerator | _: Constant => ()
+        case _: Type if isClauseBinding             => ()
+        case other =>
+          messages.addError(
+            vr.loc,
+            s"Value reference '${vr.path.format}' names ${other.identify}, which is not a value",
+            suggestion = "A value reference names a field, a constant, an enumerator, a 'let', a " +
+              "'foreach' element, a clause binding or parameter. If an enumeration member was " +
+              "meant, name a member of the expected type.",
+            ruleId = Some(RuleId.ValueRefNotAValue)
+          )
+      }
+    end if
+  end checkValueRefTarget
+
   /** A54: validate a [[Value]] — recurse constructors, and confirm value references resolve. Get
     * sources are checked for existence via [[checkRef]].
     */
@@ -10966,6 +11008,7 @@ case class ValidationPass(
                 "or saga's 'requires' input.",
             ruleId = Some(RuleId.ValueRefUnresolved)
           )
+        else checkValueRefTarget(vr, parents, lets, elements)
       case gv: GetValue =>
         gv.source match
           case ir: InputRef => checkRef[Input](ir, parents)

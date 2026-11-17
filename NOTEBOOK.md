@@ -68,6 +68,34 @@ fixtures, not a task).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-17 (later) — saga steps see `requires`; a value reference must name a value
+
+Two synapify tasks, both about where a value reference lands.
+
+**Saga steps** could not read the saga's `requires`. `valueScopeField` had arms for state,
+message and Function input, and none for a Saga. The fix is one arm (`00e23112f`), and the CM
+§9.4 now says so. The corpus has 7 sagas, only one with `requires`, so it gains little today.
+
+**`s = Draft` bound to an entity STATE** and validated clean. The resolver's last resort is an
+ordinary any-definition lookup, and the argument type check has no type to compare for a State.
+That makes it silent on two counts. **The rule was derived from a census, not guessed.**
+Temporary instrumentation classified all 20,076 value references in riddl-models:
+- Field: 19,924
+- lexical names: 78
+- Enumerator: 47
+- Type: 26, every one a clause binding (`on m: event …`, `on other as m`)
+- State: 2, the two synapify reported
+
+So `value-ref-not-a-value` admits Field, Enumerator, Constant (by definition) and Type only as a
+clause binding. The corpus impact was predicted as exactly 2, and measured as exactly 2. Until
+riddl-models fixes them (task filed), `RiddlModelsRoundTripTest` is red on reactive-bbq. That
+test validates the live sibling checkout.
+
+**The census exposed a bigger hole it could not close, filed as [5.12].** The same fallback can
+bind a bare name to a FIELD of an unrelated message (`account = sourceAcct` →
+`Elsewhere.sourceAcct`). The target is a Field, so the new rule is blind to it. The instance
+synapify noticed was a State, and the State is not the extent of the problem.
+
 ## 2026-11-17 — a deprecation lasts until the next major, not forever
 
 Reid's ruling, which ossum.tech's 2.7.0 docs audit brought to light: deprecated spellings
