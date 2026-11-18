@@ -32,7 +32,10 @@ authoritative). Ask `git` for branch, tree and unpushed span — never trust a w
 
 ### In flight
 
-Nothing in riddl; `task/` is empty apart from `done/`. **Owed at 3.0: BACKLOG [5.10]**
+**`main` is heading for 2.8.0** (Reid): undeliverable-clause rules, schema-link typing,
+`on init` as creation, `on entry`, **FORMAT_REVISION 32**. `../bin/riddlc` predates the
+`on init`/`on entry` work; restage only when asked. Open question to Reid: should
+`morph S -> S` be an Error rather than a Warning? **Owed at 3.0: BACKLOG [5.10]**
 (rename the `AST.Initiate` class to `Create`, drop the alias val). BACKLOG [5.9] stays
 DEFERRED by Reid.
 
@@ -67,6 +70,48 @@ Empty of task files (`probe-2026-09-06-adaptor/` is a leftover scratch directory
 fixtures, not a task).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-11-17 (late night) — `on init` is creation; no initial state; `on entry`
+
+riddl-models asked one narrow thing (task `on-init-is-the-creation-event`, in
+`task/done/`): let an event-sourced entity's `on init` morph. Reid widened it
+into a language change, for 2.8.0. Commits: `909b5fc2b` (creation),
+`c833fe6f9` (`on entry`); CM top-level `37cd607`.
+
+**`on init` is CREATION**: one per entity, entity-level, and it MORPHS into
+the starting state chosen from its parameters. There is no initial state.
+Declaration order "is far removed from runtime concerns" (Reid). The old
+forms are three Deprecations that keep their meaning until 3.0. The parser
+still defaults `State.isInitial` for an entity whose `on init` does NOT morph,
+because riddlg, synapify's simulator and EntityLifecyclePass read that field.
+Prettify omits a redundant `initial`; otherwise every round trip would write
+the deprecated marker back.
+
+**`on entry`**: a state's entry action, run only by a LIVE morph that changes
+the state. Reid's five rulings are in CM §4.5. **I got ruling 1 wrong in the
+first CM draft**: I wrote that the creation morph runs the starting state's
+entry. It does not, and I caught this only by rereading the diff before
+committing. The code was never affected, since validation does not execute
+clauses. The rulings that matter for code: placement (the state's initial
+handler only), no `morph` inside, and `morph S -> S` is a Warning. That last
+one is open: Reid said "a no-op or an error".
+
+**Trap hit again: a FORMAT_REVISION bump reddens `language`** through the
+committed `language/input/import/NotImplemented.bast`. Regenerate it with a
+riddlc built from the tree (`riddlc/stage`, not `../bin`), running `bastify`
+from the fixture's own directory. The diff must be the revision byte only
+(`cmp -l`).
+
+Filed: riddl-models (migrate the corpus: 220 `initial state` lines, 639
+`on init`s), riddl-generator (lowering, plus the CM index moved +17 lines),
+ossum.tech (eleven pages teach the old model).
+
+Verification (warm cache, module by module, `testOnly *`): JVM language 81/803,
+passes 308/2089, testkit, riddlLib 32/181; JS language 42/473, passes 44/376,
+testkit, riddlLib 16/152; Native language 76/785, passes 305/2077, testkit,
+riddlLib 31/180. commands and riddlc on JVM and Native fail only on the known
+reactive-bbq `Draft` and shopify-cart cases. They have no JS row. TatSu 129/152,
+with `entity-creation.riddl` ✓. Not yet certified from a cold cache.
 
 ## 2026-11-17 (night) — undeliverable clauses; two rule ids that never fired
 
