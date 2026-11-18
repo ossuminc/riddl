@@ -217,6 +217,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case oc: OnEventClause          => writeOnEventClause(oc)
       case oc: OnActivationClause     => writeOnActivationClause(oc)
       case oc: OnPassivationClause    => writeOnPassivationClause(oc)
+      case oc: OnEntryClause          => writeOnEntryClause(oc)
       case oc: OnQuiescenceClause     => writeOnQuiescenceClause(oc)
       case oc: OnOtherClause          => writeOnOtherClause(oc)
 
@@ -860,6 +861,13 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeOnPassivationClause(oc: OnPassivationClause): Unit = {
     writeNodeTag(NODE_ON_CLAUSE, oc.metadata.nonEmpty)
     writer.writeU8(6) // Passivation clause type — entity lifecycle, no message ref
+    writeLocation(oc.loc)
+    writeContents(oc.contents)
+  }
+
+  def writeOnEntryClause(oc: OnEntryClause): Unit = {
+    writeNodeTag(NODE_ON_CLAUSE, oc.metadata.nonEmpty)
+    writer.writeU8(8) // Entry clause type (rev 32) — a state's entry action, no message ref
     writeLocation(oc.loc)
     writeContents(oc.contents)
   }

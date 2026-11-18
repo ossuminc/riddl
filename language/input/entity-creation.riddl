@@ -1,0 +1,48 @@
+// Corpus fixture for 2.8.0 entity creation, exercised by BOTH the fastparse parser
+// (EntryClauseTest) and the EBNF/TatSu grammar (ebnf_tatsu_validator.py over **/input/**):
+//   - an entity-level `on init` with parameters that MORPHS into the state the entity starts
+//     in, chosen from those parameters (there is no initial state any more)
+//   - `on entry`, a state's entry action, run when a live `morph` moves the entity into it
+domain Kitchen is {
+  context Orders is {
+    type TableNumber is Integer
+    record OrderData is { table: TableNumber, note: String }
+    command Submit is { note: String }
+    command Reopen is { note: String }
+    event TicketOpened is { table: TableNumber }
+
+    entity Order is {
+      outlet Tickets is event TicketOpened
+      handler Lifecycle is {
+        on init(atTable: TableNumber, rush: Boolean) is {
+          when rush then
+            morph entity Kitchen.Orders.Order to state Kitchen.Orders.Order.Submitted
+              with record Kitchen.Orders.OrderData(table = atTable, note = "rush")
+          else
+            morph entity Kitchen.Orders.Order to state Kitchen.Orders.Order.Draft
+              with record Kitchen.Orders.OrderData(table = atTable, note = "")
+          end
+        }
+      }
+      state Draft of record Kitchen.Orders.OrderData is {
+        handler DraftHandler is {
+          on command Kitchen.Orders.Submit is {
+            morph entity Kitchen.Orders.Order to state Kitchen.Orders.Order.Submitted
+              with record Kitchen.Orders.OrderData(table = 1, note = "submitted")
+          }
+        }
+      }
+      state Submitted of record Kitchen.Orders.OrderData is {
+        handler SubmittedHandler is {
+          on entry is {
+            send event Kitchen.Orders.TicketOpened(table = 1) to outlet Kitchen.Orders.Order.Tickets
+          }
+          on command Kitchen.Orders.Reopen is {
+            morph entity Kitchen.Orders.Order to state Kitchen.Orders.Order.Draft
+              with record Kitchen.Orders.OrderData(table = 1, note = "reopened")
+          }
+        }
+      }
+    }
+  }
+}

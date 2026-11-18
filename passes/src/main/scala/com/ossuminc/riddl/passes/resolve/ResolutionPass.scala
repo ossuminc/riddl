@@ -128,6 +128,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case _: OnTerminationClause    => ()
       case _: OnActivationClause     => ()
       case _: OnPassivationClause    => ()
+      case _: OnEntryClause          => ()
       // A57: the envelope type an `on other as x` binding denotes -- the clause's ascription, else
       // the type `option message_envelope` names. Recorded under the CLAUSE so `resolveValueRef`
       // finds it there. Until B1 (2026-09-18) this arm was `()`, so `x.source` never resolved and

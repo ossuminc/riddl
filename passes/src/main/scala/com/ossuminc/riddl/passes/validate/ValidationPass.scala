@@ -1419,6 +1419,11 @@ case class ValidationPass(
         checkDefinition(parentsAsSeq, oac)
       case opc: OnPassivationClause =>
         checkDefinition(parentsAsSeq, opc)
+      case oec: OnEntryClause =>
+        checkDefinition(parentsAsSeq, oec)
+        // An EFFECT block like `on quiescence` -- it may send and tell -- so it gets the full
+        // on-clause treatment, not the side-effect-free activate/passivate hook's.
+        validateOnClause(oec)
       case oqc: OnQuiescenceClause =>
         checkDefinition(parentsAsSeq, oqc)
         // Unlike the other lifecycle clauses this one gets the full on-clause treatment (empty
@@ -4253,7 +4258,8 @@ case class ValidationPass(
       ("on init", h.clauses.collect { case c: OnInitializationClause => c }, "one construction"),
       ("on term", h.clauses.collect { case c: OnTerminationClause => c }, "one termination"),
       ("on activate", h.clauses.collect { case c: OnActivationClause => c }, "one activation"),
-      ("on passivate", h.clauses.collect { case c: OnPassivationClause => c }, "one passivation")
+      ("on passivate", h.clauses.collect { case c: OnPassivationClause => c }, "one passivation"),
+      ("on entry", h.clauses.collect { case c: OnEntryClause => c }, "one entry action")
     )
     for (keyword, found, why) <- specialKinds if found.sizeIs > 1 do
       found.tail.foreach { later =>
@@ -4735,6 +4741,82 @@ case class ValidationPass(
       }
   end checkCreationReadsNothing
 
+  /** `on entry` (2.8.0, Reid 2026-11-17): a state's entry action, run when a LIVE `morph` moves the
+    * entity into that state.
+    *
+    *   - **`entity-entry-misplaced`** -- it belongs in the handler that is live when the state is
+    *     entered, i.e. the state's INITIAL handler. In an entity-level handler there is no state to
+    *     enter; in another handler of the state it never runs, since `become` only reaches that
+    *     handler after entry has happened.
+    *   - **`entity-entry-morphs`** -- it may not `morph` (Reid's ruling 4): an entry that moves on
+    *     at once would chain entries, A to B to A, with nothing to stop it.
+    *   - **`stmt-morph-to-current-state`** -- a clause of state S morphing into S changes no state,
+    *     so no `on entry` runs (ruling 2: "essentially a no-op"). A WARNING, not an Error: it was
+    *     legal 2.x, where it replaced the state's record, and that much still happens. Only the
+    *     statically evident case is reported; from an entity-level handler the current state is a
+    *     runtime fact.
+    */
+  private def checkEntryClauses(entity: Entity): Unit =
+    if entity.nonEmpty then
+      def entries(hs: Seq[Handler]): Seq[OnEntryClause] =
+        hs.flatMap(_.clauses).collect { case oec: OnEntryClause => oec }
+      entries(entity.handlers).foreach { oec =>
+        messages.addError(
+          oec.loc,
+          s"'on entry' in an entity-level handler of ${entity.identify} never runs: there is no " +
+            "state for it to enter",
+          suggestion = "Put it in a handler of the state whose entry it describes. A step every " +
+            "transition shares belongs in each morphing clause, or in a function they call.",
+          ruleId = Some(RuleId.EntryMisplaced)
+        )
+      }
+      entity.states.foreach { state =>
+        val (live, other) = state.handlers.partition(_.isInitial)
+        entries(other).foreach { oec =>
+          messages.addError(
+            oec.loc,
+            s"'on entry' in a non-initial handler of ${state.identify} never runs: entering the " +
+              "state makes its initial handler live, and only a later 'become' reaches this one",
+            suggestion = s"Move it to the initial handler of ${state.identify}" +
+              live.headOption.map(h => s", ${h.identify}").getOrElse("") + ".",
+            ruleId = Some(RuleId.EntryMisplaced)
+          )
+        }
+        entries(state.handlers).foreach { oec =>
+          walkStatements(oec.contents) {
+            case m: MorphStatement =>
+              messages.addError(
+                m.loc,
+                s"'on entry' of ${state.identify} may not 'morph': an entry that moves on at once " +
+                  "would chain into the next state's entry",
+                suggestion = "Morph from the clause that handles the message causing the " +
+                  "transition, and let this state's entry action stay an action.",
+                ruleId = Some(RuleId.EntryMorphs)
+              )
+            case _ => ()
+          }
+        }
+        state.handlers.flatMap(_.clauses).foreach { clause =>
+          walkStatements(clause.contents) {
+            case m: MorphStatement =>
+              val target = resolution.refMap.definitionOf[State](m.state.pathId, clause)
+                .orElse(resolution.refMap.definitionOf[State](m.state.pathId))
+              if target.exists(_ eq state) then
+                messages.addWarning(
+                  m.loc,
+                  s"${clause.identify} of ${state.identify} morphs into ${state.identify}, the " +
+                    "state it is already in; that changes no state, so no 'on entry' runs",
+                  suggestion = s"To replace ${state.identify}'s record, 'set' it; to move the " +
+                    "entity, morph into a different state.",
+                  ruleId = Some(RuleId.MorphToCurrentState)
+                )
+            case _ => ()
+          }
+        }
+      }
+    end if
+  end checkEntryClauses
+
   private def checkTransitionsHaveSomewhereToGo(entity: Entity, parents: Parents): Unit =
     if entity.nonEmpty then
       // An entity's clauses commonly live inside a State, which `entity.handlers` alone cannot see.
@@ -4792,6 +4874,7 @@ case class ValidationPass(
   ): Unit = {
     checkContainer(parents, entity)
     checkTransitionsHaveSomewhereToGo(entity, parents)
+    checkEntryClauses(entity)
     checkCreationReadsNothing(entity, parents)
     checkHandledMessagesCanBeAddressed(entity)
     // At most one state may be the entity's initial (starting) state.
@@ -12396,7 +12479,7 @@ case class ValidationPass(
       // parameter list (a message clause's local name is A55's `binding`, taken from the handled
       // message), and enumerating is what makes a seventh clause kind a compile error here.
       case _: OnMessageLikeClause | _: OnActivationClause | _: OnPassivationClause |
-          _: OnOtherClause | _: OnQuiescenceClause =>
+          _: OnEntryClause | _: OnOtherClause | _: OnQuiescenceClause =>
         Seq.empty[MethodArgument]
     parameters.map(a => a.name -> a.typeEx).toMap
   end clauseParameterScope

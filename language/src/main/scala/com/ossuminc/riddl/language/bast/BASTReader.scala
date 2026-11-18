@@ -1419,6 +1419,11 @@ class BASTReader(
         val metadata = readMetadataDeferred()
         OnQuiescenceClause(loc, window, contents, metadata)
 
+      case 8 => // Entry (rev 32) — a state's entry action, no message ref
+        val contents = readContentsDeferred[Statements]()
+        val metadata = readMetadataDeferred()
+        OnEntryClause(loc, contents, metadata)
+
       case other =>
         // Never fabricate a clause: a byte this reader does not know means a newer FORMAT_REVISION
         // or a corrupt stream, and an invented `on other` would derail everything after it.

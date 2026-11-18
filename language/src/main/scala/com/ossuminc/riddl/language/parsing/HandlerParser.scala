@@ -105,6 +105,20 @@ private[parsing] trait HandlerParser
     }
   }
 
+  /** `on entry is { … }` (2.8.0): a STATE's entry action, run when a live `morph` moves the entity
+    * into that state -- never at creation, on replay, recovery or rehydration. Entity-only at parse
+    * time; that it sits in a state (in the state's initial handler) is validation's question, since
+    * the evidence survives into the AST. The body takes the full statement set, not the
+    * activation restriction: it is an effect block. `morph` inside it is a validation Error.
+    */
+  private def onEntryClause[u: P](set: StatementsSet): P[OnEntryClause] = {
+    P(
+      Index ~ Keywords.onEntry ~ is ~/ pseudoCodeBlock(set) ~ withMetaData ~/ Index
+    ).map { case (start, statements, descriptives, end) =>
+      OnEntryClause(at(start, end), statements.toContents, descriptives.toContents)
+    }
+  }
+
   /** `on quiescence <window> is { … }` (2026-09-07): fires when NOTHING arrived at this processor
     * instance within the window. Legal on ANY handler-bearing processor, so it sits in both branches
     * of [[onClause]]; the two-word keyword fails cleanly before `Keywords.on`'s cut, like
@@ -208,6 +222,14 @@ private[parsing] trait HandlerParser
     )).asInstanceOf[P[OnClause]]
   }
 
+  /** `on entry` belongs to an entity's STATE; anywhere else it is a parse error. */
+  private def rejectEntry[u: P]: P[OnClause] = {
+    (P(Keywords.onEntry) ~/ Fail.opaque(
+      "'on entry' clauses are only allowed in the handlers of an entity's states; they run when " +
+        "a 'morph' moves the entity into that state"
+    )).asInstanceOf[P[OnClause]]
+  }
+
   /** The on-clauses legal in a handler depend on the processor kind. Only entities get
     * activate/passivate; everywhere else those keywords are a parse error. The projector event-only
     * restriction is applied inside [[onMessageOrEventClause]] via [[onMessageLikeRef]]. The
@@ -218,13 +240,13 @@ private[parsing] trait HandlerParser
     if set.processor == ProcessorKind.Entity then
       P(
         onInitClause(set) | onTermClause(set) |
-          onActivationClause(set) | onPassivationClause(set) | onQuiescenceClause(set) |
-          onOtherClause(set) | onMessageOrEventClause(set)
+          onActivationClause(set) | onPassivationClause(set) | onEntryClause(set) |
+          onQuiescenceClause(set) | onOtherClause(set) | onMessageOrEventClause(set)
       )
     else
       P(
         onInitClause(set) | onTermClause(set) | onQuiescenceClause(set) | onOtherClause(set) |
-          rejectActivatePassivate | onMessageOrEventClause(set)
+          rejectActivatePassivate | rejectEntry | onMessageOrEventClause(set)
       )
   }
 

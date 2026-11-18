@@ -360,6 +360,12 @@ enum RuleId(
   case InitialStateMarker extends RuleId("entity-initial-state-marker", deprecates = true)
   case InitInState extends RuleId("entity-init-in-state", deprecates = true)
   case InitNoMorph extends RuleId("entity-init-no-morph", deprecates = true)
+  // 2.8.0: `on entry`, a state's entry action. It belongs in the handler live when the state is
+  // entered (the state's initial handler), may not morph (no chained entries), and a morph into
+  // the state a clause of that state already holds changes nothing, so no entry runs.
+  case EntryMisplaced extends RuleId("entity-entry-misplaced")
+  case EntryMorphs extends RuleId("entity-entry-morphs")
+  case MorphToCurrentState extends RuleId("stmt-morph-to-current-state")
   case EntityNoHandlers extends RuleId("entity-no-handlers")
   case EntityNoQueryClause extends RuleId("entity-no-query-clause")
   // ONE rule, TWO spellings, deliberately ([1.25], 2026-09-11). "Handles messages but declares no

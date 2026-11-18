@@ -584,9 +584,15 @@ fact from that file that you had no reason to look for, it belongs back here.
   because replay must reproduce the same state changes, and **R1/R2 read the
   `yields` DECLARATION on the command's type, never `yield` statements in a
   body**. Two migration traps: `yields` exists ONLY on the kind-first form, so
-  type-first commands must be reshaped; and R3 forbids `set` in `on init` while
-  an empty body is a parse error, so the idiom is `on init is { yield event
-  Created }` plus an `on event Created` clause doing the mutation. **R5 (2026-11-07)
+  type-first commands must be reshaped. **Since 2.8.0 `on init` is CREATION**
+  (Reid, 2026-11-17): one per entity, entity-level only, and it `morph`s into
+  the starting state chosen from its parameters; there is NO initial state. For
+  an event-sourced entity the `on init` invocation is the first journal entry and
+  replay re-runs it, so R3/R4 ADMIT `set`/`morph` there and R5 covers it (a
+  creation time arrives as a parameter). The old `on init is { yield event
+  Created }` idiom is stale. A state's per-entry action is `on entry`, which runs
+  only on a LIVE morph into a different state -- never at creation, replay or
+  rehydration, so it may not mutate an event-sourced entity's state. **R5 (2026-11-07)
   bans `system.now`/`system.random` in a fold of an OWN event**: the fold runs
   again on every replay, so the clock would set a different state each time.
   **EVERY read counts, not only one reaching state** (Reid chose this over

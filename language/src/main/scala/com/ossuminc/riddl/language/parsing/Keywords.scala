@@ -290,6 +290,11 @@ object Keywords {
 
   def onInit[u: P]: P[Unit] = keyword("on init")
 
+  /** `on entry` (2.8.0). Only the two-word form is a keyword: `entry` alone is NOT reserved,
+    * because riddl-models uses it as a field and `let` name and reserving it would break them.
+    */
+  def onEntry[u: P]: P[Unit] = keyword("on entry")
+
   def onOther[u: P]: P[Unit] = keyword("on other")
 
   def onPassivate[u: P]: P[Unit] = keyword("on passivate")

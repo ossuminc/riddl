@@ -856,6 +856,16 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
                 brief = briefOf(oc.metadata)
               )
             )
+          case _: OnEntryClause =>
+            Some(
+              OnClauseDto(
+                "entry",
+                None,
+                statements,
+                metadata = metaOf(oc.metadata),
+                brief = briefOf(oc.metadata)
+              )
+            )
           case oqc: OnQuiescenceClause =>
             // 2026-09-07: the window is a FIELD, serialized directly -- the generic child machinery
             // never reaches it.

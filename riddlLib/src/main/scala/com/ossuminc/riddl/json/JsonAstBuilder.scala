@@ -1049,6 +1049,7 @@ object JsonAstBuilder:
         OnTerminationClause(curAt, parameters, statements, md)
       case "activate"  => OnActivationClause(curAt, statements, md)
       case "passivate" => OnPassivationClause(curAt, statements, md)
+      case "entry"     => OnEntryClause(curAt, statements, md)
       case "quiescence" =>
         // 2026-09-07: the window is a literal duration or a reference; anything else is a
         // malformed document, reported rather than guessed.
@@ -1064,7 +1065,7 @@ object JsonAstBuilder:
         OnQuiescenceClause(curAt, window, statements, md)
       case other =>
         ctx.err(
-          s"unknown on-clause kind '$other' (expected message|event|init|other|term|activate|passivate|quiescence)"
+          s"unknown on-clause kind '$other' (expected message|event|init|other|term|activate|passivate|entry|quiescence)"
         )
         OnOtherClause(curAt, None, None, statements, md)
     end match

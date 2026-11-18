@@ -5499,6 +5499,30 @@ object AST:
     override def format: String = ""
   }
 
+  /** `on entry` (2.8.0, Reid 2026-11-17): what an entity does each time a LIVE `morph` moves it
+    * INTO the state whose handler holds this clause. A state's entry action, the property that
+    * "whenever the entity enters S, this happens" -- which no single transition can state.
+    *
+    * Legal only in a handler of a State (validation). It runs ONLY as the consequence of an
+    * executed `morph` that changes the state: never at creation (`on init` morphs, and that morph
+    * does fire it), never for `morph S -> S`, never on replay or recovery (`on activate` covers
+    * those), and never on rehydration. It may not `morph` itself, so entries cannot chain. In an
+    * event-sourced entity it may not mutate either: it does not run on replay, so nothing it set
+    * would be reproduced. Unlike activate/passivate it is an EFFECT block: it may send and tell.
+    */
+  @JSExportTopLevel("OnEntryClause")
+  case class OnEntryClause(
+    loc: At,
+    contents: Contents[Statements] = Contents.empty[Statements](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
+  ) extends OnClause {
+    def id: Identifier = Identifier(loc, s"entry")
+
+    override def kind: String = "On Entry"
+
+    override def format: String = ""
+  }
+
   /** `on quiescence <window>` (Reid's ruling, 2026-09-07; CM §18): the clause that fires when
     * NOTHING arrived at this processor instance within the window. The clock restarts on every
     * handled message; inside a State's handler it is armed only while that state is active. Legal

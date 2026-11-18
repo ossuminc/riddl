@@ -107,6 +107,7 @@ case class BASTWriterPass(input: PassInput, outputs: PassesOutput)(using pc: Pla
       case oc: OnEventClause          => traverseOnClause(oc, oc.contents, parents)
       case oc: OnActivationClause     => traverseOnClause(oc, oc.contents, parents)
       case oc: OnPassivationClause    => traverseOnClause(oc, oc.contents, parents)
+      case oc: OnEntryClause          => traverseOnClause(oc, oc.contents, parents)
       case oc: OnOtherClause          => traverseOnClause(oc, oc.contents, parents)
       case oc: OnQuiescenceClause     => traverseOnClause(oc, oc.contents, parents)
 

@@ -452,10 +452,26 @@ decision.
   read in a fold of an own event (it would differ on every replay). R1/R2 read the
   `yields` DECLARATION on the command's type, never `yield` statements in a body.
   Two migration traps: `yields` exists ONLY on the kind-first form (`command X
-  yields event Y is {…}`), so type-first commands must be reshaped; and R3
-  forbids `set` in `on init` while an empty body is a parse error, so the idiom is
-  `on init is { yield event Created }` plus an `on event Created` clause doing the
-  mutation.
+  yields event Y is {…}`), so type-first commands must be reshaped. (Before
+  2.8.0 R3 forbade `set` in `on init` and the idiom was `on init is { yield event
+  Created }` plus an `on event Created` fold. 2.8.0 made `on init` the creation
+  clause and the first journal entry, so R3/R4 admit it and R5 covers it.)
+
+- **Creation and `on entry` (2.8.0, Reid 2026-11-17).** `on init` is the
+  entity's ONE creation clause, in an entity-level handler; it `morph`s into the
+  state the entity starts in, chosen from its parameters. There is no initial
+  state: the parser still defaults one (`EntityParser.defaultEntityInitials`) only
+  when no `on init` morphs, for consumers reading `State.isInitial`, and prettify
+  omits a redundant `initial`. Deprecations, kept until 3.0:
+  `entity-initial-state-marker`, `entity-init-in-state`, `entity-init-no-morph`.
+  `on entry is { … }` (`OnEntryClause`, BAST on-clause discriminator 8,
+  `FORMAT_REVISION` 32, JSON `"entry"`) is legal only in an entity's handlers
+  (a parse error elsewhere) and only in a state's INITIAL handler (else
+  `entity-entry-misplaced`). It runs when a live `morph` enters the state: not at
+  creation, not for `morph S -> S` (`stmt-morph-to-current-state`, Warning), not
+  on replay, recovery or rehydration (`on activate` covers those). No `morph`
+  inside it (`entity-entry-morphs`). `on entry` is a two-word keyword; bare
+  `entry` is NOT reserved (the corpus uses it as a name).
 
 - **Unified processor model** — every `Processor`
   (Context/Entity/Projector/Repository/Adaptor + the generic keyword) is
