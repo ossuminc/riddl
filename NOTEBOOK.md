@@ -33,9 +33,9 @@ authoritative). Ask `git` for branch, tree and unpushed span — never trust a w
 ### In flight
 
 **`main` is heading for 2.8.0** (Reid): undeliverable-clause rules, schema-link typing,
-`on init` as creation, `on entry`, **FORMAT_REVISION 32**. `../bin/riddlc` predates the
-`on init`/`on entry` work; restage only when asked. Open question to Reid: should
-`morph S -> S` be an Error rather than a Warning? **Owed at 3.0: BACKLOG [5.10]**
+`on init` as creation, `on entry`, **FORMAT_REVISION 32**. `../bin/riddlc` and ivy are
+`2.7.0-15-53c8fcfe` (restaged at Reid's request so riddl-models can migrate). `morph S -> S`
+stays a Warning (Reid). **Owed at 3.0: BACKLOG [5.10]**
 (rename the `AST.Initiate` class to `Create`, drop the alias val). BACKLOG [5.9] stays
 DEFERRED by Reid.
 
