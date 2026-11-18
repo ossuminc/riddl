@@ -71,6 +71,21 @@ fixtures, not a task).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-18 (evening) — a yield-argument prompt is fine in an external context
+
+riddl-models (reactive-bbq), Reid's ruling: `stmt-yield-argument-prompt` now
+abstains inside an `external context` (either spelling, via
+`isExternalContext`). An external context's handler stands in for a system the
+model does not own, so a value only that system decides (the amount a card
+processor actually held) is exactly what a `prompt` describes. The advisory's
+premise, "a value the handler already has", holds only for the system's own
+processors. The rule is yield-only, so the task's "and matching `send`s" had
+nothing to exempt. Three cases in `YieldPromptAndRangeLintTest`: keyword, option,
+and the same yield in an ordinary context, which still fires. The two external
+cases were red before the fix and assert no Error, so they are not vacuous.
+No CM change: this decides when an advisory fires, not what a generator must
+preserve.
+
 ## 2026-11-18 (later) — `ask query Q(args) of P`
 
 riddl-models task (`task/done/2026-11-18-ask-cannot-say-what-it-asks.md`). An

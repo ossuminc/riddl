@@ -32,9 +32,9 @@ class YieldPromptAndRangeLintTest extends AbstractValidatingTest {
 
   private def of(msgs: Messages, rule: RuleId): Seq[Message] = msgs.filter(_.ruleId.contains(rule))
 
-  private def model(body: String): String =
+  private def model(body: String, contextKeyword: String = "context"): String =
     s"""domain D is {
-       |  context C is {
+       |  $contextKeyword C is {
        |    command Book yields event Booked is { id: String, when: TimeStamp, size: Integer }
        |      with { briefly "c" }
        |    event Booked is { id: String, at: TimeStamp, size: Integer } with { briefly "e" }
@@ -87,6 +87,39 @@ class YieldPromptAndRangeLintTest extends AbstractValidatingTest {
           |          tell event Booked(id = b.id, at = prompt("x"), size = b.size) to entity C.E""".stripMargin
       )
       of(diagnostics(src, td.name), RuleId.YieldArgumentPrompt) mustBe empty
+    }
+  }
+
+  "a prompt as a yield argument in an EXTERNAL context" should {
+    // riddl-models, 2026-11-18 (Reid's ruling): an external context's handler stands in for a
+    // system the model does not own; a value only that system decides is exactly what a prompt
+    // describes, so the rule's premise ("a value the handler already has") does not hold there.
+    val body = """yield event Booked(id = b.id, at = prompt("what the gateway decided"), size = b.size)"""
+
+    "NOT fire under the external-context keyword" in { (td: TestData) =>
+      val msgs = diagnostics(model(body, "external context"), td.name)
+      withClue(msgs.format) {
+        // Not vacuous: the model parsed and validated (no Error), so the yield was checked.
+        msgs.filter(_.kind == Error) mustBe empty
+        of(msgs, RuleId.YieldArgumentPrompt) mustBe empty
+      }
+    }
+
+    "NOT fire under 'option external'" in { (td: TestData) =>
+      val src = model(body).replace(
+        "  } with { briefly \"c\" }\n} with { briefly \"d\" }",
+        "  } with { briefly \"c\" option external }\n} with { briefly \"d\" }"
+      )
+      src must include("option external")
+      val msgs = diagnostics(src, td.name)
+      withClue(msgs.format) {
+        msgs.filter(_.kind == Error) mustBe empty
+        of(msgs, RuleId.YieldArgumentPrompt) mustBe empty
+      }
+    }
+
+    "still fire on the same yield in an ordinary context" in { (td: TestData) =>
+      of(diagnostics(model(body), td.name), RuleId.YieldArgumentPrompt).size mustBe 1
     }
   }
 

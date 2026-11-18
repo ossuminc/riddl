@@ -12555,9 +12555,16 @@ case class ValidationPass(
     * expression. An ADVISORY, per argument: consistent with the model, inconsistent with what the
     * shape usually means, dismissable -- a modeller may genuinely want the AI to compute it.
     * Yield only: a yielded event is what a fold reads, which is the other remedy on offer.
+    *
+    * Silent inside an EXTERNAL context (riddl-models, 2026-11-18, Reid's ruling): its handler
+    * stands in for a system the model does not own, so a value only that system decides -- an
+    * amount a card processor actually held -- is exactly what a prompt describes, and the
+    * premise "a value the handler already has" does not hold. Both spellings, via
+    * `isExternalContext`.
     */
-  private def checkYieldArgumentPrompts(c: Constructor): Unit =
-    c.args.zipWithIndex.foreach { case (arg, i) =>
+  private def checkYieldArgumentPrompts(c: Constructor, parents: Parents): Unit =
+    val inExternal = parents.collectFirst { case ctx: Context => ctx }.exists(isExternalContext)
+    if !inExternal then c.args.zipWithIndex.foreach { case (arg, i) =>
       arg.value match
         case _: PromptValue =>
           val which = arg.name.map(n => s"'${n.value}'").getOrElse(s"#${i + 1}")
@@ -13105,7 +13112,7 @@ case class ValidationPass(
           s.msg match
             case c: Constructor =>
               validateValue(c, parents, lets, elements)
-              checkYieldArgumentPrompts(c)
+              checkYieldArgumentPrompts(c, parents)
             case vr: ValueRef   => checkMessageOperandSource(vr, "yield", parents, lets, elements)
             case mr: MessageRef => checkBareMessageOperand(mr, "yield") // Task 4
           recordDeliverableType(s, s.msg, parents, lets, elements) // [1.2]
