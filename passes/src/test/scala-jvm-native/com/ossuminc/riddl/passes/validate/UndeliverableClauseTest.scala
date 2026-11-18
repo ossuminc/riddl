@@ -163,6 +163,90 @@ class UndeliverableClauseTest extends AbstractValidatingTest {
       of(msgs, RuleId.EntityNoInlet).size mustBe 1
     }
 
+    // riddl-models, 2026-11-18: a context's `tell` to its own entity travels context outlet ->
+    // router -> entity inlet, and the router relays it. `msg-tell-no-route-for-type` counts that
+    // relay as the tell's route, so the router's clause is delivered to.
+    def relayModel(routerClause: String): String =
+      s"""domain D is { context C is {
+         |  command Start is { x: Integer }
+         |  command Go is { x: Integer }
+         |  command Other is { y: Integer }
+         |  inlet CIn is command C.Start
+         |  outlet COut is command C.Go
+         |  handler CH is { on command C.Start { tell command C.Go(x = 1) to entity C.E } }
+         |  router R is {
+         |    inlet RIn is command C.Go
+         |    inlet ROtherIn is command C.Other
+         |    outlet ROut is command C.Go
+         |    outlet ROtherOut is command C.Other
+         |    handler RH is {
+         |      $routerClause
+         |      on o: command C.Other is { send o to outlet C.R.ROtherOut }
+         |    }
+         |  }
+         |  entity E is {
+         |    inlet EIn is command C.Go
+         |    handler EH is { on command C.Go { do "go" } }
+         |  }
+         |  connector K1 is { from outlet C.COut to inlet C.R.RIn }
+         |  connector K2 is { from outlet C.R.ROut to inlet C.E.EIn }
+         |} }
+         |""".stripMargin
+
+    "count a tell riding through a relaying router as delivering to the router's clause" in {
+      (td: TestData) =>
+        val msgs = messages(relayModel("on g: command C.Go is { send g to outlet C.R.ROut }"), td)
+        of(msgs, RuleId.ClauseUndeliverable) mustBe empty
+        of(msgs, RuleId.TellNoRouteForType) mustBe empty
+    }
+
+    "leave msg-tell-no-route-for-type to report a deleted relay (negative control)" in {
+      (td: TestData) =>
+        val msgs = messages(relayModel(""), td)
+        of(msgs, RuleId.TellNoRouteForType).size mustBe 1
+    }
+
+    // riddl-models, 2026-11-18: a projector correlation's `yields command` is transmitted on the
+    // projector's outlets that admit it, like a `yield`.
+    def correlationModel(repoInletType: String): String =
+      s"""domain D is { context C is {
+         |  event Seen is { k: String, n: Integer }
+         |  command Persist is { k: String, n: Integer }
+         |  command Noted is { k: String }
+         |  type RepoCommand is one of { command C.Persist or command C.Noted }
+         |  repository Repo is {
+         |    inlet RepoIn is $repoInletType
+         |    handler RH is {
+         |      on command C.Persist { do "persist" }
+         |      on command C.Noted { do "note" }
+         |    }
+         |  }
+         |  projector P is {
+         |    updates repository C.Repo
+         |    inlet PIn is event C.Seen
+         |    outlet POut is $repoInletType
+         |    handler PH is { on e: event C.Seen is { send command C.Noted(k = e.k) to outlet C.P.POut } }
+         |    correlation J by k yields command C.Persist is {
+         |      handler Collect is { on e: event C.Seen is { set field n to e.n } }
+         |    } times out after "1 day" { do "give up" }
+         |  }
+         |  connector K is { from outlet C.P.POut to inlet C.Repo.RepoIn }
+         |} }
+         |""".stripMargin
+
+    "count a projector correlation's yielded command as transmitted on its outlets" in {
+      (td: TestData) =>
+        val msgs = messages(correlationModel("type C.RepoCommand"), td)
+        of(msgs, RuleId.ClauseUndeliverable) mustBe empty
+    }
+
+    "still report the clause when the inlet no longer admits the yielded command" in {
+      (td: TestData) =>
+        val errs = of(messages(correlationModel("command C.Noted"), td), RuleId.ClauseUndeliverable)
+        errs.size mustBe 1
+        errs.head.message must include("Command 'Persist'")
+    }
+
     "exempt a ??? clause body" in { (td: TestData) =>
       val src =
         """domain D is { context C is {

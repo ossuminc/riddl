@@ -71,6 +71,31 @@ fixtures, not a task).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-18 — `msg-clause-undeliverable` missed a relay hop and a correlation
+
+riddl-models task (`task/done/2026-11-18-undeliverable-misses-tell-relays-
+and-correlation-yields.md`). Two more gaps in the delivery index, after the
+two found at landing:
+
+- **A `tell` relayed by a streamlet.** The index already recorded what a
+  sender's tells RIDE (`riding`, used by `stream-outlet-never-sent`), but the
+  undeliverable check discarded it. So a router relaying its context's tell to
+  the entity was "undeliverable", and deleting it drew
+  `msg-tell-no-route-for-type`: two rules each condemning the other's remedy.
+  The check now counts an outlet a sender's tell rides as carrying it, CM
+  line 1465's reading of a route.
+- **A projector correlation's `yields command`** is now a load on the
+  projector's admitting outlets, like a `yield`.
+
+**Trap: a fixture that does not parse makes a positive case pass.** The first
+router fixture had one outlet (a `router` needs two). Parsing failed, no
+validation ran, and the "no undeliverable" assertion passed vacuously while its
+negative control failed. Run a fixture through riddlc before trusting a test
+built on it. Canary-checked: both new positives fail with the fix stashed.
+Verified: passes JVM 308/2093, JS 44/376, Native 305/2081; reactive-bbq 6 → 3
+findings of the three rules, the remaining three being other cases; both
+acceptance negatives reproduce on a scratch copy.
+
 ## 2026-11-17 (late night) — `on init` is creation; no initial state; `on entry`
 
 riddl-models asked one narrow thing (task `on-init-is-the-creation-event`, in

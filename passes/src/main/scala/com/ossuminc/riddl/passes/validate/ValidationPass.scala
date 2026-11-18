@@ -9699,6 +9699,18 @@ case class ValidationPass(
         }
       }
     }
+    // A projector correlation, once complete, emits the command it `yields` (A70): a transmission
+    // on the projector's outlets that admit it, as a `yield` is (riddl-models, 2026-11-18).
+    processors.foreach {
+      case pj: Projector =>
+        pj.correlations.foreach { c =>
+          val t = resolution.refMap.definitionOf[Type](c.yields.pathId)
+          pj.outlets.foreach { o =>
+            if outletType(o).forall(ot => mayCarry(t, ot)) then load(o, t)
+          }
+        }
+      case _ => ()
+    }
     // Tells and asks are collected wherever they occur (saga steps included), with their target.
     collectedTells.foreach { case (ts, target, sender) =>
       val t = tellOperandTypes.get(ByIdentity[Statement](ts))
@@ -9737,7 +9749,9 @@ case class ValidationPass(
     * X to. The receiving end of the question `msg-tell-no-route-for-type` asks from the sending
     * end. X reaches processor Q only through Q's own inlets (CM §17) or a direct delivery; this
     * reports a clause where every inlet admitting X is fed by connectors whose senders are all
-    * known and none puts X on the outlet, and no `tell`/`ask`/`forward` delivers X.
+    * known and none puts X on the outlet -- by `send`/`forward`, `yield`/`reply`, a projector
+    * correlation's `yields`, or a `tell`/`ask`/`forward` riding it toward a further target -- and
+    * no `tell`/`ask`/`forward` delivers X.
     *
     * It ABSTAINS rather than guess: an inlet admitting X with no connector at all
     * (`stream-portlet-unconnected` reports that), an opaque sender upstream, or an operand whose
@@ -9745,7 +9759,7 @@ case class ValidationPass(
     * processor, predefined definitions, and external contexts, which the model does not implement.
     */
   private def checkClausesAreDeliverable(d: Deliveries): Unit =
-    val Deliveries(onOutlet, direct, _, opaque) = d
+    val Deliveries(onOutlet, direct, riding, opaque) = d
     // Which outlets feed each inlet, through the declared connectors.
     val feeders = mutable.Map.empty[ByIdentity[Inlet], mutable.ListBuffer[Outlet]]
     connectors.filterNot(_.isEmpty).foreach { connector =>
@@ -9759,6 +9773,17 @@ case class ValidationPass(
     }
     def ownerOf(o: Outlet): Option[Processor[?]] =
       symbols.parentsOf(o).collectFirst { case p: Processor[?] => p }
+    // A `tell`/`ask`/`forward`-to-processor travels "the outlet connected to the target's inlet"
+    // (A6) without naming it, and every processor it passes through on the way receives it. So an
+    // outlet admitting X whose owner transmits X that way carries X to the next hop -- the reading
+    // `msg-tell-no-route-for-type` already takes of a relay (riddl-models, 2026-11-18: reactive-
+    // bbq's OnlineOrderSignalRouter relays its context's tells to the entity).
+    def ridesOn(o: Outlet, x: Type): Boolean =
+      val ot = resolution.refMap.definitionOf[Type](o.type_.pathId)
+      ownerOf(o).exists { p =>
+        riding.getOrElse(ByIdentity[Processor[?]](p), Seq.empty)
+          .exists(t => mayCarry(t, x) && ot.forall(mayCarry(t, _)))
+      }
 
     // A processor declaring NO dataflow inlet is skipped: `stream-processor-no-inlet` /
     // `entity-no-inlet` already reports "handles X but declares no inlet", and [1.25]'s rule is
@@ -9777,7 +9802,8 @@ case class ValidationPass(
                 case Some(outs) =>
                   outs.exists { o =>
                     ownerOf(o).forall(p => opaque.contains(ByIdentity[Processor[?]](p))) ||
-                    onOutlet.getOrElse(ByIdentity(o), Seq.empty).exists(mayCarry(_, x))
+                    onOutlet.getOrElse(ByIdentity(o), Seq.empty).exists(mayCarry(_, x)) ||
+                    ridesOn(o, x)
                   }
             }
             if !directly && !viaInlets then
