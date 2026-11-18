@@ -7004,6 +7004,7 @@ case class ValidationPass(
         case sr: StateRef =>
           resolution.refMap.definitionOf[State](sr.pathId).map(sr.pathId -> _).toSeq
     case c: Constructor           => c.args.flatMap(a => valueReferencedDefs(a.value))
+    case ask: Ask                 => ask.args.flatMap(a => valueReferencedDefs(a.value))
     case le: LogicalExpression    => valueReferencedDefs(le.left) ++ valueReferencedDefs(le.right)
     case ne: NotExpression        => valueReferencedDefs(ne.expr)
     case ce: ComparisonExpression => valueReferencedDefs(ce.left) ++ valueReferencedDefs(ce.right)
@@ -8159,7 +8160,7 @@ case class ValidationPass(
     // An `ask` can fail exactly as a `call` can -- more obviously, since no answer may ever
     // arrive -- and `Call` was already counted here, so omitting `ask` would have let a saga
     // step hide a second failure point behind a `let`.
-    case _: Ask => 1
+    case ask: Ask => 1 + ask.args.map(a => countValueFailPoints(a.value)).sum
     // A70/instance-identity: `initiate` invokes `on init` and mints an instance -- it can fail
     // exactly as `call`/`ask` can, so it counts itself (1) PLUS its argument values, exactly like
     // `call` immediately above.
@@ -8305,7 +8306,7 @@ case class ValidationPass(
     case ic: InvariantCondition => ic.argument.toSeq.flatMap(stateReadsIn)
     // An `ask` holds only a QueryRef and a ProcessorRef -- no nested value -- so it cannot contain
     // a state read. (A saga's `ask` is separately banned outright; see `asksIn`.)
-    case _: Ask          => Seq.empty
+    case ask: Ask        => ask.args.toSeq.flatMap(a => stateReadsIn(a.value))
     case _: EmptyValue   => Seq.empty // An `empty` is a LITERAL: its only payload is a TypeExpression, which holds no values.
     case _: Reference[?] => Seq.empty
     // An IDENTIFIER is a NAME, not an expression: `when isValid` can bind a bare `Identifier`
@@ -8367,7 +8368,7 @@ case class ValidationPass(
     // it cannot contain an `initiate`.
     case _: GetValue => Seq.empty
     // An `ask` holds only a QueryRef and a ProcessorRef -- no nested value.
-    case _: Ask          => Seq.empty
+    case ask: Ask        => ask.args.toSeq.flatMap(a => initiatesIn(a.value))
     case _: EmptyValue   => Seq.empty // An `empty` is a LITERAL: its only payload is a TypeExpression, which holds no values.
     case _: Reference[?] => Seq.empty
     // A name contains nothing; see the note in `stateReadsIn`.
@@ -8431,7 +8432,8 @@ case class ValidationPass(
     case cv: CountValue           => systemValuesIn(cv.collection)
     case mv: MembershipValue      => systemValuesIn(mv.collection) ++ systemValuesIn(mv.element)
     case ic: InvariantCondition   => ic.argument.toSeq.flatMap(systemValuesIn)
-    case _: DurationLiteral | _: GetValue | _: Ask | _: EmptyValue | _: Reference[?] |
+    case ask: Ask                 => ask.args.toSeq.flatMap(a => systemValuesIn(a.value))
+    case _: DurationLiteral | _: GetValue | _: EmptyValue | _: Reference[?] |
         _: Identifier | _: SelfValue =>
       Seq.empty
     case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral | _: NumericLiteral =>
@@ -8444,7 +8446,7 @@ case class ValidationPass(
   end systemValuesIn
 
   private def asksIn(v: RiddlValue): Seq[Ask] = v match
-    case ask: Ask        => Seq(ask)
+    case ask: Ask        => Seq(ask) ++ ask.args.toSeq.flatMap(a => asksIn(a.value))
     case lv: LookupValue => asksIn(lv.collection) ++ lv.indices.flatMap(asksIn)
     case call: Call      => call.args.toSeq.flatMap(a => asksIn(a.value))
     case c: Constructor  => c.args.toSeq.flatMap(a => asksIn(a.value))
@@ -9866,6 +9868,41 @@ case class ValidationPass(
       }
     }
   end checkConnectedOutletsAreSent
+
+  /** The query's field values (riddl-models, 2026-11-18): `ask query Q(code = c) of P` is checked
+    * as a [[Constructor]] of Q, by the ONE copy of those rules -- names, types, ordering,
+    * duplicates, arity and every field supplied -- including recursion into the argument values.
+    *
+    * A BARE ask of a query that HAS fields says nothing about what is asked (inside a `foreach`,
+    * not even which element). It was the only spelling through 2.7.0, so the compat policy makes it
+    * a Deprecation until 3.0 rather than the Error a bare `send` of such a message is (Reid,
+    * 2026-11-18). A field-less query is exempt, as for `send`: its type is its whole value.
+    */
+  private def validateAskArguments(
+    ask: Ask,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Unit =
+    if ask.args.nonEmpty then
+      validateConstructor(Constructor(ask.loc, ask.query, ask.args), parents, lets, elements)
+    else
+      resolution.refMap.definitionOf[Type](ask.query.pathId).foreach { t =>
+        val fields = aggregateFieldsOf(t.typEx)
+        if fields.nonEmpty then
+          messages.addDeprecation(
+            ask.query.loc,
+            s"This 'ask' names ${t.identify} but not its ${fields.size} field value(s), so " +
+              "nothing says what is asked; the bare form is deprecated for a query with fields " +
+              "and will be removed in 3.0",
+            suggestion = s"Supply the query's fields as a constructor does: 'ask ${ask.query.format}(" +
+              fields.map(f => s"${f.id.value} = …").mkString(", ") + s") of ${ask.processor.format}'.",
+            ruleId = Some(RuleId.AskBareQuery)
+          )
+        end if
+      }
+    end if
+  end validateAskArguments
 
   private def validateAsk(ask: Ask, parents: Parents): Unit =
     // 1. The target must resolve, and it must be a query. The ref TYPE makes the kind structural
@@ -11408,7 +11445,9 @@ case class ValidationPass(
       case pv: PromptValue => checkAscriptionIsName(pv) // the prose itself resolves nothing
       case c: Constructor => validateConstructor(c, parents, lets, elements)
       case call: Call     => validateCall(call, parents, lets, elements)
-      case ask: Ask       => validateAsk(ask, parents)
+      case ask: Ask =>
+        validateAsk(ask, parents)
+        validateAskArguments(ask, parents, lets, elements)
       case init: Create => checkInitiate(init, parents, lets, elements)
       case vr: ValueRef =>
         checkStateRecordInScope(vr, parents)

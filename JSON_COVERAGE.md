@@ -198,7 +198,7 @@ message operands of `send`/`tell`/`yield`/`morph`, and constructor args via
 | PromptValue | ✅ A54 / A20 typed holes (2026-08-15) | `{ "value": "prompt", "prompt": ..., "type"?: <typeExpr> }` — AI-computed value; optional `type` is the `as <type>` ascription (A20), omitted when unascribed so an untyped prompt's JSON is unchanged. `typeRef` (2.4.0, [1.26]) is NOT a key: the reader derives it from a name in `type` through `PromptValue.ascribed`, the parser's own constructor |
 | Constructor / ConstructorArg | ✅ A54 | refKind command/event/query/result/record; positional + named args |
 | Call | ✅ A24 | `{ "value": "call", "function": "<path>", "args": [<arg>] }` — call a pure function to get a result |
-| Ask | ✅ 2.0 | `{ "value": "ask", "query": "<path>", "processor": "<path>", "processorKind": "<kind>" }` — a query correlated with the processor asked. No answer type is carried: it is the query's declared `replies result X`, so storing it would be a second place for the same fact to drift |
+| Ask | ✅ 2.0; `args` 2.8.0 | `{ "value": "ask", "query": "<path>", "processor": "<path>", "processorKind": "<kind>", "args"?: [{ "name"?, "value" }] }` — a query correlated with the processor asked. `args` holds the query's field values (`ask query Q(f = v) of P`, 2026-11-18), the same shape as a constructor's; it is omitted for a bare ask, and a document without it reads as one. No answer type is carried: it is the query's declared `replies result X`, so storing it would be a second place for the same fact to drift |
 | ValueRef | ✅ A54 | `{ "value": "valueRef", "path": ... }` |
 | GetValue | ✅ A54 | `{ "value": "get", "source": "input"\|"state", "ref": ... }` |
 | BooleanLiteral | ✅ A28 | `{ "value": "boolLiteral", "bool": true\|false }` |

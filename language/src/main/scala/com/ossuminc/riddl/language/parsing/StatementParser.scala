@@ -1094,9 +1094,16 @@ private[parsing] trait StatementParser {
     * that declares no `replies`, since neither is decidable here.
     */
   private def askValue[u: P]: P[Ask] = {
+    // The query's field values are written as a constructor's (riddl-models, 2026-11-18), with the
+    // parentheses omitted for the bare form, as `create` omits them. Arity and field checks live in
+    // ValidationPass, which reuses the Constructor rules; a parser error() would preempt them.
     P(
-      Index ~ Keywords.ask ~/ queryRef ~ of ~/ processorRef ~/ Index
-    )./.map { case (start, qRef, pRef, end) => Ask(at(start, end), qRef, pRef) }
+      Index ~ Keywords.ask ~/ queryRef ~
+        (Punctuation.roundOpen ~/ constructorArg.rep(0, Punctuation.comma) ~
+          Punctuation.roundClose).? ~ of ~/ processorRef ~/ Index
+    )./.map { case (start, qRef, args, pRef, end) =>
+      Ask(at(start, end), qRef, pRef, args.map(_.toSeq).getOrElse(Seq.empty))
+    }
   }
 
   /** `initiate <processor>[(args)]` -- bring an instance into being and yield its identity.

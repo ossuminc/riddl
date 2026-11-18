@@ -214,6 +214,10 @@ enum RuleId(
   case InitiateKeyword
       extends RuleId("value-initiate-keyword", mechanicalFix = Some(Fix.Constant("create")), deprecates = true)
   case SingleAlternation extends RuleId("single-alternation", deprecates = true)
+  // An `ask` names its query's field values as a constructor does (riddl-models, 2026-11-18). The
+  // bare form was the only spelling through 2.7.0, so for a query WITH fields it is deprecated, not
+  // an Error, until 3.0 (Reid). No mechanical fix: the values have to be chosen.
+  case AskBareQuery extends RuleId("value-ask-bare-query", deprecates = true)
   case EntityOptionToIntention extends RuleId("entity-option-to-intention", deprecates = true)
   case TypeFirstAggregate extends RuleId("type-first-aggregate", deprecates = true)
   case ConnectorOptionToIntention extends RuleId("connector-option-to-intention", deprecates = true)

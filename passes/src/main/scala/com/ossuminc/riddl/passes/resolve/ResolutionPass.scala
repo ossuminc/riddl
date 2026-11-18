@@ -574,6 +574,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
           parents.head,
           resolveARef[Processor[?]](ask.processor, parents)
         )
+        // The query's field values (2026-11-18), resolved as a Constructor's are.
+        ask.args.foreach(arg => resolveValue(arg.value, parents))
       case init: Create =>
         // A70/instance-identity: resolve the target processor and recurse into argument values,
         // exactly as a Constructor/Call does. `init`'s type (the newly minted `Id(P)`) is

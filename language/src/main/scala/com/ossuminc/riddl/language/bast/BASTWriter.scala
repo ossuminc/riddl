@@ -1791,6 +1791,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeLocation(a.loc)
     writeMessageRef(a.query)
     writeProcessorRef(a.processor)
+    writeSeq(a.args)(writeConstructorArg) // revision 33: the query's field values
   }
 
   def writeCall(c: Call): Unit = {

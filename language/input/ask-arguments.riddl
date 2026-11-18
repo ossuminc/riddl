@@ -1,0 +1,47 @@
+// `ask query Q(f = v) of P` (riddl-models, 2026-11-18): an ask states its query's field values as
+// a constructor does. A fixture for the EBNF grammar validator, which walks every
+// **/input/**/*.riddl file, so the argument form is covered by the Python CI job too. It holds a
+// named argument, a positional one, an argument naming a `foreach` element, and the bare form of a
+// field-less query.
+domain Restaurant is {
+  context Menu is {
+    command AddItem is { itemCode: String }
+    command AddItems is { itemCodes: String* }
+    query FindListing replies result ListingFound is { listingItemCode: String }
+    query AllListings replies result ListingFound is { ??? }
+    result ListingFound is { onMenu: Boolean }
+
+    entity Catalog is {
+      inlet CatalogIn is query Menu.FindListing
+      outlet CatalogOut is result Menu.ListingFound
+      handler Answer is {
+        on query Menu.FindListing { reply result Menu.ListingFound(onMenu = true) }
+        on query Menu.AllListings { reply result Menu.ListingFound(onMenu = true) }
+      }
+    }
+
+    entity TableOrder is {
+      inlet OrderIn is command Menu.AddItem
+      inlet OrderResultIn is result Menu.ListingFound
+      outlet OrderOut is query Menu.FindListing
+      handler Take is {
+        on addItem: command Menu.AddItem is {
+          let listing: type Menu.ListingFound =
+            ask query Menu.FindListing(listingItemCode = addItem.itemCode) of entity Menu.Catalog
+          when listing.onMenu then do "add the item" else error "not on the menu" end
+        }
+        on addItems: command Menu.AddItems is {
+          foreach code in field Menu.AddItems.itemCodes {
+            let found: type Menu.ListingFound = ask query Menu.FindListing(code) of entity Menu.Catalog
+            when found.onMenu then do "add this one" end
+          }
+          let everything: type Menu.ListingFound = ask query Menu.AllListings of entity Menu.Catalog
+          when everything.onMenu then do "the menu is open" end
+        }
+      }
+    }
+
+    connector Asks is { from outlet Menu.TableOrder.OrderOut to inlet Menu.Catalog.CatalogIn }
+    connector Answers is { from outlet Menu.Catalog.CatalogOut to inlet Menu.TableOrder.OrderResultIn }
+  }
+}

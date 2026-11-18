@@ -279,6 +279,7 @@ object Finder:
     case ct: Constructor          => ct.args
     case cl: Call                 => cl.args
     case in: Create             => in.args
+    case ak: Ask                  => ak.args
     case ca: ConstructorArg       => Seq(ca.value)
     case gv: GetValue             => Seq(gv.source)
     // B4 (2026-09-21): arithmetic composition, and the duration literal's amount. Found in the

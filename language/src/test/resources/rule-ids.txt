@@ -443,3 +443,4 @@ entity-init-no-morph
 entity-entry-misplaced
 entity-entry-morphs
 stmt-morph-to-current-state
+value-ask-bare-query

@@ -925,11 +925,26 @@ object JsonModel:
     */
   case class CallValueDto(function: String, args: Seq[ConstructorArgDto]) extends ValueDto
 
-  /** `{ "value": "ask", "query": "<path>", "processor": "<path>" }` -- the correlation `ask`
-    * declares. No answer type is carried: it is the query's declared `replies result X`, so storing
-    * it would be a second place for the same fact to go stale.
+  /** `{ "value": "ask", "query": "<path>", "processor": "<path>", "args": [...] }` -- the
+    * correlation `ask` declares. No answer type is carried: it is the query's declared `replies
+    * result X`, so storing it would be a second place for the same fact to go stale. `args` (the
+    * query's field values, 2026-11-18) is written only when there are some, so a bare ask
+    * serializes exactly as before, and a document without the key reads as a bare ask.
     */
-  case class AskValueDto(query: String, processor: String, processorKind: String) extends ValueDto
+  case class AskValueDto(query: String, processor: String, processorKind: String, args: Seq[ConstructorArgDto])
+      extends ValueDto:
+    // The pre-2.8.0 shape, for binary compatibility within 2.x (MiMa against 2.7.0). Remove at 3.0.
+    def this(query: String, processor: String, processorKind: String) =
+      this(query, processor, processorKind, Nil)
+    def copy(query: String, processor: String, processorKind: String): AskValueDto =
+      AskValueDto(query, processor, processorKind, args)
+  end AskValueDto
+
+  /** Companion: keeps the pre-2.8.0 three-argument `AskValueDto(...)`. Remove at 3.0. */
+  object AskValueDto:
+    def apply(query: String, processor: String, processorKind: String): AskValueDto =
+      new AskValueDto(query, processor, processorKind, Nil)
+  end AskValueDto
 
   /** `{ "value": "valueRef", "path": "<path>" }` */
   case class ValueRefDto(path: String) extends ValueDto
@@ -1934,7 +1949,15 @@ object JsonModel:
           .getOrElse(Nil)
         CallValueDto(m("function").str, args)
       case "ask" =>
-        AskValueDto(m("query").str, m("processor").str, m("processorKind").str)
+        val args = m
+          .get("args")
+          .map(
+            _.arr
+              .map(a => ConstructorArgDto(a.obj.get("name").map(_.str), readValue(a.obj("value"))))
+              .toSeq
+          )
+          .getOrElse(Nil)
+        AskValueDto(m("query").str, m("processor").str, m("processorKind").str, args)
       case "self" => SelfValueDto(m.get("field").map(_.str))
       case "system" => SystemValueDto(m.get("field").map(_.str))
       // `initiate` is the spelling JSON written before 2026-11-16 carries; read it through 2.x.
@@ -2067,12 +2090,21 @@ object JsonModel:
             )
           })
         )
-      case AskValueDto(query, processor, processorKind) =>
-        ujson.Obj(
-          "value" -> ujson.Str("ask"),
-          "query" -> ujson.Str(query),
-          "processor" -> ujson.Str(processor),
-          "processorKind" -> ujson.Str(processorKind)
+      case AskValueDto(query, processor, processorKind, args) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)](
+            "value" -> ujson.Str("ask"),
+            "query" -> ujson.Str(query),
+            "processor" -> ujson.Str(processor),
+            "processorKind" -> ujson.Str(processorKind)
+          ) ++ (if args.isEmpty then Nil
+                else
+                  Seq("args" -> ujson.Arr.from(args.map { a =>
+                    ujson.Obj.from(
+                      a.name.map(n => "name" -> (ujson.Str(n): ujson.Value)).toSeq
+                        ++ Seq("value" -> (writeValue(a.value): ujson.Value))
+                    )
+                  })))
         )
       case CallValueDto(function, args) =>
         ujson.Obj(

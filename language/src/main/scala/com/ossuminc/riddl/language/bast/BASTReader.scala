@@ -2682,7 +2682,9 @@ class BASTReader(
             throw new RuntimeException(
               s"Ask names a ${other.getClass.getSimpleName}, but `ask` takes a query"
             )
-        Ask(askLoc, q, readProcessorRef())
+        val processor = readProcessorRef()
+        val args = readSeq(() => readConstructorArg()) // revision 33
+        Ask(askLoc, q, processor, args)
       case 2 => // ValueRef
         val loc = readLocation()
         val pid = readPathIdentifierInline()

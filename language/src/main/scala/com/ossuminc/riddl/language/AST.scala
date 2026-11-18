@@ -3388,15 +3388,39 @@ object AST:
     *   The query being asked. A [[QueryRef]] specifically, so the kind restriction is structural.
     * @param processor
     *   The processor being asked
+    * @param args
+    *   The values of the query's fields, written as a constructor's are: `ask query Q(code = c) of
+    *   context M` (riddl-models, 2026-11-18 -- until then an asker could not say WHAT it asked, and
+    *   inside a `foreach` the model was ambiguous). Empty for the bare form, whose parentheses are
+    *   omitted; a bare ask of a query WITH fields is deprecated until 3.0 (`value-ask-bare-query`).
+    *   Validated by the same rules as a [[Constructor]] of the query type, every field included.
     */
   @JSExportTopLevel("Ask")
   case class Ask(
     loc: At,
     query: QueryRef,
-    processor: ProcessorRef[Processor[?]]
+    processor: ProcessorRef[Processor[?]],
+    args: Seq[ConstructorArg]
   ) extends RiddlValue:
+    // The pre-2.8.0 three-field shape, kept for binary compatibility within 2.x (MiMa against
+    // 2.7.0): a consumer compiled against `new Ask(loc, query, processor)` / `copy(...)` still links.
+    // Remove at 3.0 (BACKLOG [5.10]).
+    def this(loc: At, query: QueryRef, processor: ProcessorRef[Processor[?]]) =
+      this(loc, query, processor, Seq.empty)
+    def copy(loc: At, query: QueryRef, processor: ProcessorRef[Processor[?]]): Ask =
+      Ask(loc, query, processor, args)
     override def kind: String = "Ask"
-    def format: String = s"ask ${query.format} of ${processor.format}"
+    def format: String =
+      val argList = if args.isEmpty then "" else args.map(_.format).mkString("(", ", ", ")")
+      s"ask ${query.format}$argList of ${processor.format}"
+  end Ask
+
+  /** Companion: keeps the pre-2.8.0 three-argument `Ask(loc, query, processor)` for binary and
+    * source compatibility within 2.x. Remove at 3.0 (BACKLOG [5.10]).
+    */
+  object Ask:
+    def apply(loc: At, query: QueryRef, processor: ProcessorRef[Processor[?]]): Ask =
+      new Ask(loc, query, processor, Seq.empty)
   end Ask
 
   /** `create <processor>(args)` -- bring an instance into being and yield its identity.

@@ -468,8 +468,10 @@ call = "call" function_ref "(" [constructor_arg {"," constructor_arg}] ")" ;
    implies no mechanism (no Future, temp actor, correlation-id field or blocking call); those are
    lowerings a generator chooses. The operand is a query_ref SPECIFICALLY: a command, event, result
    or record is not answerable, so the restriction is structural rather than a validation rule. The
-   answer's type is the query's declared `replies result X`. *)
-ask = "ask" query_ref "of" processor_ref ;
+   answer's type is the query's declared `replies result X`. The query's field values are written
+   as a constructor's (2026-11-18); the bare form, with no parentheses, is deprecated for a query
+   that has fields. *)
+ask = "ask" query_ref ["(" [constructor_arg {"," constructor_arg}] ")"] "of" processor_ref ;
 (* A70/instance-identity: bring an instance into being and yield its identity, the newly minted
    `Id(<processor>)`. Parens are OPTIONAL and present exactly when there are arguments -- one
    keyword, not two. Arity/argument-type checking is done in validation, which is the only place

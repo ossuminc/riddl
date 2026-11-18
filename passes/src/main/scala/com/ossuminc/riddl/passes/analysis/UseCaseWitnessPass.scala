@@ -222,6 +222,7 @@ case class UseCaseWitnessPass(
       case _: GetValue               => Seq.empty // state read, not an input
       case c: Constructor            => c.args.flatMap(a => getInputRefsIn(a.value))
       case call: Call                => call.args.flatMap(a => getInputRefsIn(a.value))
+      case ask: Ask                  => ask.args.flatMap(a => getInputRefsIn(a.value))
       case ce: ComparisonExpression  => getInputRefsIn(ce.left) ++ getInputRefsIn(ce.right)
       case le: LogicalExpression     => getInputRefsIn(le.left) ++ getInputRefsIn(le.right)
       case ne: NotExpression         => getInputRefsIn(ne.expr)

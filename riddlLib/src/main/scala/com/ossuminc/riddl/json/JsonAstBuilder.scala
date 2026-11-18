@@ -1602,7 +1602,12 @@ object JsonAstBuilder:
       case c: ConstructorValueDto => buildConstructor(c)
       case c: CallValueDto        => buildCall(c) // A24
       case a: AskValueDto =>
-        Ask(curAt, QueryRef(curAt, pathId(a.query)), processorRef(a.processor, a.processorKind))
+        Ask(
+          curAt,
+          QueryRef(curAt, pathId(a.query)),
+          processorRef(a.processor, a.processorKind),
+          a.args.map(arg => ConstructorArg(curAt, arg.name.map(ident), buildValue(arg.value)))
+        )
       case BooleanLiteralDto(b) => BooleanLiteral(curAt, b)
       case ComparisonDto(op, left, right) =>
         val cop = ComparisonOperator.values

@@ -321,7 +321,7 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     * `AST.scala` ONLY for `.format`-based error-message rendering, which this emitter never uses
     * for a `Value`.
     *
-    * Every OTHER [[Value]] shape (`LiteralString`, `ValueRef`, `GetValue`, `Ask`, `SelfValue`,
+    * Every OTHER [[Value]] shape (`LiteralString`, `ValueRef`, `GetValue`, `SelfValue`,
     * `NumericLiteral`, `ComparisonExpression`, `BooleanLiteral`) still renders via `.format`: none
     * of them carries a nested `Value`/`TypeExpression` that needs emitter-level rendering, so the
     * fallback arm is byte-identical to the pre-fix behaviour for all of them.
@@ -373,6 +373,12 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         add(s"call ${function.format}(")
         emitConstructorArgs(args)
         add(")")
+      case Ask(_, query, processor, args) =>
+        // Through `emitConstructorArgs`, not `.format`: an argument may hold a nested
+        // `prompt(...) as T`, which only the emitter renders faithfully.
+        add(s"ask ${query.format}")
+        (if args.nonEmpty then add("(").emitConstructorArgs(args).add(")") else this)
+          .add(s" of ${processor.format}")
       case Create(_, processor, args) =>
         add(s"create ${processor.format}")
         if args.nonEmpty then add("(").emitConstructorArgs(args).add(")") else this

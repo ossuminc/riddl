@@ -71,6 +71,44 @@ fixtures, not a task).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-18 (later) — `ask query Q(args) of P`
+
+riddl-models task (`task/done/2026-11-18-ask-cannot-say-what-it-asks.md`). An
+`ask` named its query but could not construct it. `Ask` now carries
+`args: Seq[ConstructorArg]`, as `create` does. Validation passes a synthesized
+`Constructor(query, args)` to `validateConstructor`, so there is still ONE copy
+of the argument rules. A bare ask of a query WITH fields is the Deprecation
+`value-ask-bare-query` until 3.0 (Reid ruled it). It was the only spelling
+through 2.7.0, so the compat policy rules out the Error a bare `send` gets.
+BAST `FORMAT_REVISION` 33. JSON writes `args` only when non-empty, so a bare
+ask serializes as before.
+
+**MiMa: a new case-class field CAN stay binary compatible.** There was no
+precedent in this repo. Three shims are needed, each a 2.7.0 signature:
+`def this(old fields)`, a companion `apply(old fields)` overload, and a
+`copy(old fields)` overload. With all three, `language` and `riddlLib` were
+clean. Calibrated: deleting the `copy` shim made MiMa report exactly
+`DirectMissingMethodProblem` on `Ask.copy`. Leave the new field WITHOUT a
+default, or the old-arity `apply` becomes ambiguous. The shims are on BACKLOG
+[5.10]'s 3.0 removal list.
+
+**Trap, again: an unparseable fixture makes a negative assertion vacuous.** My
+`foreach` case was written `do … end`, but `foreach` takes braces and
+`in field T.f`. It "passed" because a parse error contains no error about
+`code`. The test now asserts the WHOLE model is error-free AND that the
+element really is the argument. This is the second time today (see the router
+fixture below). The habit to keep: run every hand-written model through
+riddlc before trusting a test that asserts an absence.
+
+Verified: JVM utils 19, language 81/803, passes 309/2105, testkit,
+commands 30/363, riddlLib 33/185; JS 8/42/44/1/17; Native
+16/76/306/1/30/32. riddlc fails only on the known ShopifyCart case, and that
+failure ends the `;` chain, so JS and Native were run separately. TatSu is
+130/153, with only the new fixture added (✓). The `.bast` fixture changed in
+the revision byte only. reactive-bbq: its 5 asks each draw one
+`value-ask-bare-query`, with 0 errors. The CM paragraph was extended IN PLACE,
+so no CM line moved. ossum.tech has a task for the language reference.
+
 ## 2026-11-18 — `msg-clause-undeliverable` missed a relay hop and a correlation
 
 riddl-models task (`task/done/2026-11-18-undeliverable-misses-tell-relays-

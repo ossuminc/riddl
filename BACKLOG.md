@@ -69,6 +69,11 @@ is worse than no handle**, because it fails exactly when it is being relied on.
   simply unparseable), retire `Initiate`/`InitiateValueDto`, the JSON reader's `"initiate"`, and
   every `@deprecated` public API member. Rule-id CODES are NOT on the list: a published code keeps
   its meaning forever, and a removed rule's code goes to `RuleId.retired`.
+  **Also owed (2026-11-18, `ask query Q(args) of P`):** a bare `ask` of a query WITH fields is a
+  Deprecation (`value-ask-bare-query`) only because it was the sole spelling through 2.7.0; at 3.0
+  make it the Error a bare `send` of such a message already is (`stmt-operand-is-type-not-value`).
+  And drop the pre-2.8.0 three-field shims on `AST.Ask` (`this`/`copy`/companion `apply`) and on
+  `JsonModel.AskValueDto`, which exist only for MiMa against 2.7.0.
 
 - **[5.9]** **DEFERRED — duplicate emissions that CONVERGE downstream through different
   outlets** (Reid, 2026-10-16). Case 4 of riddl-generator's "incognito duplicate" task: one

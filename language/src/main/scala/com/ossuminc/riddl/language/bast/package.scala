@@ -180,7 +180,9 @@ package object bast {
     // peek advanced the location base and did not restore it, shifting every later position after
     // a Group (synapify). A revision-30 file holding a contained group was never readable.
     // 32 (2026-11-17) adds on-clause discriminator 8, `on entry`; a revision-31 reader throws on it.
-    32 // `on entry` clause
+    // 33 (2026-11-18) appends an `ask`'s argument list (count, then the constructor args) after
+    // its processor ref; a revision-32 reader would leave those bytes in the stream.
+    33 // `ask query Q(args) of P`
     // 30 was B5 collection predicates, filter, count and membership
     // 23 was multi-line `do` / `prompt`
     // 22 was: `system` value: tag 13 in readValue/writeValue. A revision-21 reader hitting tag 13 throws
