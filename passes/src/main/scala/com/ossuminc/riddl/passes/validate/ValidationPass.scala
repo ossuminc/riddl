@@ -537,8 +537,10 @@ case class ValidationPass(
     }
   }
 
-  /** Whether a processor kind has NO "should have a handler" rule of its own, so an inlet on a
-    * handler-less one must be reported by `checkInletsAreReceived` rather than left to a companion.
+  /** Whether a processor kind has NO "should have a handler" rule of its own, so a handler-less
+    * one is judged LITERALLY on both sides -- its inlets by `checkInletsAreReceived`, its outlets by
+    * `stream-outlet-never-sent` (it is not opaque, [[isOpaqueProcessor]]) -- rather than left to a
+    * companion rule that does not exist.
     */
   private def lacksNoHandlerRule(proc: Processor[?]): Boolean = proc match
     case _: Context | _: Projector => true
@@ -560,6 +562,9 @@ case class ValidationPass(
           // those with no handler at all was reported by NOTHING (riddl-models, 2026-09-11:
           // `PhysicianNotificationService`, three commands sent into an inlet no clause could ever
           // dequeue, at zero findings). Those two kinds are reported here, with the sharper wording.
+          // An `external context` is opaque on BOTH sides (Reid, 2026-11-19): it was already trusted
+          // to send (`isOpaqueProcessor`), so judging its inlets literally was the asymmetry.
+          case Some(c: Context) if isExternalContext(c) => ()
           case Some(proc: Processor[?]) if !proc.isEmpty && (proc.handlers.nonEmpty || lacksNoHandlerRule(proc)) =>
             resolution.refMap.definitionOf[Type](inlet.type_.pathId).foreach { inletType =>
               val unreceived = unreceivedMembers(proc, inletType)
@@ -9816,8 +9821,9 @@ case class ValidationPass(
     *   "the outlet connected to the target's inlet" (A6) without naming it, so an outlet admitting
     *   one is in use
     * @param opaque
-    *   senders no rule may reason about: no clauses, a `???` body, predefined, an external
-    *   context, or one whose `send` names a portlet that does not resolve
+    *   senders no rule may reason about: a `???` body, predefined, an external context, no
+    *   clauses where the kind has its own "should have a handler" rule ([[isOpaqueProcessor]]),
+    *   or one whose `send` names a portlet that does not resolve
     */
   private case class Deliveries(
     onOutlet: Map[ByIdentity[Outlet], Seq[Option[Type]]],
@@ -9834,10 +9840,21 @@ case class ValidationPass(
     case Some(x) =>
       typeMembers(x).exists(m => typeAdmits(t, m)) || typeMembers(t).exists(m => typeAdmits(x, m))
 
+  /** Which senders no rule may reason about (Reid, 2026-11-19; riddl-models'
+    * handler-less-application task). Opaque on BOTH sides: a `???` body, a predefined definition,
+    * an `external context` -- the model declares those to be outside itself. A processor with no
+    * clauses is opaque ONLY when its kind has a "should have a handler" rule that states the
+    * omission once (entity, streamlet, repository, adaptor). A Context or Projector has no such rule
+    * ([[lacksNoHandlerRule]]), so for them opacity meant nothing reported anything: a handler-less
+    * application was trusted to send on outlets it has no clause to send from, while its inlets were
+    * judged literally. Both sides are literal now; a group input still counts as sending
+    * (`deliveries`), because that is how a USER's command enters.
+    */
   private def isOpaqueProcessor(p: Processor[?]): Boolean =
-    p.isEmpty || isPredefined(p) || handlerClausesOf(p).isEmpty || (p match
-      case c: Context => isExternalContext(c)
-      case _          => false)
+    p.isEmpty || isPredefined(p) || (handlerClausesOf(p).isEmpty && !lacksNoHandlerRule(p)) ||
+      (p match
+        case c: Context => isExternalContext(c)
+        case _          => false)
 
   private def deliveries(root: PassRoot): Deliveries =
     val onOutlet = mutable.Map.empty[ByIdentity[Outlet], mutable.ListBuffer[Option[Type]]]
