@@ -9514,12 +9514,28 @@ case class ValidationPass(
     *   type X -> processor P -> (Q, the clause in P that handles X and transmits X so it reaches
     *   Q). This is what "P passes X on" means: an `on X` clause re-transmitting X. A handler-less
     *   processor contributes no edge, so it passes nothing through.
+    * @param loopEdges
+    *   `edges` without the hops a RECURRENCE makes: a `send ... at <instant> + <duration>` (Reid,
+    *   2026-11-19). Such a hop still carries X -- a tell's route may run through it, so `edges`
+    *   keeps it -- but each lap is pushed later, so it cannot close an infinite message loop.
     */
   private case class MessageCarriage(
     leadsTo: Map[ByIdentity[Outlet], Seq[Arrival]],
     edges: Map[ByIdentity[Type], Map[ByIdentity[Processor[?]], Seq[(Processor[?], OnClause)]]],
+    loopEdges: Map[ByIdentity[Type], Map[ByIdentity[Processor[?]], Seq[(Processor[?], OnClause)]]],
     typeOf: Map[ByIdentity[Type], Type]
   )
+
+  /** A scheduled instant that ADVANCES: `<instant> + <duration>`, read from the text (Reid,
+    * 2026-11-19). `checkSendAtInstant` and B4 already require the `at` value to be an instant, and
+    * the only sum B4 types as an instant is a timestamp plus a duration, so the operator settles
+    * it. Anything else -- a bare field, `system.now`, a subtraction, a `let` holding the sum --
+    * is not known to advance, and CM §20.7 delivers a past instant IMMEDIATELY, so a re-emission
+    * at it would re-fire at once.
+    */
+  private def isAdvancingInstant(v: Value): Boolean = v match
+    case ae: ArithmeticExpression => ae.op == ArithmeticOperator.Add
+    case _                        => false
 
   /** Built on first use, which is in `postProcess`, after every connector and clause is known. */
   private lazy val messageCarriage: MessageCarriage =
@@ -9564,6 +9580,8 @@ case class ValidationPass(
     // x -> P -> (Q, the clause in P whose transmission of x reaches Q)
     val edges = mutable.Map
       .empty[ByIdentity[Type], mutable.Map[ByIdentity[Processor[?]], mutable.ListBuffer[(Processor[?], OnClause)]]]
+    val loopEdges = mutable.Map
+      .empty[ByIdentity[Type], mutable.Map[ByIdentity[Processor[?]], mutable.ListBuffer[(Processor[?], OnClause)]]]
     val typeOf = mutable.Map.empty[ByIdentity[Type], Type]
 
     processors.foreach { p =>
@@ -9576,7 +9594,7 @@ case class ValidationPass(
             // event X }` carries nothing back.
             def loopTypes(operand: Option[Type]): Seq[Type] =
               operand.toSeq.flatMap(typeMembers).filter(x => typeAdmits(handled, x))
-            def record(operand: Option[Type], arrivals: Seq[Arrival]): Unit =
+            def record(operand: Option[Type], arrivals: Seq[Arrival], recurs: Boolean = false): Unit =
               for
                 x <- loopTypes(operand)
                 (q, gate) <- arrivals
@@ -9584,13 +9602,19 @@ case class ValidationPass(
               do
                 val key = ByIdentity(x)
                 typeOf(key) = x
-                edges
-                  .getOrElseUpdate(key, mutable.Map.empty)
-                  .getOrElseUpdate(ByIdentity[Processor[?]](p), mutable.ListBuffer.empty) += ((q, omc))
+                val targets = if recurs then Seq(edges) else Seq(edges, loopEdges)
+                targets.foreach {
+                  _.getOrElseUpdate(key, mutable.Map.empty)
+                    .getOrElseUpdate(ByIdentity[Processor[?]](p), mutable.ListBuffer.empty) += ((q, omc))
+                }
               end for
             walkStatements(omc.contents) {
               case s: SendStatement =>
-                record(clauseOperandType(s.msg, omc), arrivalsViaPortlet(s.portlet, omc))
+                record(
+                  clauseOperandType(s.msg, omc),
+                  arrivalsViaPortlet(s.portlet, omc),
+                  recurs = s.at.exists(isAdvancingInstant)
+                )
               case s: ForwardStatement =>
                 // A forward passes the HANDLED message on, whatever the operand's spelling.
                 val arrivals = s.target match
@@ -9611,6 +9635,7 @@ case class ValidationPass(
     MessageCarriage(
       leadsTo.map((k, v) => k -> v.toSeq).toMap,
       edges.map((k, v) => k -> v.map((p, l) => p -> l.toSeq).toMap).toMap,
+      loopEdges.map((k, v) => k -> v.map((p, l) => p -> l.toSeq).toMap).toMap,
       typeOf.toMap
     )
   end messageCarriage
@@ -9642,12 +9667,16 @@ case class ValidationPass(
     *     an inlet admitting X (or, for an adaptor, accepts X on its implied inlet). Only riddlg's
     *     lowering may make them direct or edgeless.
     *   - `on other`, `on init`, `on term`, `on quiescence` do not count as handling X.
+    *   - **A recurrence is not a loop** (2026-11-19, riddl-models' usage-metering): a `send ... at
+    *     <instant> + <duration>` re-emitting X pushes every lap later, so the walk uses
+    *     `loopEdges`, which omits that hop. Any other `at` still loops -- a past instant is
+    *     delivered immediately (CM §20.7).
     *
     * Reported once per loop, at the first member's transmitting clause, naming the processors in
     * order. Keyed by reference identity (`ByIdentity`) for the reason `connectorAdjacency` records.
     */
   protected def checkMessageLoops(): Unit =
-    val MessageCarriage(_, edges, typeOf) = messageCarriage
+    val MessageCarriage(_, _, edges, typeOf) = messageCarriage
 
     def byPosition(n: ByIdentity[Processor[?]]): Int = n.value.loc.offset
 
@@ -9672,7 +9701,9 @@ case class ValidationPass(
             s"same clause: $members; that is an infinite message loop",
           suggestion =
             "Emit a different message type from the clause, or break the connector chain so the " +
-              "message cannot return to a processor whose handler re-emits it.",
+              "message cannot return to a processor whose handler re-emits it. A periodic " +
+              "re-emission is a recurrence, not a loop, when it is scheduled to an advancing " +
+              "instant: `send ... at <instant> + <duration>`.",
           ruleId = Some(RuleId.GraphCycle)
         )
       end report
