@@ -30,6 +30,8 @@ class ValueFormsJsonTest extends AnyWordSpec with Matchers {
       |        on init is {
       |          let a = minutes of Data.wait
       |          let b = days of (Data.t2 - Data.t1) + 1
+      |          let c = sum of Data.lines
+      |          let d = sum of Data.lines as l by l.qty * l.price
       |        }
       |      } with { briefly "h" }
       |    } with { briefly "e" }
@@ -51,6 +53,8 @@ class ValueFormsJsonTest extends AnyWordSpec with Matchers {
       val json = RiddlLib.root2Json(parse(src)).replaceAll("\\s+", "")
       json must include("\"value\":\"durationUnits\"")
       json must include("\"unit\":\"minutes\"")
+      json must include("\"value\":\"sum\"")
+      json must include("\"by\":")
     }
 
     "round-trip to the same values and be a fixed point" in {

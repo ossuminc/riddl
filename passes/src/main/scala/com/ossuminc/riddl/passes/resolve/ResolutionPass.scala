@@ -628,6 +628,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         resolveValue(cf.collection, parents); resolveValue(cf.predicate, parents)
       case cv: CountValue      => resolveValue(cv.collection, parents)
       case du: DurationUnitsValue => resolveValue(du.duration, parents)
+      case sv: SumValue =>
+        resolveValue(sv.collection, parents); sv.by.foreach(resolveValue(_, parents))
       case mv: MembershipValue =>
         resolveValue(mv.collection, parents); resolveValue(mv.element, parents)
 

@@ -182,6 +182,7 @@ is covered in that construct's phase. The builder emits references as
 | CountValue | ✅ B5 (2026-09-23) | `{ "value": "count", "collection": <value> }` |
 | MembershipValue | ✅ B5 (2026-09-23) | `{ "value": "contains", "collection": <value>, "element": <value> }` |
 | DurationUnitsValue | ✅ [1.27] (2026-11-19) | `{ "value": "durationUnits", "unit": "minutes", "duration": <value> }` |
+| SumValue | ✅ [1.27] (2026-11-19) | `{ "value": "sum", "collection": <value>, "element"?: "e", "by"?: <value> }` — `element` and `by` together or not at all |
 | QueryValue | ✅ B2 (2026-09-22) | `{ "value": "query", "table": …, "one"?: true, "where"?: <value> }` |
 | LogStatement | ✅ B7 (2026-09-21) | `{ "kind": "log", "value": <value> }` — record a value for humans; deterministic, not state |
 | TerminateStatement | ✅ 2.0 | `{ "kind": "terminate", "target": <value>, "args": [<arg>] }` — end the instance denoted by `target`, invoking its `on term`. **`target` REPLACED the `processor`/`processorKind` pair on 2026-08-15**: it is a value whose type must be `Id(entity E)`, so it names WHICH INSTANCE ends rather than which kind. **No longer the same shape as `Create`**, which still names a type because the instance does not exist yet. A producer still emitting the old pair has it silently dropped and gets a null `target` — the reader diffs no keys |

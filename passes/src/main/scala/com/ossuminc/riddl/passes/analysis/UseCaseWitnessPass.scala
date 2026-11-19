@@ -232,6 +232,7 @@ case class UseCaseWitnessPass(
       case cf: CollectionFilter      => getInputRefsIn(cf.collection) ++ getInputRefsIn(cf.predicate)
       case cv: CountValue            => getInputRefsIn(cv.collection)
       case du: DurationUnitsValue => getInputRefsIn(du.duration)
+      case sv: SumValue => getInputRefsIn(sv.collection) ++ sv.by.toSeq.flatMap(getInputRefsIn)
       case mv: MembershipValue       => getInputRefsIn(mv.collection) ++ getInputRefsIn(mv.element)
       case _                         => Seq.empty
 

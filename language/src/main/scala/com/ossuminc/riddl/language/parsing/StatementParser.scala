@@ -740,6 +740,20 @@ private[parsing] trait StatementParser {
     ).map { case (start, unit, d, end) => DurationUnitsValue(at(start, end), unit, d) }
   }
 
+  /** BACKLOG [1.27]: `sum of <coll> [as <e> by <expr>]`. `sum` is NOT reserved, so the
+    * `sum of` prefix is `NoCut`, as `count of`'s is. The collection is an atom; the projection is
+    * a PRODUCT (`multiplicative`), so `sum of xs as l by l.qty * l.price + 1` adds 1 to the sum,
+    * and a projection that adds is written in parentheses.
+    */
+  private def sumValue[u: P]: P[SumValue] = {
+    P(
+      Index ~ NoCut(Keywords.keyword("sum") ~ of) ~/ arithAtom ~
+        (as ~/ identifier ~ by ~/ multiplicative).? ~ Index
+    ).map { case (start, coll, proj, end) =>
+      SumValue(at(start, end), coll, proj.map(_._1), proj.map(_._2))
+    }
+  }
+
   /** The expression ladder, for the positions that want a condition: `update`/`delete`'s
     * `where` and `query`'s. Any value may stand there; validation requires it to be boolean.
     */
@@ -917,6 +931,7 @@ private[parsing] trait StatementParser {
       collectionPredicate.map(cp => cp: Value) |
         countValue.map(cv => cv: Value) |
         durationUnitsValue.map(du => du: Value) | // BACKLOG [1.27]
+        sumValue.map(sv => sv: Value) |
         durationLiteral.map(dl => dl: Value) |
         // `NoCut` is load-bearing: `literalString` cuts after its opening quote, and
         // `booleanExprOnly` FILTERS the ladder's result -- so `when "prose"` would parse the

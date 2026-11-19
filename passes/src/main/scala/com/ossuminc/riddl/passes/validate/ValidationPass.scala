@@ -7081,6 +7081,7 @@ case class ValidationPass(
       valueReferencedDefs(cf.collection) ++ valueReferencedDefs(cf.predicate)
     case cv: CountValue      => valueReferencedDefs(cv.collection)
     case du: DurationUnitsValue => valueReferencedDefs(du.duration)
+    case sv: SumValue => valueReferencedDefs(sv.collection) ++ sv.by.toSeq.flatMap(valueReferencedDefs)
     case mv: MembershipValue => valueReferencedDefs(mv.collection) ++ valueReferencedDefs(mv.element)
     case cr: ConstantRef =>
       resolution.refMap.definitionOf[Constant](cr.pathId).map(cr.pathId -> _).toSeq
@@ -8247,6 +8248,7 @@ case class ValidationPass(
       countValueFailPoints(cf.collection) + countValueFailPoints(cf.predicate)
     case cv: CountValue      => countValueFailPoints(cv.collection)
     case du: DurationUnitsValue => countValueFailPoints(du.duration)
+    case sv: SumValue => countValueFailPoints(sv.collection) + sv.by.map(countValueFailPoints).getOrElse(0)
     case mv: MembershipValue => countValueFailPoints(mv.collection) + countValueFailPoints(mv.element)
     // B2: a query READS the store and may fail, exactly as `get` does (1), plus its condition.
     case qv: QueryValue => 1 + qv.where.map(countValueFailPoints).getOrElse(0)
@@ -8367,6 +8369,7 @@ case class ValidationPass(
     case cf: CollectionFilter     => stateReadsIn(cf.collection) ++ stateReadsIn(cf.predicate)
     case cv: CountValue           => stateReadsIn(cv.collection)
     case du: DurationUnitsValue => stateReadsIn(du.duration)
+    case sv: SumValue => stateReadsIn(sv.collection) ++ sv.by.toSeq.flatMap(stateReadsIn)
     case mv: MembershipValue      => stateReadsIn(mv.collection) ++ stateReadsIn(mv.element)
     case _: DurationLiteral       => Seq.empty // B4: a literal
     // A17's ASK form: `when invariant Limit with <expr>`. The `with` operand is a full Value, so it
@@ -8431,6 +8434,7 @@ case class ValidationPass(
     case cf: CollectionFilter     => initiatesIn(cf.collection) ++ initiatesIn(cf.predicate)
     case cv: CountValue           => initiatesIn(cv.collection)
     case du: DurationUnitsValue => initiatesIn(du.duration)
+    case sv: SumValue => initiatesIn(sv.collection) ++ sv.by.toSeq.flatMap(initiatesIn)
     case mv: MembershipValue      => initiatesIn(mv.collection) ++ initiatesIn(mv.element)
     case _: DurationLiteral       => Seq.empty // B4: a literal
     case ic: InvariantCondition   => ic.argument.toSeq.flatMap(initiatesIn)
@@ -8501,6 +8505,7 @@ case class ValidationPass(
     case cf: CollectionFilter     => systemValuesIn(cf.collection) ++ systemValuesIn(cf.predicate)
     case cv: CountValue           => systemValuesIn(cv.collection)
     case du: DurationUnitsValue => systemValuesIn(du.duration)
+    case sv: SumValue => systemValuesIn(sv.collection) ++ sv.by.toSeq.flatMap(systemValuesIn)
     case mv: MembershipValue      => systemValuesIn(mv.collection) ++ systemValuesIn(mv.element)
     case ic: InvariantCondition   => ic.argument.toSeq.flatMap(systemValuesIn)
     case ask: Ask                 => ask.args.toSeq.flatMap(a => systemValuesIn(a.value))
@@ -8533,6 +8538,7 @@ case class ValidationPass(
     case cf: CollectionFilter     => asksIn(cf.collection) ++ asksIn(cf.predicate)
     case cv: CountValue           => asksIn(cv.collection)
     case du: DurationUnitsValue => asksIn(du.duration)
+    case sv: SumValue => asksIn(sv.collection) ++ sv.by.toSeq.flatMap(asksIn)
     case mv: MembershipValue      => asksIn(mv.collection) ++ asksIn(mv.element)
     case _: DurationLiteral       => Seq.empty // B4: a literal
     // A17's ASK form. Same reasoning as `stateReadsIn`: the `with` operand is a full Value, so an
@@ -10798,6 +10804,11 @@ case class ValidationPass(
       // own TypeExpression -- none of them a NAMED Type. See `valueTypeExpr`.
       case _: CollectionPredicate | _: CountValue | _: MembershipValue => None
       case _: DurationUnitsValue                                       => None
+      case sv: SumValue =>
+        sumResultType(sv, parents, lets, elements).flatMap {
+          case ate: AliasedTypeExpression => resolveTypeAlias(ate)
+          case _                          => None
+        }
       case cf: CollectionFilter => valueType(cf.collection, parents, lets, elements)
       case cr: ConstantRef =>
         resolution.refMap.definitionOf[Constant](cr.pathId).flatMap { k =>
@@ -11258,6 +11269,46 @@ case class ValidationPass(
   /** A55: the [[TypeExpression]] any [[Value]] denotes, for the cases where a named [[Type]] is too
     * narrow (a directly-typed `flag: Boolean` field has no named Type).
     */
+  /** BACKLOG [1.27]: the element scope a `sum … as e by <expr>` projection sees -- the same
+    * `elements` map a `foreach` element uses. An element of an untypable collection is bound to
+    * `Anything`, so the projection is not blamed for the collection's own unresolved reference.
+    */
+  private def sumScope(
+    sv: SumValue,
+    elemType: Option[TypeExpression],
+    elements: Map[String, TypeExpression]
+  ): Map[String, TypeExpression] =
+    elements ++ sv.element.map(e => e.value -> elemType.getOrElse(Anything(e.loc)))
+
+  /** BACKLOG [1.27]: the type `sum of` yields when adding values of type `te`, or None when such
+    * values cannot be added. The zero of the type is the empty sum, so a type that excludes zero
+    * widens: `Natural` sums to `Whole`, and a range to `Whole` or `Integer` by its lower bound.
+    * Every other numeric, a `Duration` and a `Currency` sum to themselves (as written, so a
+    * named `Price` stays `Price`). A record does not add -- sum its field.
+    */
+  private def summableResult(te: TypeExpression, loc: At): Option[TypeExpression] =
+    aliasFreeTypeExpr(te) match
+      case _: Bool                                     => None
+      case _: Natural                                  => Some(Whole(loc))
+      case rt: RangeType                               => Some(if rt.min >= 0 then Whole(loc) else Integer(loc))
+      case _: NumericType | _: Duration | _: Currency  => Some(te)
+      case _                                           => None
+
+  /** BACKLOG [1.27]: what `sum of` denotes -- [[summableResult]] of the projection, or of the
+    * element when there is none.
+    */
+  private def sumResultType(
+    sv: SumValue,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Option[TypeExpression] =
+    val elemType = valueTypeExpr(sv.collection, parents, lets, elements).flatMap(collectionElementType)
+    val summed = sv.by match
+      case Some(b) => valueTypeExpr(b, parents, lets, sumScope(sv, elemType, elements))
+      case None    => elemType
+    summed.flatMap(summableResult(_, sv.loc))
+
   /** Does `te` admit an empty value — is its MINIMUM cardinality zero?
     *
     * This one rule is what lets a single `empty` literal serve both the absent optional and the
@@ -11446,6 +11497,7 @@ case class ValidationPass(
         val chained = valueTypeExpr(du.duration, parents, lets, elements)
           .exists(te => aliasFreeTypeExpr(te).isInstanceOf[Optional])
         Some(optionalIfChained(Integer(du.loc), chained))
+      case sv: SumValue => sumResultType(sv, parents, lets, elements)
       case cf: CollectionFilter => valueTypeExpr(cf.collection, parents, lets, elements)
       case qv: QueryValue =>
         queryRecordType(qv, parents).map { t =>
@@ -11695,6 +11747,31 @@ case class ValidationPass(
         )
       case cv: CountValue =>
         validateOverCollection(cv.collection, None, None, "'count of'", parents, lets, elements)
+      case sv: SumValue =>
+        val elemType =
+          validateOverCollection(sv.collection, None, None, "'sum of'", parents, lets, elements)
+        val scope = sumScope(sv, elemType, elements)
+        sv.by.foreach(b => validateValue(b, parents, lets, scope))
+        // What is summed: the projection when there is one, else the element. Silent when it
+        // cannot be typed -- an unresolved operand is reported where it is.
+        val summed = sv.by match
+          case Some(b) => valueTypeExpr(b, parents, lets, scope)
+          case None    => elemType
+        summed.foreach { te =>
+          val known = aliasFreeTypeExpr(te) match
+            case _: AliasedTypeExpression | _: Anything => false
+            case _                                      => true
+          if known && summableResult(te, sv.loc).isEmpty then
+            val what = sv.by.map(b => s"'${b.format}'").getOrElse("each element")
+            messages.addError(
+              sv.by.map(_.loc).getOrElse(sv.collection.loc),
+              s"'sum of' adds numbers, Durations or Currency, but $what is a '${te.format}'",
+              suggestion = "Sum a numeric field of each element with 'sum of xs as e by e.amount'. " +
+                "An optional value is not a number until it has a default -- write " +
+                "'e.amount otherwise 0'.",
+              ruleId = Some(RuleId.SumNotSummable)
+            )
+        }
       case du: DurationUnitsValue =>
         validateValue(du.duration, parents, lets, elements)
         // Silent when the operand's type cannot be determined -- reasoning from absence is the

@@ -1,6 +1,7 @@
 // Exercises BACKLOG [1.27] (2026-11-19): the value forms riddl-models could not write.
 //   * optional chaining -- a value path through a `T?` reaches an optional value
 //   * `<unit> of d` -- a Duration in whole units, an Integer
+//   * `sum of xs [as e by <expr>]` -- a total, of the elements or of a per-element product
 // The unit words are NOT reserved: `hours` is a field name below, and so is `days`.
 domain Insurance is {
   context Billing is {
@@ -20,7 +21,9 @@ domain Insurance is {
       hours: Integer,
       heldDays: Integer,
       graceMinutes: Integer,
-      depositAmount: Integer?
+      depositAmount: Integer?,
+      total: Integer,
+      units: Integer
     } with { briefly "e" }
 
     entity Account is {
@@ -35,7 +38,9 @@ domain Insurance is {
             hours = hours of Policy.grace,
             heldDays = held + Policy.days,
             graceMinutes = graceMinutes,
-            depositAmount = Policy.deposit.amount
+            depositAmount = Policy.deposit.amount,
+            total = sum of Policy.lines as l by l.quantity * l.price,
+            units = sum of Policy.lines as l by l.quantity
           )
         }
         on other is { error "unexpected" }

@@ -871,7 +871,7 @@ object AST:
     GetValue | PromptValue | BooleanExpression | Call | Ask | SelfValue | SystemValue | Create |
     NumericLiteral | LookupValue | EmptyValue | ArithmeticExpression | DurationLiteral |
     QueryValue | TableRef | CollectionPredicate | CollectionFilter | CountValue |
-    MembershipValue | DurationUnitsValue | Requires | Returns | InvariantBlock
+    MembershipValue | DurationUnitsValue | SumValue | Requires | Returns | InvariantBlock
 
   /** Type of definitions that occur in a [[Root]] without [[Include]]. [[Root]] deliberately stays
     * narrow: it is the file parse-root, not the reuse unit. [[Module]] is the reuse unit and is
@@ -3274,13 +3274,14 @@ object AST:
     * [[ConstantRef]] from a comparison-only operand to a value in its own right, because a
     * comparison's operands are now full Values (see [[ComparisonExpression]]). B2 (2026-09-22)
     * adds [[QueryValue]], the eighteenth; B5 the four collection kinds, making twenty-two.
-    * BACKLOG [1.27] (2026-11-19) adds [[DurationUnitsValue]], the twenty-third.
+    * BACKLOG [1.27] (2026-11-19) adds [[DurationUnitsValue]], the twenty-third, and
+    * [[SumValue]].
     */
   type Value =
     LiteralString | PromptValue | Constructor | ValueRef | GetValue | BooleanExpression | Call |
       Ask | SelfValue | SystemValue | Create | NumericLiteral | LookupValue | EmptyValue |
       ArithmeticExpression | DurationLiteral | ConstantRef | QueryValue | CollectionPredicate |
-      CollectionFilter | CountValue | MembershipValue | DurationUnitsValue
+      CollectionFilter | CountValue | MembershipValue | DurationUnitsValue | SumValue
 
   /** A54: a single argument supplied to a [[Constructor]]. Positional when `name` is `None`; named
     * (`id = value`) when `name` is `Some`. Validation requires positional arguments to precede
@@ -4127,7 +4128,11 @@ object AST:
             (isRight && ArithmeticOperator.precedence(ae.op) == ArithmeticOperator.precedence(op)) =>
         s"(${v.format})"
       case _: LogicalExpression | _: ComparisonExpression => s"(${v.format})"
-      case _                                              => v.format
+      // [1.27]: a `sum … by` would absorb a following `*`/`/` into its projection.
+      case sv if SumValue.isOpenRight(sv) &&
+          ArithmeticOperator.precedence(op) == ArithmeticOperator.precedence(ArithmeticOperator.Multiply) =>
+        s"(${v.format})"
+      case _ => v.format
     def format: String = s"${paren(left, isRight = false)} ${op.symbol} ${paren(right, isRight = true)}"
   end ArithmeticExpression
 
@@ -4398,6 +4403,45 @@ object AST:
     )
   end DurationUnitsValue
 
+  /** BACKLOG [1.27] (Reid, 2026-11-19): `sum of <coll>` and `sum of <coll> as <e> by <expr>` --
+    * the total of the elements, or of `<expr>` evaluated per element. A fold to ONE value, never
+    * a collection, so the CM's "ask a question about a collection, never build one" holds. An
+    * empty collection sums to the zero of the type.
+    *
+    * `element` and `by` are both present or both absent. `by` takes a PRODUCT (the parser's
+    * multiplicative level): `sum of xs as l by l.qty * l.price + 1` is `(sum …) + 1`, and a
+    * projection that adds is parenthesized, `by (l.a + l.b)`. Because a `by` is open on its
+    * right, a sum with one is parenthesized wherever a following `*`, `/` or atom-level operator
+    * would otherwise be absorbed into it ([[CollectionValues.needsParens]],
+    * [[ArithmeticExpression]]'s `paren`, and their hand copies in `RiddlFileEmitter`).
+    */
+  @JSExportTopLevel("SumValue")
+  case class SumValue(loc: At, collection: Value, element: Option[Identifier], by: Option[Value])
+      extends RiddlValue:
+    override def kind: String = "Sum Value"
+    def format: String =
+      s"sum of ${CollectionValues.parenthesized(collection)}" +
+        element.zip(by).map((e, b) => s" as ${e.format} by ${SumValue.byFormat(b)}").getOrElse("")
+  end SumValue
+
+  object SumValue:
+    /** A `by` expression parses at the multiplicative level, so anything looser -- an additive
+      * expression, a comparison, a logical, a filter or a membership test -- is parenthesized.
+      */
+    def byNeedsParens(v: Value): Boolean = v match
+      case ae: ArithmeticExpression =>
+        ArithmeticOperator.precedence(ae.op) < ArithmeticOperator.precedence(ArithmeticOperator.Multiply)
+      case _: CollectionFilter | _: MembershipValue | _: ComparisonExpression |
+          _: LogicalExpression =>
+        true
+      case _ => false
+    def byFormat(v: Value): String = if byNeedsParens(v) then s"(${v.format})" else v.format
+    /** A sum WITH a `by` is open on its right: a following `*`/`/` would join its projection. */
+    def isOpenRight(v: Value): Boolean = v match
+      case sv: SumValue => sv.by.nonEmpty
+      case _            => false
+  end SumValue
+
   /** B5: the shared parenthesizing rule for a collection operand. An INFIX operand (a filter, a
     * membership test, a comparison, a logical or an arithmetic expression) binds looser than the
     * `additive` these forms take, so it must be parenthesized to re-parse as the same tree.
@@ -4407,7 +4451,8 @@ object AST:
       case _: CollectionFilter | _: MembershipValue | _: ComparisonExpression |
           _: LogicalExpression | _: ArithmeticExpression =>
         true
-      case _ => false
+      case v if SumValue.isOpenRight(v) => true // [1.27]
+      case _                            => false
     def parenthesized(v: Value): String = if needsParens(v) then s"(${v.format})" else v.format
   end CollectionValues
 

@@ -2782,6 +2782,13 @@ class BASTReader(
         val loc = readLocation()
         val unit = readString()
         DurationUnitsValue(loc, unit, readValue())
+      case 23 => // BACKLOG [1.27]: SumValue (revision 34)
+        val loc = readLocation()
+        val coll = readValue()
+        if reader.readU8() != 0 then
+          val e = readIdentifierInline()
+          SumValue(loc, coll, Some(e), Some(readValue()))
+        else SumValue(loc, coll, None, None)
       case 17 => // B2: QueryValue (revision 29)
         val loc = readLocation()
         val table = readTableRef()

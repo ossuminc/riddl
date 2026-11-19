@@ -1685,6 +1685,17 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writeLocation(du.loc)
         writeString(du.unit)
         writeValue(du.duration)
+      case sv: SumValue =>
+        writer.writeU8(23)
+        writeLocation(sv.loc)
+        writeValue(sv.collection)
+        // `element` and `by` are both present or both absent: one presence byte for the pair.
+        sv.element.zip(sv.by) match
+          case Some((e, b)) =>
+            writer.writeU8(1)
+            writeIdentifierInline(e)
+            writeValue(b)
+          case None => writer.writeU8(0)
       // B2 (revision 29): `query [one] <table> [where …]` -- value tag 17
       case qv: QueryValue =>
         writer.writeU8(17)

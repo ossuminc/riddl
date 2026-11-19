@@ -29,7 +29,15 @@ class ValueFormsRoundTripTest extends AnyWordSpec with Matchers {
     "days of (Data.t2 - Data.t1)",
     "minutes of Data.wait + 1",
     "hours of Data.wait * 2",
-    "Data.hours + Data.days"
+    "Data.hours + Data.days",
+    "sum of Data.lines",
+    "sum of Data.lines as l by l.qty * l.price",
+    "sum of Data.lines as l by l.qty + 1",
+    "sum of Data.lines as l by (l.qty + l.price)",
+    "(sum of Data.lines as l by l.qty) * 2",
+    "2 * (sum of Data.lines as l by l.qty) * 3",
+    "count of (sum of Data.lines as l by l.qty)",
+    "sum of Data.lines as l by minutes of Data.wait"
   )
 
   private val src: String =

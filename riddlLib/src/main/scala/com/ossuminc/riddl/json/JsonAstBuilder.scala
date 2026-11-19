@@ -1637,6 +1637,8 @@ object JsonAstBuilder:
       case CountValueDto(collection)             => CountValue(curAt, buildValue(collection))
       case DurationUnitsValueDto(unit, duration) =>
         DurationUnitsValue(curAt, unit, buildValue(duration))
+      case SumValueDto(collection, element, by) =>
+        SumValue(curAt, buildValue(collection), element.map(Identifier(curAt, _)), by.map(buildValue))
       case MembershipValueDto(collection, element) =>
         MembershipValue(curAt, buildValue(collection), buildValue(element))
       case QueryValueDto(table, one, where) => // B2

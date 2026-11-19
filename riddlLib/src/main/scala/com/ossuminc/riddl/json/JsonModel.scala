@@ -1012,6 +1012,12 @@ object JsonModel:
   /** BACKLOG [1.27]: `{ "value": "durationUnits", "unit": "minutes", "duration": <value> }` */
   case class DurationUnitsValueDto(unit: String, duration: ValueDto) extends ValueDto
 
+  /** BACKLOG [1.27]: `{ "value": "sum", "collection": <value>, "element"?: "e", "by"?: <value> }`
+    * -- `element` and `by` together or not at all.
+    */
+  case class SumValueDto(collection: ValueDto, element: Option[String], by: Option[ValueDto])
+      extends ValueDto
+
   /** B2 (2026-09-22): `{ "value": "query", "table": "Schema.table", "one"?: true, "where"?:
     * <value> }` -- reading the repository's own storage.
     */
@@ -1921,6 +1927,8 @@ object JsonModel:
       case "count"    => CountValueDto(readValue(m("collection")))
       case "contains" => MembershipValueDto(readValue(m("collection")), readValue(m("element")))
       case "durationUnits" => DurationUnitsValueDto(m("unit").str, readValue(m("duration")))
+      case "sum" =>
+        SumValueDto(readValue(m("collection")), m.get("element").map(_.str), m.get("by").map(readValue))
       case "query" => // B2
         QueryValueDto(
           m("table").str,
@@ -2059,6 +2067,12 @@ object JsonModel:
           "value" -> ujson.Str("durationUnits"),
           "unit" -> ujson.Str(unit),
           "duration" -> writeValue(duration)
+        )
+      case SumValueDto(collection, element, by) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)]("value" -> ujson.Str("sum"), "collection" -> writeValue(collection)) ++
+            element.map(e => "element" -> ujson.Str(e)).toSeq ++
+            by.map(b => "by" -> writeValue(b)).toSeq
         )
       case QueryValueDto(table, one, where) =>
         ujson.Obj.from(
@@ -3093,6 +3107,7 @@ object JsonModel:
     "table", // B2: the storage statements and the query value
     "quantifier", // B5: the collection kinds
     "duration", // BACKLOG [1.27]: `<unit> of <duration>`
+    "by", // BACKLOG [1.27]: `sum of xs as e by <expr>`
     "collection",
     "predicate",
     "assignments",

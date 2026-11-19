@@ -103,4 +103,35 @@ class ValueFormsValidationTest extends AbstractValidatingTest {
       mustRefuse(RuleId.DurationUnitsNotDuration, "Integer", "minutes of E.S.waits", td)
     }
   }
+
+  "`sum of`" should {
+    "sum numbers, Durations and Currency to their own type" in { (td: TestData) =>
+      mustBeClean("Integer", "sum of E.S.counts", td)
+      mustBeClean("Integer", "sum of E.S.lines as l by l.qty", td)
+      mustBeClean("Decimal(10,2)", "sum of E.S.lines as l by l.price * l.qty", td)
+      mustBeClean("Duration", "sum of E.S.waits", td)
+      mustBeClean("Duration", "sum of E.S.lines as l by l.wait", td)
+      mustBeClean("Integer", "sum of E.S.lines as l by l.cost.amount", td)
+    }
+    "refuse what does not add" in { (td: TestData) =>
+      mustRefuse(RuleId.SumNotSummable, "Integer", "sum of E.S.lines", td)
+        .head.message must include("each element")
+      mustRefuse(RuleId.SumNotSummable, "Integer", "sum of E.S.lines as l by l.sku", td)
+        .head.message must include("'l.sku'")
+      mustRefuse(RuleId.SumNotSummable, "Integer", "sum of E.S.lines as l by l.cost", td)
+    }
+    "refuse an operand that is not a collection" in { (td: TestData) =>
+      mustRefuse(RuleId.NotACollection, "Integer", "sum of E.S.n", td)
+    }
+    "bind the element in the projection only" in { (td: TestData) =>
+      val msgs = messages(model("Integer", "sum of E.S.lines as l by l.nosuch"), td)
+      withClue(clue(msgs)) { errors(msgs) must not be empty }
+      val outside = messages(model("Integer", "l.qty", "let s = sum of E.S.lines as l by l.qty"), td)
+      withClue(clue(outside)) { errors(outside) must not be empty }
+    }
+    "not fill a String" in { (td: TestData) =>
+      val msgs = messages(model("String", "sum of E.S.counts"), td)
+      withClue(clue(msgs)) { errors(msgs) must not be empty }
+    }
+  }
 }

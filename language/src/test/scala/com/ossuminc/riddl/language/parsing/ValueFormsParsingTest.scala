@@ -76,4 +76,37 @@ abstract class ValueFormsParsingTest(using PlatformContext) extends AbstractPars
       parse(wrap("let v = minute of Data.wait"), td) mustBe a[Left[?, ?]]
     }
   }
+
+  "`sum of`" should {
+
+    "parse the bare form" in { (td: TestData) =>
+      letValue("sum of Data.lines", td) match
+        case SumValue(_, _: ValueRef, None, None) => succeed
+        case other => fail(s"wrong shape: ${other.format}")
+    }
+
+    "parse a projection, taking a product" in { (td: TestData) =>
+      letValue("sum of Data.lines as l by l.qty * l.price", td) match
+        case SumValue(_, _, Some(e), Some(_: ArithmeticExpression)) => e.value mustBe "l"
+        case other => fail(s"wrong shape: ${other.format}")
+    }
+
+    "leave a following `+` outside the projection" in { (td: TestData) =>
+      letValue("sum of Data.lines as l by l.qty + 1", td) match
+        case ArithmeticExpression(_, ArithmeticOperator.Add, SumValue(_, _, _, Some(_: ValueRef)), _) =>
+          succeed
+        case other => fail(s"wrong shape: ${other.format}")
+    }
+
+    "take a parenthesized sum as its projection" in { (td: TestData) =>
+      letValue("sum of Data.lines as l by (l.qty + l.price)", td) match
+        case SumValue(_, _, _, Some(ArithmeticExpression(_, ArithmeticOperator.Add, _, _))) => succeed
+        case other => fail(s"wrong shape: ${other.format}")
+    }
+
+    "leave a field named `sum` alone" in { (td: TestData) =>
+      letValue("sum", td) mustBe a[ValueRef]
+      letValue("sum + 1", td) mustBe a[ArithmeticExpression]
+    }
+  }
 }

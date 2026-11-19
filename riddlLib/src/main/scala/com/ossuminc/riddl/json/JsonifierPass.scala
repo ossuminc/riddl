@@ -1583,6 +1583,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
       CollectionFilterDto(serializeValue(cf.collection), cf.element.value, serializeValue(cf.predicate))
     case cv: CountValue      => CountValueDto(serializeValue(cv.collection))
     case du: DurationUnitsValue => DurationUnitsValueDto(du.unit, serializeValue(du.duration))
+    case sv: SumValue =>
+      SumValueDto(serializeValue(sv.collection), sv.element.map(_.value), sv.by.map(serializeValue))
     case mv: MembershipValue => MembershipValueDto(serializeValue(mv.collection), serializeValue(mv.element))
     case cr: ConstantRef     => ConstantRefDto(path(cr.pathId))
     case le: LogicalExpression =>

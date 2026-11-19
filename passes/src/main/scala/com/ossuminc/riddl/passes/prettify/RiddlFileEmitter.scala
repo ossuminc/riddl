@@ -419,6 +419,15 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
       case du: DurationUnitsValue => // BACKLOG [1.27]
         add(s"${du.unit} of ")
         emitCollectionOperand(du.duration)
+      case sv: SumValue =>
+        add("sum of ")
+        emitCollectionOperand(sv.collection)
+        sv.element.zip(sv.by).foreach { (e, b) =>
+          add(s" as ${e.format} by ")
+          // `SumValue.byNeedsParens`, which this emitter may call: it is public on the object.
+          if SumValue.byNeedsParens(b) then add("(").emitValue(b).add(")") else emitValue(b)
+        }
+        this
       case mv: MembershipValue =>
         emitCollectionOperand(mv.collection)
         add(" contains ")
@@ -448,7 +457,8 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
       case _: CollectionFilter | _: MembershipValue | _: ComparisonExpression |
           _: LogicalExpression | _: ArithmeticExpression =>
         add("(").emitValue(v).add(")")
-      case _ => emitValue(v)
+      case sv if SumValue.isOpenRight(sv) => add("(").emitValue(v).add(")") // [1.27]
+      case _                              => emitValue(v)
 
   /** B4: an arithmetic operand is parenthesized when it is an arithmetic expression of LOWER
     * precedence, or of the same precedence on the RIGHT of `-`/`/` (`a - (b - c)`), or a logical
@@ -468,7 +478,11 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
             (isRight && ArithmeticOperator.precedence(inner.op) == pp) =>
         add("(").emitValue(inner).add(")")
       case _: LogicalExpression | _: ComparisonExpression => add("(").emitValue(v).add(")")
-      case _                                              => emitValue(v)
+      // [1.27]: a `sum … by` would absorb a following `*`/`/` into its projection.
+      case sv if SumValue.isOpenRight(sv) &&
+          pp == ArithmeticOperator.precedence(ArithmeticOperator.Multiply) =>
+        add("(").emitValue(v).add(")")
+      case _ => emitValue(v)
 
   /** A `LogicalExpression` operand is parenthesized when it is itself a `LogicalExpression` — same
     * rule as `LogicalExpression.format`'s private `paren` helper, kept in step by hand since this
