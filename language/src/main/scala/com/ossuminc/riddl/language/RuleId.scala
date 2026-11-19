@@ -575,6 +575,12 @@ enum RuleId(
   case EmptyUntyped extends RuleId("value-empty-untyped")
   case EmptyAscriptionContradicts extends RuleId("value-empty-ascription-contradicts")
   case ValueTypeMismatch extends RuleId("value-type-mismatch")
+  /** [1.29](b), Reid 2026-11-18: a string LITERAL given to a Date/DateTime/TimeStamp must be
+    * ISO-8601 for that type. A String-typed REFERENCE stays accepted. */
+  case TimeLiteralNotIso8601 extends RuleId("value-time-literal-not-iso8601")
+  /** [1.29](a), Reid 2026-11-18: an optional value for a required field is an ADVISORY asking for
+    * a guard -- emptiness is a run-time fact, and the generator proceeds and chooses. */
+  case OptionalForRequired extends RuleId("value-optional-for-required")
   // B4 (2026-09-21): arithmetic. Which categories may be combined by which operator is the table
   // in `ValidationPass.checkArithmetic`; anything off the table is this Error, never a coercion.
   case ArithmeticOperandMismatch extends RuleId("value-arithmetic-operand-mismatch")

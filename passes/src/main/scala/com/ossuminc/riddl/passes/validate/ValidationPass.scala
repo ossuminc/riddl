@@ -3674,8 +3674,11 @@ case class ValidationPass(
       expected <- resolution.refMap.definitionOf[Type](tr.pathId).map(_.typEx)
       arg <- rs.argument
       if !arg.isInstanceOf[PromptValue]
-      actual <- valueTypeExpr(arg, parents, lets, elements)
-    do checkAssignable(expected, actual, None, parents, arg.loc, s"${inv.identify} requires")
+    do
+      checkLiteralConformance(arg, expected) // [1.28]/[1.29](b): a literal has no valueTypeExpr
+      valueTypeExpr(arg, parents, lets, elements).foreach { actual =>
+        checkAssignable(expected, actual, None, parents, arg.loc, s"${inv.identify} requires")
+      }
   end checkRequireArgumentType
 
   private def checkRequireArgument(inv: Invariant, argument: Option[Value], loc: At): Unit =
@@ -3990,6 +3993,7 @@ case class ValidationPass(
     checkMetadata(c)
     c.value match
       case nl: NumericLiteral => checkNumericLiteralConformance(nl, c.typeEx)
+      case ls: LiteralString  => checkStringLiteralConformance(ls, c.typeEx) // [1.29](b)
       // A20: a typed hole's ascription restates the constant's declared type; it never overrides
       // it. `c.typeEx` is ALWAYS present for a Constant (unlike `let`, which may be unascribed),
       // so a Constant never draws the seam CompletenessWarning -- the constant itself supplies
@@ -4089,8 +4093,19 @@ case class ValidationPass(
     nl: NumericLiteral,
     expected: TypeExpression
   ): Unit =
-    expected match
-      case _: Bool => () // Boolean, not integer-range — see the doc above.
+    // [1.28] (2026-11-18): judge the type the position RESOLVES to. Until then an aliased (`type
+    // When is DateTime`) or a `T?` target fell past every arm, and so did every non-numeric one --
+    // `5` filled a DateTime, a Boolean, a String or a record field without a word.
+    underlyingTypeExpr(expected) match
+      // `Bool` extends IntegerTypeExpression, so NumericType's assignability would accept any
+      // number for it; a Boolean is a different kind entirely, so it is refused by name here.
+      case b: Bool => refuseNumberFor(nl, b)
+      // Not a number at all. Asked through `checkAssignable`, so the policy is the one references
+      // get; `Anything` accepts. Deliberately limited to shapes that are UNAMBIGUOUSLY not numeric:
+      // an unresolved alias, an alternation or an enumeration stays silent rather than guessed at.
+      case te @ (_: PredefinedType | _: AggregateTypeExpression | _: UniqueId)
+          if !te.isInstanceOf[NumericType] =>
+        if !te.isAssignmentCompatible(literalNumericType(nl)) then refuseNumberFor(nl, te)
       case _: IntegerTypeExpression if !nl.isInteger =>
         messages.addError(
           nl.loc,
@@ -4114,6 +4129,57 @@ case class ValidationPass(
         )
       case _ => ()
   end checkNumericLiteralConformance
+
+  /** [1.29](b), Reid 2026-11-18: a string LITERAL given to a `Date`, `DateTime` or `TimeStamp`
+    * position must be ISO-8601 for that type -- `"tomorrow"` validated until then, because those
+    * types list `String_` as compatible. That allowance STAYS for a String-typed REFERENCE (its
+    * value is unknown here); only a literal, whose text is visible, is judged. `Time` and the
+    * zoned types were not in the ruling and are left alone.
+    *
+    * Anchored regexes with no lookahead (unavailable on Scala Native), field ranges written into
+    * the pattern so `2026-13-01` and `25:00` fail. A `DateTime` and a `TimeStamp` take the same
+    * form: a date, `T`, `hh:mm`, optional `:ss` and fraction, optional `Z` or `+hh:mm`/`-hh:mm`.
+    */
+  private def checkStringLiteralConformance(ls: LiteralString, expected: TypeExpression): Unit =
+    val shape: Option[(String, String)] = underlyingTypeExpr(expected) match
+      case _: Date      => Some("Date" -> "YYYY-MM-DD")
+      case _: DateTime  => Some("DateTime" -> "YYYY-MM-DDThh:mm[:ss[.fff]][Z|+hh:mm]")
+      case _: TimeStamp => Some("TimeStamp" -> "YYYY-MM-DDThh:mm[:ss[.fff]][Z|+hh:mm]")
+      case _            => None
+    shape.foreach { (kind, form) =>
+      val ok = if kind == "Date" then IsoDate.matches(ls.s) else IsoDateTime.matches(ls.s)
+      if !ok then
+        messages.addError(
+          ls.loc,
+          s"\"${ls.s}\" is not an ISO-8601 $kind; a $kind literal is written $form",
+          suggestion = s"Write the $kind in ISO-8601 form, e.g. " +
+            (if kind == "Date" then "\"2026-11-18\"" else "\"2026-11-18T10:30:00Z\"") +
+            ", or use a value such as 'system.now'.",
+          ruleId = Some(RuleId.TimeLiteralNotIso8601)
+        )
+    }
+  end checkStringLiteralConformance
+
+  private val IsoDatePart = "[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])"
+  private val IsoDate: scala.util.matching.Regex = IsoDatePart.r
+  private val IsoDateTime: scala.util.matching.Regex =
+    (IsoDatePart + "T([01][0-9]|2[0-3]):[0-5][0-9](:([0-5][0-9]|60)(\\.[0-9]+)?)?" +
+      "(Z|[+-]([01][0-9]|2[0-3]):[0-5][0-9])?").r
+
+  /** Both literal judges, for a position that knows its type. Anything else is a no-op. */
+  private def checkLiteralConformance(v: Value, expected: TypeExpression): Unit =
+    v match
+      case nl: NumericLiteral => checkNumericLiteralConformance(nl, expected)
+      case ls: LiteralString  => checkStringLiteralConformance(ls, expected)
+      case _                  => ()
+
+  private def refuseNumberFor(nl: NumericLiteral, te: TypeExpression): Unit =
+    messages.addError(
+      nl.loc,
+      s"'${te.format}' is expected, but ${nl.text} is a number",
+      suggestion = s"Supply a value of type '${te.format}', or declare the field as a numeric type.",
+      ruleId = Some(RuleId.ValueTypeMismatch)
+    )
 
   private def validateState(
     s: State,
@@ -10333,6 +10399,34 @@ case class ValidationPass(
           )
   end checkAssignable
 
+  /** [1.29](a), Reid 2026-11-18: a value that MAY be empty (`T?`, `T*`, `T{0,n}`) given to a
+    * position that may NOT is an ADVISORY asking for a guard -- *"we don't at compile time know if
+    * latestNavPerShare is ACTUALLY empty. That can only be determined at run time ... the generator
+    * can do whatever is correct for the model as specified (like generating the guard)."* Silent
+    * until then because `checkAssignable` compares `underlyingTypeExpr` of both sides, which strips
+    * cardinality. Kept OUT of `checkAssignable` on purpose: its membership caller compares an
+    * element with a collection, a different question. Both sides read through names (`admitsEmpty`).
+    */
+  private def checkOptionalIntoRequired(
+    expected: TypeExpression,
+    actual: TypeExpression,
+    value: Value,
+    loc: At,
+    what: String
+  ): Unit =
+    if admitsEmpty(actual) && !admitsEmpty(expected) then
+      // An ADVISORY (Reid, 2026-11-18), not a Warning: CM §0.3 ruling 5 makes every warning but
+      // Style a hard stop for generation, and the ruling is that the generator proceeds and
+      // chooses how the empty case fails -- e.g. by generating the guard itself.
+      messages.addAdvisory(
+        loc,
+        s"$what is required, but '${value.format}' may be empty",
+        suggestion = s"Guard it -- e.g. 'when ${value.format} != empty then ... end' -- so the model " +
+          "says what happens when it is empty; otherwise the generator must choose.",
+        ruleId = Some(RuleId.OptionalForRequired)
+      )
+  end checkOptionalIntoRequired
+
   private def resolveTypeAlias(ate: AliasedTypeExpression): Option[Type] =
     resolution.refMap.definitionOf[Type](ate.pathId)
 
@@ -11988,6 +12082,7 @@ case class ValidationPass(
     // hand for a literal, so it is where the literal-only range/fraction check belongs.
     (v, expected) match
       case (nl: NumericLiteral, Some(e)) => checkNumericLiteralConformance(nl, e.typEx)
+      case (ls: LiteralString, Some(e))  => checkStringLiteralConformance(ls, e.typEx) // [1.29](b)
       // A BARE `empty` takes its type from the position, so this is the only place its
       // minimum-cardinality rule can be enforced. The ASCRIBED form is checked context-free in
       // `validateValue`; checking it again here would double-report, so it is skipped.
@@ -12247,8 +12342,15 @@ case class ValidationPass(
             // reporting both would double up on one mistake. So is an undeterminable value type --
             // `valueTypeExpr` returning None means this check has nothing to say.
             case pv: PromptValue => ()
+            // [1.28]: a written number has no `valueTypeExpr`, so it reached no check here at all;
+            // its own judge also holds it to a numeric field's range, which it never was here.
+            case nl: NumericLiteral =>
+              fieldForArg(arg, idx).foreach(f => checkNumericLiteralConformance(nl, f.typeEx))
             case other =>
               fieldForArg(arg, idx).foreach { f =>
+                // [1.29](b): a written time string must be ISO-8601 (beside, not instead of, the
+                // assignability check, which still refuses a string for an Integer).
+                checkLiteralConformance(other, f.typeEx)
                 valueTypeExpr(other, parents, lets, elements).foreach { actual =>
                   checkAssignable(
                     f.typeEx,
@@ -12258,6 +12360,8 @@ case class ValidationPass(
                     other.loc,
                     s"Field '${f.id.value}' of ${typ.identify}"
                   )
+                  checkOptionalIntoRequired(f.typeEx, actual, other, other.loc,
+                    s"Field '${f.id.value}' of ${typ.identify}")
                 }
               }
         }
@@ -12452,12 +12556,16 @@ case class ValidationPass(
       // TypeExpression level, which is what the constructor-argument check uses, and only when the
       // named comparison could not run -- so the two can never double-report one mistake.
       if expected.isEmpty || actual.isEmpty then
+        val e = output.putOut match
+          case tr: TypeRef => resolution.refMap.definitionOf[Type](tr.pathId).map(_.typEx)
+          case _           => None
+        e.foreach(checkLiteralConformance(ps.value, _)) // [1.28]/[1.29](b)
         for
-          e <- output.putOut match
-            case tr: TypeRef => resolution.refMap.definitionOf[Type](tr.pathId).map(_.typEx)
-            case _           => None
+          e <- e
           a <- valueTypeExpr(ps.value, parents, lets, elements)
-        do checkAssignable(e, a, None, parents, ps.loc, "'put' value")
+        do
+          checkAssignable(e, a, None, parents, ps.loc, "'put' value")
+          checkOptionalIntoRequired(e, a, ps.value, ps.loc, "The 'put' value")
     }
   end validatePut
 
@@ -12501,12 +12609,16 @@ case class ValidationPass(
       // TypeExpression level, which is what the constructor-argument check uses, and only when the
       // named comparison could not run -- so the two can never double-report one mistake.
       if expected.isEmpty || actual.isEmpty then
+        val e = fn.output match
+          case Some(tr: TypeRef) => resolution.refMap.definitionOf[Type](tr.pathId).map(_.typEx)
+          case _                 => None
+        e.foreach(checkLiteralConformance(rs.value, _)) // [1.28]/[1.29](b)
         for
-          e <- fn.output match
-            case Some(tr: TypeRef) => resolution.refMap.definitionOf[Type](tr.pathId).map(_.typEx)
-            case _                 => None
+          e <- e
           a <- valueTypeExpr(rs.value, parents, lets, elements)
-        do checkAssignable(e, a, None, parents, rs.loc, "'return' value")
+        do
+          checkAssignable(e, a, None, parents, rs.loc, "'return' value")
+          checkOptionalIntoRequired(e, a, rs.value, rs.loc, "The 'return' value")
     }
   end validateReturn
 
@@ -12930,6 +13042,7 @@ case class ValidationPass(
                     expectedTe =>
                       ls.expression match
                         case nl: NumericLiteral => checkNumericLiteralConformance(nl, expectedTe)
+                        case ls: LiteralString  => checkStringLiteralConformance(ls, expectedTe)
                         case pv: PromptValue    => checkPromptAscription(pv, Some(expectedTe))
                         case ev: EmptyValue =>
                           checkEmptyFits(ev, expectedTe, s"'let ${ls.identifier.value}'",

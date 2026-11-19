@@ -75,8 +75,8 @@ domain dokn is {
             state CompanyBase of record Company.fields
             handler CompanyBaseHandler is {
                 on command AddCompany {
-                    yield event CompanyAdded(when = "now")
-                    send event CompanyAdded(when = "now") to outlet CompanyEvents_out
+                    yield event CompanyAdded(when = system.now)
+                    send event CompanyAdded(when = system.now) to outlet CompanyEvents_out
                 }
                 on event CompanyAdded { ??? }
             }

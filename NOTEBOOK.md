@@ -71,6 +71,36 @@ fixtures, not a task).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-18 (late) — literals held to their type; optional into required
+
+riddl-models, replacing `prompt(...)` yield arguments with real values, read
+three validator silences as rules. Reid ruled; BACKLOG [1.28]/[1.29] done:
+
+- **A written number reached no check at a constructor argument, `put`,
+  `return` or `require … with`**, because `valueTypeExpr` has no arm for a
+  `NumericLiteral`. `checkNumericLiteralConformance` is now the one judge of a
+  written number: it resolves the position through aliases and cardinality
+  (an aliased or `T?` target used to slip past every arm), refuses a Boolean
+  by name (`Bool` extends `IntegerTypeExpression`, so numeric assignability
+  would have accepted `5`), and refuses any unambiguously non-numeric target
+  through `checkAssignable`. Alternations, enumerations and unresolved aliases
+  stay silent rather than guessed at.
+- **A time string must be ISO-8601** (`checkStringLiteralConformance`; Date,
+  DateTime, TimeStamp only, per the ruling; no-lookahead regexes for Native).
+  `String_` stays in the time types' compatible lists for references.
+- **`T?` into `T` is an ADVISORY** (`value-optional-for-required`), kept out
+  of `checkAssignable` because its membership caller asks a different
+  question. Reid first said "warning"; CM §0.3 ruling 5 makes every warning
+  but Style block generation, which contradicted "the generator can do
+  whatever is correct", so I asked and he chose Advisory. **When a ruling's
+  word is a message kind, check it against ruling 5 before building.**
+- Two fixtures had been relying on the silence: `language/input/dokn.riddl`
+  gave `"now"` to a TimeStamp (now `system.now`), and
+  `LogStatementValidationTest` gave `0` to a `Natural`.
+- Not done, filed as [1.30]: `call`/`create`/`terminate` arguments check only
+  ALIASED parameter types, so a predefined-typed parameter takes anything.
+- CM §0.3 ruling 6 extended in place (no lines moved); ossum.tech task filed.
+
 ## 2026-11-18 (night) — `Currency` and the zoned types did not survive prettify
 
 riddl-models: `on init(a: Currency(USD))` prettified to `on init(a: Currency)`,

@@ -57,7 +57,7 @@ class LogStatementValidationTest extends AbstractValidatingTest {
        |} with { briefly "d" }
        |""".stripMargin
 
-  private val init = """log "created" yield event Acct.Opened(id = "x", n = 0)"""
+  private val init = """log "created" yield event Acct.Opened(id = "x", n = 1)"""
   private val cmd = """log "opening " + o.id yield event Acct.Opened(id = o.id, n = o.n)"""
 
   "log" should {
