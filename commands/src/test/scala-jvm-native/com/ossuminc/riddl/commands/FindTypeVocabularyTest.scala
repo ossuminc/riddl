@@ -35,7 +35,8 @@ class FindTypeVocabularyTest extends AnyWordSpec with Matchers {
 
   given io: PlatformContext = pc
 
-  private val corpora = Seq(Path.of("../riddl-models"), Path.of("../riddl-examples"))
+  // riddl-examples was retired 2026-11-19; riddl-models is the corpus.
+  private val corpora = Seq(Path.of("../riddl-models"))
 
   /** The direct children of `dir`, or nothing if it cannot be read. A directory that vanishes
     * between being listed and being descended is not this test's problem to report.

@@ -1,0 +1,9 @@
+type Info is {
+  text: String
+} with {
+  briefly as "Foo's own notion of information"
+  described as {
+    |Deliberately shares its name with Bar.Info to show that the two do not
+    |collide when they live in separate domains.
+  }
+}

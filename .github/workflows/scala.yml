@@ -87,7 +87,8 @@ jobs:
         fetch-depth: 0      # full history + tags so sbt-dynver can `git describe`
         fetch-tags: true
 
-    # [1.3]: the corpus suites read SIBLING checkouts (`../riddl-models`, `../riddl-examples`)
+    # [1.3]: the corpus suites read a SIBLING checkout (`../riddl-models`; `../riddl-examples`
+    # was retired 2026-11-19)
     # and SKIP when they are absent. They used to download a zip per run, which is what kept them
     # off Scala Native — `java.net.URL.openStream` is a stub there — and cost a fetch per job.
     #
@@ -100,9 +101,7 @@ jobs:
       run: |
         git clone --depth 1 \
           https://github.com/ossuminc/riddl-models.git ../riddl-models
-        git clone --depth 1 \
-          https://github.com/ossuminc/riddl-examples.git ../riddl-examples
-        ls -d ../riddl-models ../riddl-examples
+        ls -d ../riddl-models
 
     - name: Set Up JDK 25
       uses: actions/setup-java@v5
@@ -125,7 +124,7 @@ jobs:
     # test results included. It therefore survives across runs.
     #
     # That is fine for tasks whose inputs sbt can see, and WRONG for the corpus suites. They read
-    # `../riddl-models` and `../riddl-examples`, which are cloned by the step above and are not
+    # `../riddl-models`, which is cloned by the step above and is not
     # build inputs at all, so their CONTENT is in no cache key. A result computed before a rule
     # landed -- or before the corpus migrated -- stays valid-looking indefinitely, and a green
     # corpus suite becomes evidence about the CACHE rather than about the corpus.
@@ -313,17 +312,6 @@ jobs:
       run: |
         cd language/src/test/scalajvm/python
         python ebnf_tatsu_validator.py --verbose
-
-    - name: Checkout riddl-examples
-      uses: actions/checkout@v6
-      with:
-        repository: ossuminc/riddl-examples
-        path: riddl-examples
-
-    - name: Validate EBNF Grammar against riddl-examples
-      run: |
-        cd language/src/test/scalajvm/python
-        python validate_external_riddl.py --repo ${{ github.workspace }}/riddl-examples
 
     # riddl-models is the LARGER corpus and was validated only by hand until now. It is a
     # different check from RiddlModelsRoundTripTest: that exercises the fastparse parser and

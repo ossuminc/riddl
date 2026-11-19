@@ -2,7 +2,7 @@
 """
 External RIDDL Repository Validator
 
-Validates RIDDL files from external repositories (like riddl-examples)
+Validates RIDDL files from external repositories (like riddl-models)
 against the EBNF grammar using TatSu.
 
 This script finds entry point .riddl files by looking at the `input-file`
@@ -13,7 +13,7 @@ Usage:
     python validate_external_riddl.py [--repo PATH] [--verbose]
 
 Options:
-    --repo PATH   Path to external RIDDL repository (default: riddl-examples)
+    --repo PATH   Path to external RIDDL repository (default: riddl-models)
     --verbose     Show detailed output
 """
 
@@ -38,8 +38,9 @@ LANGUAGE_DIR = SCRIPT_DIR.parent.parent.parent.parent
 EBNF_FILE = LANGUAGE_DIR / "src" / "main" / "resources" / "riddl" / "grammar" / "ebnf-grammar.ebnf"
 RIDDL_ROOT = LANGUAGE_DIR.parent
 
-# Default external repository path (riddl-examples)
-DEFAULT_EXTERNAL_REPO = RIDDL_ROOT.parent / "riddl-examples"
+# Default external repository path. riddl-examples was the default until it was retired on
+# 2026-11-19; riddl-models is the corpus now, and CI already validated it with --repo.
+DEFAULT_EXTERNAL_REPO = RIDDL_ROOT.parent / "riddl-models"
 
 # Files with known issues that should be expected to fail
 EXPECTED_FAILURES: Set[str] = {

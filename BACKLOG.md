@@ -735,7 +735,8 @@ each want an approved plan before implementation, per the standing rule.
   the entry can never drift as far as the ~800 estimate it opened with.
 
   **THE `commands` BLOCKER IS NOW IDENTIFIED PRECISELY (2026-08-18), by experiment
-  rather than by reading.** Three suites there — `RunCommandOnExamplesTest` and its
+  rather than by reading.** (Moot since 2026-11-19: all three were deleted with
+  riddl-examples.) Three suites there — `RunCommandOnExamplesTest` and its
   two subclasses — cannot run on Native, and the reason is NOT what the entry
   assumed. Moving them to `scala-jvm-native` and compiling reveals a chain:
 
@@ -872,7 +873,8 @@ each want an approved plan before implementation, per the standing rule.
      cases from tri-platform parity, and that residue is the part worth chasing.
      Also still JVM-bound: `RunCommandOnExamplesTest` (commons-io `FileUtils` +
      `filefilter`) and, through it, `RunCommandsOnExamplesTest` and
-     `NamespaceTest`.
+     `NamespaceTest`. **All three were DELETED 2026-11-19** when riddl-examples was
+     retired; `FooBarFixturesTest` (passes, jvm-native) replaces `NamespaceTest`.
      **Method note that cost a cycle: scanning imports OVERSTATES what is
      movable.** `NamespaceTest` imports nothing JVM-only and is still unmovable,
      because it EXTENDS `RunCommandOnExamplesTest`. Check the base class too —

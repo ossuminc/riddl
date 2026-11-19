@@ -1,0 +1,59 @@
+author Reid is {
+  name: "Reid Spencer"
+  email: "reid@ossuminc.com"
+  organization: "Ossum Inc."
+  title: "Chief Architect"
+} with {
+  briefly as "The author of this example model"
+  described as {
+    |Reid Spencer designs the RIDDL language and writes the example models
+    |that exercise it.
+  }
+}
+
+domain Foo is {
+  include "Foo/foo"
+
+  type FooEntry is {
+    info: Foo.Info,
+    peer: Bar.BarEntry
+  } with {
+    briefly as "A type that reaches its own domain's Info by qualified path"
+    described as {
+      |The qualifier Foo. is what makes this unambiguous even though Bar
+      |defines a type of the same name.
+    }
+  }
+} with {
+  briefly as "One of two sibling domains that define the same type name"
+  described as {
+    |Foo and Bar each define a type called Info. Because they are separate
+    |domains, a reference qualified by its domain names exactly one of them
+    |and nothing is ambiguous.
+    |
+    |Contrast FooBarSameDomain, where the same thing is attempted inside a
+    |single domain and the compiler rightly objects.
+  }
+  by author Reid
+}
+
+domain Bar is {
+  include "Bar/bar"
+
+  type BarEntry is {
+    info: Bar.Info,
+    peer: Foo.FooEntry
+  } with {
+    briefly as "A type that reaches its own domain's Info by qualified path"
+    described as {
+      |The qualifier Bar. is what makes this unambiguous even though Foo
+      |defines a type of the same name.
+    }
+  }
+} with {
+  briefly as "The sibling of domain Foo, defining the same type name"
+  described as {
+    |Holds its own Info, distinct from Foo's despite sharing the name.
+  }
+  by author Reid
+}

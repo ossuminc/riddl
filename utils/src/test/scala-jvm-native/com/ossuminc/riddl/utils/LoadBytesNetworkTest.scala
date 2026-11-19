@@ -40,7 +40,7 @@ class LoadBytesNetworkTest extends AnyWordSpec with Matchers {
     * ours — whether fetched content arrives intact.
     */
   private val directUrl =
-    "https://raw.githubusercontent.com/ossuminc/riddl-examples/main/README.md"
+    "https://raw.githubusercontent.com/ossuminc/riddl-models/main/README.md" // riddl-examples retired 2026-11-19
 
   "loadBytes" should {
     "return fetched content intact, not truncated" in {

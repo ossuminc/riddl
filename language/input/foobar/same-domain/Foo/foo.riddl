@@ -1,0 +1,7 @@
+type Info is {
+	text: String
+}
+
+type Foo {
+  info: Info
+}

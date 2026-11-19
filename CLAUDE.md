@@ -2176,9 +2176,10 @@ calibrate on a case known to be positive before trusting a zero.
 
 Related, same family as the false-green traps below: **validate ENTRY POINTS, not
 include fragments.** A fragment validated alone reports errors by construction,
-which reads as corpus breakage. riddl-examples' `FooBarSameDomain` is a further
-trap — it is a DELIBERATELY ambiguous fixture, so its duplicate-name errors are
-the fixture working.
+which reads as corpus breakage. `language/input/foobar/same-domain` (riddl-examples'
+`FooBarSameDomain` until that corpus was retired on 2026-11-19) is a further trap —
+it is a DELIBERATELY ambiguous fixture, so its duplicate-name errors are the fixture
+working; `FooBarFixturesTest` pins that.
 
 ### Build / CI / Tooling
 

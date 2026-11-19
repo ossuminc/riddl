@@ -348,6 +348,10 @@ Two things this buys beyond a green gate: the certification floors are measured 
 with no failures, and the corpus census that drives the migration can be exact rather than
 grepped, because `validate --json` names every diagnostic's rule.
 
+**riddl-examples was RETIRED on 2026-11-19**, so the paragraphs below that count its
+failures are history; riddl-models is the only external corpus, and `RunRiddlcOnLocalTest`,
+which ran riddl-examples' `dokn` and `shopify-cart`, is deleted.
+
 **The deliberate-failure count is ZERO as of 2026-08-25 (rc.25)**, with both corpora
 migrated before the tag rather than after. The paragraph below describes the OLD cycle and
 is kept because it is still what happens if you tag first.
@@ -526,10 +530,11 @@ cd language/src/test/scalajvm/python
 # 258-rule grammar at a usable speed. The EBNF remains authoritative and TatSu still
 # gates it, so grammar coverage is unchanged.
 .venv/bin/python ebnf_tatsu_validator.py     # MUST report zero "Unexpected failures"
-.venv/bin/python validate_external_riddl.py --repo ../../../../../riddl-examples
 .venv/bin/python validate_external_riddl.py --repo ../../../../../riddl-models
-# ^ both of these now run in CI's ebnf-grammar-validation job, so a green CI run
-#   covers them and this block is only for the code-changed path.
+# ^ this runs in CI's ebnf-grammar-validation job, so a green CI run covers it and
+#   this block is only for the code-changed path. riddl-examples was RETIRED on
+#   2026-11-19 (its FooBar models are fixtures in language/input/foobar/ now), so
+#   there is no second external corpus to validate.
 ```
 
 Use `.venv/bin/python`, not the Homebrew `python3` on PATH — TatSu is installed

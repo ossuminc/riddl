@@ -49,7 +49,8 @@ INCLUDE_FRAGMENTS = {
     "application.riddl",             # Context fragment in full/ and includes/
     "context.riddl",                 # Context fragment in full/
     "588included.riddl",             # Fragment included by 588.riddl
-    "foo.riddl",                     # Fragment in issues/584/Foo/
+    "foo.riddl",                     # Fragment in issues/584/Foo/ and foobar/*/Foo/
+    "bar.riddl",                     # Fragment in foobar/*/Bar/ (from riddl-examples, 2026-11-19)
     "context-types.riddl",           # Context-level types for id-in-include test
     "badEntity.riddl",                # Context-level fragment in riddl-bad/ (intentionally malformed; included by badDomain.riddl to exercise the missing-`}` error-reporter regression)
     "types.riddl",                   # Type fragment included by a51-good-include/

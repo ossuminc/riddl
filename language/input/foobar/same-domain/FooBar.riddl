@@ -1,0 +1,7 @@
+domain FooBar is {
+    // Both of these includes define a type named "Info"
+    // and then reference it as the field of another type
+    // This is ambiguous and should generate ambiguity warnings
+    include "Foo/foo"
+    include "Bar/bar"
+}

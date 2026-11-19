@@ -1,0 +1,57 @@
+author Reid is {
+  name: "Reid Spencer"
+  email: "reid@ossuminc.com"
+  organization: "Ossum Inc."
+  title: "Chief Architect"
+} with {
+  briefly as "The author of this example model"
+  described as {
+    |Reid Spencer designs the RIDDL language and writes the example models
+    |that exercise it.
+  }
+}
+
+domain Foo is {
+  include "Foo/foo"
+
+  type FooEntry is {
+    info: Root.Foo.Info,
+    peer: Root.Bar.BarEntry
+  } with {
+    briefly as "A type that reaches Foo's Info by a root-qualified path"
+    described as {
+      |Where FooBarSuccess qualifies from the domain (Foo.Info), this one
+      |spells the path out from the root (Root.Foo.Info). Both resolve; the
+      |two examples exist to show each form working.
+    }
+  }
+} with {
+  briefly as "One of two sibling domains, addressed from the root"
+  described as {
+    |Foo and Bar each define a type called Info, and each refers to its own
+    |by a path beginning at Root. Being separate domains, neither reference
+    |is ambiguous.
+  }
+  by author Reid
+}
+
+domain Bar is {
+  include "Bar/bar"
+
+  type BarEntry is {
+    info: Root.Bar.Info,
+    peer: Root.Foo.FooEntry
+  } with {
+    briefly as "A type that reaches Bar's Info by a root-qualified path"
+    described as {
+      |The Root. prefix names the domain explicitly from the top of the
+      |model rather than relative to where the reference appears.
+    }
+  }
+} with {
+  briefly as "The sibling of domain Foo, addressed from the root"
+  described as {
+    |Holds its own Info, distinct from Foo's despite sharing the name.
+  }
+  by author Reid
+}
