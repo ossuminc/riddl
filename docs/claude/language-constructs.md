@@ -573,7 +573,7 @@ decision.
   ResolutionPass resolves `c.value` (it resolved only the type before B4, which
   is why a constant's prompt ascription never resolved).
 
-- **[1.27] — optional chaining and four value forms (landed 2026-11-19, steps 1-5).**
+- **[1.27] — optional chaining and five value forms (landed 2026-11-19, all six steps).**
   Spellings and semantics are in the CM (§40.1); what follows is what the code does and why.
   **Optional chaining** is gated on `ResolutionPass.chainOptionals`, set ONLY inside
   `resolveValueRef`, so `candidatesFromTypeExpression` descends `?` for a VALUE path and still
@@ -585,10 +585,13 @@ decision.
   A `type MaybeMoney is Money?` NAME has no contents, so `candidatesFromPathIdentifier` sends a
   Type whose `typEx` is `Optional` to `candidatesFromTypeExpression` while chaining.
   **New nodes** `DurationUnitsValue(unit, duration)`, `SumValue(collection, element?, by?)`,
-  `OneOfValue(collection, element, predicate)`, `OtherwiseValue(value, fallback)`: BAST value
-  tags 22-25 under ONE bump, `FORMAT_REVISION` 34 (none shipped between steps), JSON
-  `durationUnits`/`sum`/`oneOf`/`otherwise` (`duration` and `by` joined `knownKeys`;
-  `JsonUnknownKeyVocabularyTest` caught the first). `language/input/import/NotImplemented.bast`
+  `OneOfValue(collection, element, predicate)`, `OtherwiseValue(value, fallback)`,
+  `ConditionalValue(condition, thenValue, elseValue)`: BAST value tags 22-26 under ONE bump,
+  `FORMAT_REVISION` 34 (none shipped between steps), JSON
+  `durationUnits`/`sum`/`oneOf`/`otherwise`/`conditional` (`duration` and `by` joined
+  `knownKeys`). **`JsonUnknownKeyVocabularyTest` derives the key list from the DTO's FIELD
+  NAMES**, so a hand-written DTO's fields must BE its JSON keys: `ConditionalValueDto` has
+  backticked `` `then` ``/`` `else` `` fields for that reason. `language/input/import/NotImplemented.bast`
   must be regenerated with `riddlc bastify` on every revision bump, or a language test reds.
   **Words:** `sum` and `otherwise` joined the keyword tables (`allKeywords` 179), as `count`
   is, for the tokenizer and because `ascriptionStop` consults `anyKeyword`: without it
@@ -607,14 +610,24 @@ decision.
   its `sig`), which is what catches a missing parenthesis.
   **B5's `CollectionPredicate` has the same open right edge and NO parentheses** — not fixed:
   `(all of xs as e where p) and q`, carried by BAST or JSON, prettifies to text that re-parses
-  with `q` inside the predicate.
+  with `q` inside the predicate (BACKLOG [1.31]).
   Typing: units `Integer` (`Integer?` of a `Duration?`); sum via `summableResult` (Natural to
   Whole, a range by its lower bound, numerics/Duration/Currency as written, else
   `value-sum-not-summable`); one-of the element type made optional; otherwise
   `otherwiseResultType` (strips one `?`, keeps it when the fallback may be empty, keeps a
   collection). A non-collection operand reuses `value-not-a-collection` through
-  `validateOverCollection`, not a per-form id. Step 6 (`when … then … else … end` as a value)
-  is NOT built.
+  `validateOverCollection`, not a per-form id.
+  **Conditional value**: an atom (closed by `when`/`end`, never parenthesized); the condition
+  is `booleanExprOnly | promptValue | valueRef`, i.e. the statement's forms minus the
+  deprecated bare string; the type is `joinBranchTypes` (numerics via `combineArithmetic(Add)`,
+  else assignable both ways, `value-conditional-branch-mismatch`), a bare `empty` branch giving
+  the other branch's type made optional; A12 counts the MAX of the branches.
+  **Type operands with `operandTypeExpr`, not `valueTypeExpr`**: the latter has no arm for a
+  bare numeric literal, so `then 1 else 0` was untyped and `maybeN otherwise "x"` passed in
+  silence. Branches, the `otherwise` fallback and `sum … by` use `operandTypeExpr`, and a
+  LITERAL fallback goes through `checkLiteralConformance`/`checkNumericLiteralConformance`
+  like every other typed position (numeric assignability is deliberately loose, so
+  `checkAssignable` alone passes `1.5` for an `Integer`).
 
 - **B5 — collection predicates, filter, count and membership (landed 2026-09-23).**
   `CollectionPredicate(quantifier, collection, element, predicate)` and `MembershipValue`

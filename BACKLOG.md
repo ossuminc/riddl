@@ -409,38 +409,17 @@ task files, so they were NOT physically reshuffled; this index carries the order
   (`ossum.tech/task/riddl-every-value-typed-by-name.md`) and riddl-generator's fixture
   migration (`riddl-generator/task/riddl-2.4.0-value-typed-by-name.md`).
 
-- **[1.27]** **Four new value forms, RULED by Reid 2026-11-18** (riddl-models,
-  `task/2026-11-18-value-forms-the-corpus-cannot-write.md`; 13 corpus yield
-  arguments wait on them). ADD: (1) the one element of a collection whose key
-  matches; (2) a sum over a collection, shaped like `count of` (a `Money` sum
-  needs a currency rule); (3) a conditional value -- BOTH `x otherwise y`
-  (default if empty) AND a general conditional value (spelling TBD);
-  (4) a `Duration` as a number of units -- minutes AND seconds ("the model
-  itself may need to work in a number of minutes and we should add toSeconds
-  as well"). DECLINE (5) a collection literal: "the utility is dubious and the
-  collection construction question is real". **Spellings RULED 2026-11-19**:
-  `one of xs as e where p` (a `T?`); `sum of xs [as e by <expr>]`;
-  `x otherwise y` (loosest); `when c then a else b end` (else mandatory);
-  `<unit> of d` for every plural duration unit (an Integer). Also ruled the
-  same day: **optional chaining** -- a path through a `T?` resolves and its
-  result is optional (today it is `value-ref-unresolved`, even
-  `E.S.opt.amount`); collections stay unwalkable (`map`). APPROVED PLAN:
-  `~/.claude/plans/dynamic-puzzling-hinton.md` (order: chaining, units, sum,
-  one of, otherwise, conditional; ~28 sites per node, inventoried there). Not
-  covered: `Date + 1 month` (calendar months are not durations), which
-  riddl-models' LifePolicy site needs beyond form 3. (1) yields
-  a `T?`, so its result draws `value-optional-for-required` when given to a
-  required field. When `otherwise` lands, that advisory's SUGGESTION should name
-  `<value> otherwise <default>` (it names a `when … != empty` guard today).
-  **STEPS 1-5 LANDED 2026-11-19** (`0231d7a77` chaining, `a6ea047b8` units,
-  `d06b7b51a` sum, `d79c10ae4` one of, `cebc97f73` otherwise + the advisory
-  suggestion), CM §40.1 recorded in the top-level `7558d94`. **REMAINING: step
-  6**, `when c then a else b end` as a value -- a new BAST value tag (26 is
-  free, still revision 34 until a release), A12 counts the MAX of its branches,
-  only the chosen branch is evaluated (CM must say so). The riddl-models task
-  stays open until it lands. Also found, not in scope: B5's
-  `CollectionPredicate` is open on its right with no parentheses (see
-  `docs/claude/language-constructs.md` § [1.27]).
+- **[1.31]** **B5's `all/any/none of … where p` is open on its right and is never
+  parenthesized as an operand.** Its predicate is a full boolean expression, so a tree such
+  as `And(all of xs as e where p, q)` -- which BAST and JSON can carry, and which the parser
+  builds from `(all of xs as e where p) and q` -- prettifies to text that re-parses with `q`
+  INSIDE the predicate: same text, a different program. Found 2026-11-19 while building
+  [1.27]'s `one of`, which has the same right edge and got the rule:
+  `AST.CollectionValues.alwaysParenthesized` (consulted by the comparison, logical, `not` and
+  arithmetic `format`s) and its emitter copy `RiddlFileEmitter.emitOperand`. The fix is
+  likely adding `CollectionPredicate` (and `CollectionFilter`, same edge) to that predicate,
+  plus tree-comparing round-trip cases like `ValueFormsRoundTripTest`'s. Not verified by a
+  failing test yet -- write that first.
 
 - **[1.30]** **`call`/`create`/`terminate` arguments are type-checked only
   against ALIASED parameter types.** `checkArgumentTypes`

@@ -40,12 +40,11 @@ riddl-models can migrate). `morph S -> S` stays a Warning (Reid). **Owed at 3.0:
 [5.10]** (rename the `AST.Initiate` class to `Create`, drop the alias val). BACKLOG [5.9]
 stays DEFERRED by Reid.
 
-**[1.27] steps 1-5 LANDED 2026-11-19** (chaining, `<unit> of`, `sum of`, `one of`,
-`otherwise`), one commit each, CM recorded (top-level `7558d94`), **FORMAT_REVISION 34**,
-BAST value tags 22-25. **NEXT: step 6**, `when c then a else b end` as a value (tag 26, same
-revision); the plan `~/.claude/plans/dynamic-puzzling-hinton.md` still applies. Details:
-BACKLOG [1.27], `docs/claude/language-constructs.md` § [1.27]. **Not restaged**: `../bin/riddlc`
-and ivy are still `2.7.0-27-faf60865`, so riddl-models cannot use the new forms yet.
+**[1.27] is DONE** (2026-11-19): optional chaining and all five value forms, one commit
+each (`0231d7a77` .. `cebc97f73`, then `1af9d704b` for the conditional value), CM recorded
+(top-level `7558d94`, `47ff9f8`), **FORMAT_REVISION 34**, BAST value tags 22-26. **Not
+restaged**: `../bin/riddlc` and ivy are still `2.7.0-27-faf60865`, so riddl-models cannot use
+the forms until Reid restages. Follow-up filed: BACKLOG [1.31] (B5's predicate parentheses).
 
 **riddl-examples is RETIRED** (Reid, 2026-11-19; riddl `06bc49add`, top-level `234ed69`). Its
 FooBar models are `language/input/foobar/`, pinned by `FooBarFixturesTest`. **The GitHub repo
@@ -92,6 +91,17 @@ Everything else from 2026-11-18/19 is in `task/done/`. riddl-models has its own 
 their `2f2291b63`). `probe-2026-09-06-adaptor/` is a leftover scratch directory, not a task.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-11-19 (night) — [1.27] step 6, the conditional value; [1.27] closed
+
+`when c then a else b end` as a value (`1af9d704b`), an atom closed by `end`. What it taught:
+**`valueTypeExpr` has no arm for a bare numeric literal, and CLAUDE.md says so** -- yet steps
+3 and 5 used it anyway, so `then 1 else 0` was untyped and `maybeN otherwise "x"` validated
+clean. Found only because the conditional's "not fill a String" case came back green when it
+should have been red. Every [1.27] operand now types through `operandTypeExpr`, and a literal
+default is judged by the literal checks. **A negative test that unexpectedly passes is the
+cheapest bug report there is.** Second: `JsonUnknownKeyVocabularyTest` derives JSON keys from
+DTO field names, so `ConditionalValueDto` carries backticked `then`/`else` fields.
 
 ## 2026-11-19 (evening) — riddl-examples retired; shopify-cart bisected
 
