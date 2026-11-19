@@ -409,6 +409,42 @@ task files, so they were NOT physically reshuffled; this index carries the order
   (`ossum.tech/task/riddl-every-value-typed-by-name.md`) and riddl-generator's fixture
   migration (`riddl-generator/task/riddl-2.4.0-value-typed-by-name.md`).
 
+- **[1.27]** **Four new value forms, RULED by Reid 2026-11-18** (riddl-models,
+  `task/2026-11-18-value-forms-the-corpus-cannot-write.md`; 13 corpus yield
+  arguments wait on them). ADD: (1) the one element of a collection whose key
+  matches; (2) a sum over a collection, shaped like `count of` (a `Money` sum
+  needs a currency rule); (3) a conditional value -- BOTH `x otherwise y` (default if empty) AND a
+  general conditional value (`when c then a else b`, spelling TBD);
+  (4) a `Duration` as a number of units -- minutes AND seconds ("the model
+  itself may need to work in a number of minutes and we should add toSeconds
+  as well"). DECLINE (5) a collection literal: "the utility is dubious and the
+  collection construction question is real". Spellings not yet settled; each
+  needs a plan, EBNF, all four reflective surfaces, and a CM entry. (1) yields
+  a `T?`, so it interacts with [1.29].
+
+- **[1.28]** **A numeric literal written as a constructor argument is never
+  type-checked.** `yield event E(d = 5)` validates for a `DateTime`, `Boolean`,
+  `String` or record field (measured 2026-11-18 on 2.7.0-22); a STRING literal
+  in the same place is checked. `valueTypeExpr` returns `None` for a
+  `NumericLiteral` (`ValidationPass.scala` ~10718), and
+  `checkNumericLiteralConformance` only knows numeric targets. Correctness
+  completeness; no ruling needed. Watch `Bool extends IntegerTypeExpression`.
+
+- **[1.29]** **Three value checks, RULED by Reid 2026-11-18** (riddl-models
+  tasks `optional-value-accepted-for-a-required-field` and
+  `what-may-a-date-or-datetime-field-be-given`):
+  (a) a `T?` value into a required `T` field is a **WARNING asking for a guard**
+  -- "we don't at compile time know if latestNavPerShare is ACTUALLY empty. That
+  can only be determined at run time ... the generator can do whatever is
+  correct for the model as specified (like generating the guard)." Silent today
+  because `underlyingTypeExpr` strips cardinality on both sides
+  (`ValidationPass.scala:10234`). The guard spellings are [1.27]-3.
+  (b) A string LITERAL into `Date`/`DateTime`/`TimeStamp` must be ISO-8601 for
+  that type; `"tomorrow"` becomes an Error. A String-typed REFERENCE stays
+  accepted (`String_` stays in those types' compatible lists).
+  (c) `TimeStamp` -> `Date` is an INTENDED conversion (the generator takes the
+  date part); record it in the CM, no code change.
+
 - **[1.23]** **`ask` is checked for a PATH but never for a TYPE, and riddl-models asked for
   the type check.** Their 2026-09-09 task asked for two things; only one landed on
   2026-09-10. `msg-ask-target-unreachable` / `msg-ask-reply-unreachable` ask whether a
