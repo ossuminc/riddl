@@ -71,6 +71,29 @@ fixtures, not a task).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-18 (night) — `Currency` and the zoned types did not survive prettify
+
+riddl-models: `on init(a: Currency(USD))` prettified to `on init(a: Currency)`,
+which does not parse. Lifecycle parameters (and function arguments) render
+through `TypeExpression.format`; `Currency` had no override and fell back to
+its bare kind. Record fields survived only because `RiddlFileEmitter` had its
+own Currency arm -- the dispatch-written-twice trap again. The arm is gone; the
+one `format` now serves both.
+
+Probing every parameterized type found a worse sibling the report missed:
+`ZonedDate.format` was a COPY of `ZonedDateTime.format`. Every `ZonedDate`,
+record fields included, prettified into a `ZonedDateTime`; an absent zone came
+back as an invented `"UTC"`; and the zone was quoted, which the grammar's bare
+`zone` token rejects. So any model with a zoned type broke under `sbt r`. Both
+now print their own keyword, the zone bare, and `()` when no zone was given.
+`ASTTest` had pinned the wrong `ZonedDateTime("UTC")`.
+
+BAST and JSON were never affected: both store these structurally. The new
+`ParameterizedTypeRoundTripTest` compares a SHAPE that never calls `format`
+(since `format` was the defect), over record fields and on-init parameters,
+through prettify and BAST. Red before the fix on prettify and format; BAST
+green throughout, which is what showed the AST kept the code.
+
 ## 2026-11-18 (evening) — a yield-argument prompt is fine in an external context
 
 riddl-models (reactive-bbq), Reid's ruling: `stmt-yield-argument-prompt` now

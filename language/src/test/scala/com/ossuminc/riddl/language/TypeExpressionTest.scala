@@ -316,7 +316,7 @@ class TypeExpressionTest extends AbstractTestingBasis {
       AST.errorDescription(aggregation) mustBe "Aggregation of 27 fields"
       aggregation.format mustBe
         "{ integer: Integer, anything: Anything, " +
-        "bool: Boolean, current: Current, currency: Currency, date: Date, " +
+        "bool: Boolean, current: Current, currency: Currency(CA), date: Date, " +
         "dateTime: DateTime, decimal: Decimal(8,3), duration: Duration, " +
         "integer: Integer, length: Length, location: Location, " +
         "luminosity: Luminosity, mass: Mass, mole: Mole, nothing: Nothing, " +
@@ -365,7 +365,7 @@ class TypeExpressionTest extends AbstractTestingBasis {
       AST.errorDescription(message) mustBe "Record of 27 fields and 0 methods"
       message.format mustBe
         "record { integer: Integer, anything: Anything, " +
-        "bool: Boolean, current: Current, currency: Currency, date: Date, " +
+        "bool: Boolean, current: Current, currency: Currency(CA), date: Date, " +
         "dateTime: DateTime, decimal: Decimal(8,3), duration: Duration, " +
         "integer: Integer, length: Length, location: Location, " +
         "luminosity: Luminosity, mass: Mass, mole: Mole, nothing: Nothing, " +

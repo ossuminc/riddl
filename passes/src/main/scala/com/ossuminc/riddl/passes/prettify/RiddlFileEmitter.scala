@@ -714,7 +714,6 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
           case aggr: Aggregation                  => emitAggregation(aggr)
           case mt: AggregateUseCaseTypeExpression => emitMessageType(mt)
         }
-      case c: Currency       => this.add(s"Currency(${c.country})")
       case p: PredefinedType => this.add(p.format)
     }
   }

@@ -2658,7 +2658,14 @@ object AST:
     *   The ISO 3166 A-3 three letter code for the country
     */
   @JSExportTopLevel("Currency")
-  case class Currency(loc: At, country: String) extends PredefinedType
+  case class Currency(loc: At, country: String) extends PredefinedType {
+
+    /** Without this, `format` fell back to the bare kind, and every surface that renders a type
+      * through `format` -- `on init`/`on term` parameters, function arguments -- wrote
+      * `Currency`, which does not parse (riddl-models, 2026-11-18).
+      */
+    override def format: String = s"$kind($country)"
+  }
 
   /** The simplest type expression: `Anything`. An `Anything` type expression is one that is not
     * defined explicitly. It is treated as a concrete type but without any structural or type
@@ -2895,7 +2902,12 @@ object AST:
       other.isInstanceOf[Pattern]
     }
 
-    override def format: String = s"ZonedDateTime(${zone.map(_.format).getOrElse("\"UTC\"")})"
+    /** As written: its own keyword, the zone as a bare token (the grammar's `zone` is not a string),
+      * and empty parentheses when no zone was given. This was a copy of `ZonedDateTime.format`
+      * until 2026-11-18, so every `ZonedDate` prettified into a `ZonedDateTime`, an absent zone
+      * into an invented `"UTC"`, and the quotes made the result unparseable.
+      */
+    override def format: String = s"$kind(${zone.map(_.s).getOrElse("")})"
   }
 
   @JSExportTopLevel("ZonedDateTime")
@@ -2909,7 +2921,8 @@ object AST:
       other.isInstanceOf[Pattern]
     }
 
-    override def format: String = s"ZonedDateTime(${zone.map(_.format).getOrElse("\"UTC\"")})"
+    /** See [[ZonedDate.format]]: the zone bare, and no invented default. */
+    override def format: String = s"$kind(${zone.map(_.s).getOrElse("")})"
   }
 
   /** A predefined type expression for a timestamp that records the number of milliseconds from the

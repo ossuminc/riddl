@@ -130,7 +130,11 @@ class ASTTest extends AbstractTestingBasis {
         (0, 0),
         AliasedTypeExpression((0, 0), "record", PathIdentifier((0, 0), Seq("URL")))
       )
-      ZonedDateTime((0, 0)).format mustBe "ZonedDateTime(\"UTC\")"
+      // As written (2026-11-18): own keyword, bare zone, no invented "UTC" default.
+      ZonedDateTime((0, 0)).format mustBe "ZonedDateTime()"
+      ZonedDate((0, 0)).format mustBe "ZonedDate()"
+      ZonedDate((0, 0), Some(LiteralString((0, 0), "EST"))).format mustBe "ZonedDate(EST)"
+      Currency((0, 0), "USD").format mustBe "Currency(USD)"
       UUID((0, 0)).format mustBe "UUID"
       URI((0, 0)).format mustBe "URL(\"https\")"
       Location((0, 0)).format mustBe "Location"
