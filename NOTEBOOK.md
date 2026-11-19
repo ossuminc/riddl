@@ -40,17 +40,19 @@ riddl-models can migrate). `morph S -> S` stays a Warning (Reid). **Owed at 3.0:
 [5.10]** (rename the `AST.Initiate` class to `Create`, drop the alias val). BACKLOG [5.9]
 stays DEFERRED by Reid.
 
-**NEXT: BACKLOG [1.27], the four value forms — plan APPROVED 2026-11-19, nothing coded
-yet.** The plan is `~/.claude/plans/dynamic-puzzling-hinton.md`; it carries the ruled
-spellings, the semantics for the CM, the new rule ids, and a file:line inventory of the ~28
-sites each new value node touches (modelled on `CountValue`/`CollectionPredicate`). Work order,
-each TDD and through every reflective surface before the next: (1) optional chaining — a path
-through a `T?` resolves with an optional result (`ResolutionPass` ValueRef walk and
-`typeExprOfPath`; today even `E.S.opt.amount` is `value-ref-unresolved`); (2) `<unit> of d`;
-(3) `sum of xs [as e by expr]`; (4) `one of xs as e where p`; (5) `x otherwise y`, plus the
-advisory suggestion naming it; (6) `when c then a else b end` as a value. One commit per form;
-new BAST value tags start at 22, FORMAT_REVISION 33 → 34. New words (`sum`, `otherwise`, the
-unit words) must stay CONTEXT-SENSITIVE: the corpus has 18 fields named `hours`/`days`.
+**[1.27] steps 1-5 LANDED 2026-11-19** (chaining, `<unit> of`, `sum of`, `one of`,
+`otherwise`), one commit each, CM recorded (top-level `7558d94`), **FORMAT_REVISION 34**,
+BAST value tags 22-25. **NEXT: step 6**, `when c then a else b end` as a value (tag 26, same
+revision); the plan `~/.claude/plans/dynamic-puzzling-hinton.md` still applies. Details:
+BACKLOG [1.27], `docs/claude/language-constructs.md` § [1.27]. **Not restaged**: `../bin/riddlc`
+and ivy are still `2.7.0-27-faf60865`, so riddl-models cannot use the new forms yet.
+
+**Known red: riddlc `RunRiddlcOnLocalTest` "validate shopify-cart"** (JVM and Native).
+riddl-examples' `shopify-cart.riddl:1454`, a schema `link ... field Cart.items.id to field
+Product.id`, no longer resolves. It predates [1.27] (the pre-session `2.7.0-27` binary fails
+it; 2.6.0 and the 2.7.0 certification passed), so it came in with the 2.8.0 work, possibly
+`8baddef3c` (`repo-link-type-mismatch`). Not bisected. Reid is weighing dropping
+riddl-examples altogether.
 
 ### Traps a fresh session would hit
 
@@ -72,6 +74,11 @@ unit words) must stay CONTEXT-SENSITIVE: the corpus has 18 fields named `hours`/
 
 ### Certainty
 
+Verified 2026-11-19 for `cebc97f73`, from an EMPTY sbt cache (grew to 240M): tJS all 5
+modules green; tJVM and tNative every module green except the shopify-cart test above
+(19 suite summaries, as expected); `riddlcNative/nativeLink` run separately, links. TatSu
+131/154 (the 23 failures 2.7.0 had). Not run: MiMa, a riddl-models census.
+
 Verified 2026-11-16 for 2.7.0: tJVM, tJS and tNative with nativeLink green after `clean`
 (19 suite summaries); the same suites green from an empty sbt cache before tagging; MiMa clean;
 TatSu 128/151; riddl-models census identical to 2.6.0, with the census script calibrated on a
@@ -86,6 +93,31 @@ Everything else from 2026-11-18/19 is in `task/done/`. riddl-models has its own 
 their `2f2291b63`). `probe-2026-09-06-adaptor/` is a leftover scratch directory, not a task.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-11-19 (later) — [1.27] steps 1-5: chaining and four value forms
+
+Built in the plan's order, each red first through every surface. What it taught:
+
+- **A new top precedence level exposes every place that hard-coded the old top.** Making
+  `otherwise` the loosest `value` level showed that `booleanAtom`'s parentheses admitted only
+  `booleanExpr`, so `(a otherwise b) + 1` could not be written at all. Found by the TREE
+  round trip, not by reading.
+- **A form whose right edge is a full expression must be parenthesized as an operand**, or a
+  BAST/JSON tree prettifies to text that re-parses differently. One predicate,
+  `CollectionValues.alwaysParenthesized`, now feeds four `format`s and the emitter. B5's
+  `CollectionPredicate` has the same edge and never got the rule; recorded, not fixed.
+- **"Not reserved" and "in the keyword tables" are different things.** `count` was already
+  both a keyword and a legal field name; `otherwise` had to join the tables because
+  `empty`'s ascription stop is defined by them (`empty otherwise 0` read `otherwise` as a type).
+- **The guards earned their keep**: `JsonUnknownKeyVocabularyTest` caught the new `duration`
+  key, and the committed `NotImplemented.bast` needs `riddlc bastify` on every revision bump.
+- **A live corpus is not a stable instrument.** With 567 uncommitted riddl-models files in
+  flight, two corpus suites went red once (an arity error, and a `ClassCastException`, Method
+  to Field, in the JSON round trip of `language-coverage.riddl`) and green on rerun with the
+  same build. The crash did not reproduce; if it recurs, it is real and worth a trace (the
+  severe message carries the stack).
+- Rule ids: the plan named `value-sum-not-collection`/`value-one-of-not-collection`; both
+  forms reuse `value-not-a-collection`, since an id names a rule.
 
 ## 2026-11-19 — a path through a `let` was never walked
 

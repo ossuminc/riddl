@@ -573,6 +573,49 @@ decision.
   ResolutionPass resolves `c.value` (it resolved only the type before B4, which
   is why a constant's prompt ascription never resolved).
 
+- **[1.27] — optional chaining and four value forms (landed 2026-11-19, steps 1-5).**
+  Spellings and semantics are in the CM (§40.1); what follows is what the code does and why.
+  **Optional chaining** is gated on `ResolutionPass.chainOptionals`, set ONLY inside
+  `resolveValueRef`, so `candidatesFromTypeExpression` descends `?` for a VALUE path and still
+  refuses it for every other path (`CardinalityPathDescentTest` pins the refusal). The resolved
+  definition (a required `Integer` field) cannot say the path went through `?`, so the fact
+  travels beside it: `ReferenceMap.markOptionalChain`/`isOptionalChain`, read by
+  `valueRefTypeExpr`. `typeExprOfPath` (let and foreach-element heads) chains the same way.
+  Both wrap via `optionalIfChained`, which leaves a type that already admits empty alone.
+  A `type MaybeMoney is Money?` NAME has no contents, so `candidatesFromPathIdentifier` sends a
+  Type whose `typEx` is `Optional` to `candidatesFromTypeExpression` while chaining.
+  **New nodes** `DurationUnitsValue(unit, duration)`, `SumValue(collection, element?, by?)`,
+  `OneOfValue(collection, element, predicate)`, `OtherwiseValue(value, fallback)`: BAST value
+  tags 22-25 under ONE bump, `FORMAT_REVISION` 34 (none shipped between steps), JSON
+  `durationUnits`/`sum`/`oneOf`/`otherwise` (`duration` and `by` joined `knownKeys`;
+  `JsonUnknownKeyVocabularyTest` caught the first). `language/input/import/NotImplemented.bast`
+  must be regenerated with `riddlc bastify` on every revision bump, or a language test reds.
+  **Words:** `sum` and `otherwise` joined the keyword tables (`allKeywords` 179), as `count`
+  is, for the tokenizer and because `ascriptionStop` consults `anyKeyword`: without it
+  `empty otherwise 0` read `otherwise` as the ascribed TYPE. Identifiers are unaffected (fields
+  named `count` already prove it). The unit words are in NO table; `<unit> of` is matched by a
+  `NoCut` prefix, so `hours = hours of d` works.
+  **Precedence is where the work was.** `otherwise` is a new top `value` level over the old
+  alternation (now `valueOperand`), left-associative and loosest. That exposed that
+  `booleanAtom`'s parentheses admitted only `booleanExpr`, so `(a otherwise b) + 1` could not
+  be written: they take a full `value` now. `sum … by` takes `multiplicative`, so it is open on
+  its right to `*`/`/` (`SumValue.isOpenRight`); `one of`'s predicate is a full boolean
+  expression and `otherwise` is loosest, so both are open to EVERY operator
+  (`CollectionValues.alwaysParenthesized`), which the comparison, logical, `not` and arithmetic
+  `format`s consult through `CollectionValues.operand`, and the emitter through `emitOperand`.
+  Keep those in step by hand; `ValueFormsRoundTripTest` compares TREES (locations erased by
+  its `sig`), which is what catches a missing parenthesis.
+  **B5's `CollectionPredicate` has the same open right edge and NO parentheses** — not fixed:
+  `(all of xs as e where p) and q`, carried by BAST or JSON, prettifies to text that re-parses
+  with `q` inside the predicate.
+  Typing: units `Integer` (`Integer?` of a `Duration?`); sum via `summableResult` (Natural to
+  Whole, a range by its lower bound, numerics/Duration/Currency as written, else
+  `value-sum-not-summable`); one-of the element type made optional; otherwise
+  `otherwiseResultType` (strips one `?`, keeps it when the fallback may be empty, keeps a
+  collection). A non-collection operand reuses `value-not-a-collection` through
+  `validateOverCollection`, not a per-form id. Step 6 (`when … then … else … end` as a value)
+  is NOT built.
+
 - **B5 — collection predicates, filter, count and membership (landed 2026-09-23).**
   `CollectionPredicate(quantifier, collection, element, predicate)` and `MembershipValue`
   extend **`BooleanExpression`**, not bare `RiddlValue` — a `when`/`require`/invariant condition

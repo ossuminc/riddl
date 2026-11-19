@@ -432,6 +432,15 @@ task files, so they were NOT physically reshuffled; this index carries the order
   a `T?`, so its result draws `value-optional-for-required` when given to a
   required field. When `otherwise` lands, that advisory's SUGGESTION should name
   `<value> otherwise <default>` (it names a `when … != empty` guard today).
+  **STEPS 1-5 LANDED 2026-11-19** (`0231d7a77` chaining, `a6ea047b8` units,
+  `d06b7b51a` sum, `d79c10ae4` one of, `cebc97f73` otherwise + the advisory
+  suggestion), CM §40.1 recorded in the top-level `7558d94`. **REMAINING: step
+  6**, `when c then a else b end` as a value -- a new BAST value tag (26 is
+  free, still revision 34 until a release), A12 counts the MAX of its branches,
+  only the chosen branch is evaluated (CM must say so). The riddl-models task
+  stays open until it lands. Also found, not in scope: B5's
+  `CollectionPredicate` is open on its right with no parentheses (see
+  `docs/claude/language-constructs.md` § [1.27]).
 
 - **[1.30]** **`call`/`create`/`terminate` arguments are type-checked only
   against ALIASED parameter types.** `checkArgumentTypes`
