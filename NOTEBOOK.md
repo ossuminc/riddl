@@ -72,6 +72,11 @@ a regression -- see the 2026-11-19 (evening) entry.
 
 ### Certainty
 
+Verified 2026-11-19 for `d6320be9f`, from an EMPTY sbt cache (grew to 244M): tJVM, tJS and
+tNative all green, 19 suite summaries, `riddlcNative/nativeLink` links. Covers [1.27] step 6,
+the riddl-examples retirement and the record-with-method fix. Not run: MiMa, TatSu, a
+riddl-models census.
+
 Verified 2026-11-19 for `cebc97f73`, from an EMPTY sbt cache (grew to 240M): tJS all 5
 modules green; tJVM and tNative every module green except the shopify-cart test above
 (19 suite summaries, as expected); `riddlcNative/nativeLink` run separately, links. TatSu
@@ -84,13 +89,33 @@ known-bad model.
 
 ### task/
 
-One open file: `2026-11-18-value-forms-the-corpus-cannot-write.md` (riddl-models), the
-input to [1.27]; spellings are appended to it, and it moves to `done/` when the forms land.
-Everything else from 2026-11-18/19 is in `task/done/`. riddl-models has its own task
+Empty. The [1.27] value-forms request and the record-with-method crash
+(`db09b7b86`, `d6320be9f`) are both in `task/done/`. riddl-models has its own task
 `2026-11-19-riddl-value-checks-corpus-findings.md` (the 8 Natural fields are already fixed in
 their `2f2291b63`). `probe-2026-09-06-adaptor/` is a leftover scratch directory, not a task.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-11-19 (late night) — a record with a method crashed validate; [severe] now located
+
+riddl-models' task (`task/done/2026-11-19-record-with-method-as-value-crashes.md`): a value
+whose type is a record declaring a METHOD, passed as a constructor argument, threw
+`ClassCastException: Method cannot be cast to Field` (`db09b7b86`). The cause was
+`AggregateTypeExpression.isAssignmentCompatible`: in a `for`,
+`myField: Field = named.asInstanceOf[Field] if named.isInstanceOf[Field]` evaluates the cast
+BEFORE the guard after it. **A guard in a `for` protects the generators before it, never a
+value definition before it.** The guard was wrong in intent too (it would have made such a
+record incompatible with itself), so members now compare pairwise by kind. The earlier
+"unreproducible" ClassCastException in the JSON corpus run was this: riddl-models was adding
+exactly that look-up to language-coverage at the time. The trace had been in the output all
+along -- an earlier grep cut it at the first line and I dismissed the one cast it named.
+
+Second criterion (`d6320be9f`): the last-resort reporter always used `At.empty`. Now each
+`traverse` wraps its node in `Pass.locating`, so the INNERMOST node names itself in a
+`PassFailure`; `runOnePass` names the phase for pre/postProcess and result. A try per frame,
+not a "last visited" variable, because `DepthFirstPass` processes a parent after its children.
+A test-only trap: two different record NAMES are refused nominally (`ArgumentTypeMismatch`)
+before structure is compared, so "a structurally identical twin validates" was the wrong test.
 
 ## 2026-11-19 (night) — [1.27] step 6, the conditional value; [1.27] closed
 
