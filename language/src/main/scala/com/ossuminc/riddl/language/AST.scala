@@ -871,7 +871,7 @@ object AST:
     GetValue | PromptValue | BooleanExpression | Call | Ask | SelfValue | SystemValue | Create |
     NumericLiteral | LookupValue | EmptyValue | ArithmeticExpression | DurationLiteral |
     QueryValue | TableRef | CollectionPredicate | CollectionFilter | CountValue |
-    MembershipValue | DurationUnitsValue | SumValue | OneOfValue | OtherwiseValue | Requires | Returns | InvariantBlock
+    MembershipValue | DurationUnitsValue | SumValue | OneOfValue | OtherwiseValue | ConditionalValue | Requires | Returns | InvariantBlock
 
   /** Type of definitions that occur in a [[Root]] without [[Include]]. [[Root]] deliberately stays
     * narrow: it is the file parse-root, not the reuse unit. [[Module]] is the reuse unit and is
@@ -3275,14 +3275,14 @@ object AST:
     * comparison's operands are now full Values (see [[ComparisonExpression]]). B2 (2026-09-22)
     * adds [[QueryValue]], the eighteenth; B5 the four collection kinds, making twenty-two.
     * BACKLOG [1.27] (2026-11-19) adds [[DurationUnitsValue]], the twenty-third, and
-    * [[SumValue]], [[OneOfValue]] and [[OtherwiseValue]].
+    * [[SumValue]], [[OneOfValue]], [[OtherwiseValue]] and [[ConditionalValue]], making twenty-seven.
     */
   type Value =
     LiteralString | PromptValue | Constructor | ValueRef | GetValue | BooleanExpression | Call |
       Ask | SelfValue | SystemValue | Create | NumericLiteral | LookupValue | EmptyValue |
       ArithmeticExpression | DurationLiteral | ConstantRef | QueryValue | CollectionPredicate |
       CollectionFilter | CountValue | MembershipValue | DurationUnitsValue | SumValue | OneOfValue |
-      OtherwiseValue
+      OtherwiseValue | ConditionalValue
 
   /** A54: a single argument supplied to a [[Constructor]]. Positional when `name` is `None`; named
     * (`id = value`) when `name` is `Some`. Validation requires positional arguments to precede
@@ -4484,6 +4484,25 @@ object AST:
         case _                 => fallback.format
       s"${value.format} otherwise $right"
   end OtherwiseValue
+
+  /** BACKLOG [1.27] (Reid, 2026-11-19): `when <cond> then <a> else <b> end` -- a VALUE: `a` when
+    * the condition holds, else `b`. Only the chosen branch is evaluated, which matters for a
+    * branch holding `ask`, `call` or `create`. `else` is mandatory; a multi-way choice nests
+    * (`else when … end end`), as the statement does. Its type is the branches' join: numerics
+    * join on B4's lattice, anything else must be the same type both ways, and a bare `empty`
+    * branch makes the other branch's type optional.
+    *
+    * The condition takes the `when` statement's forms -- a boolean expression, `prompt(…)` or a
+    * reference -- except its deprecated bare string, which a new form does not introduce. Closed
+    * at both ends by `when` and `end`, so it never needs parentheses as an operand.
+    */
+  @JSExportTopLevel("ConditionalValue")
+  case class ConditionalValue(loc: At, condition: Value, thenValue: Value, elseValue: Value)
+      extends RiddlValue:
+    override def kind: String = "Conditional Value"
+    def format: String =
+      s"when ${condition.format} then ${thenValue.format} else ${elseValue.format} end"
+  end ConditionalValue
 
   /** B5: the shared parenthesizing rule for a collection operand. An INFIX operand (a filter, a
     * membership test, a comparison, a logical or an arithmetic expression) binds looser than the

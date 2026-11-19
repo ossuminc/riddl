@@ -765,6 +765,20 @@ private[parsing] trait StatementParser {
     ).map { case (start, coll, element, pred, end) => OneOfValue(at(start, end), coll, element, pred) }
   }
 
+  /** BACKLOG [1.27]: `when <cond> then <a> else <b> end` as a VALUE. The condition is the
+    * statement's forms minus the deprecated bare string; the branches are full values, so a
+    * multi-way choice nests in the `else`. Closed by `end`, it is an atom of the ladder.
+    * `when` is reserved, but the prefix is `NoCut` so a filtering caller can still backtrack.
+    */
+  private def conditionalValue[u: P]: P[ConditionalValue] = {
+    P(
+      Index ~ NoCut(Keywords.when) ~/
+        (booleanExprOnly.map(be => be: Value) | promptValue.map(pv => pv: Value) |
+          valueRef.map(vr => vr: Value)) ~
+        Keywords.`then` ~/ value ~ Keywords.else_ ~/ value ~ Keywords.end_ ~ Index
+    ).map { case (start, cond, a, b, end) => ConditionalValue(at(start, end), cond, a, b) }
+  }
+
   /** The expression ladder, for the positions that want a condition: `update`/`delete`'s
     * `where` and `query`'s. Any value may stand there; validation requires it to be boolean.
     */
@@ -956,6 +970,7 @@ private[parsing] trait StatementParser {
         durationUnitsValue.map(du => du: Value) | // BACKLOG [1.27]
         sumValue.map(sv => sv: Value) |
         oneOfValue.map(ov => ov: Value) |
+        conditionalValue.map(cv => cv: Value) |
         durationLiteral.map(dl => dl: Value) |
         // `NoCut` is load-bearing: `literalString` cuts after its opening quote, and
         // `booleanExprOnly` FILTERS the ladder's result -- so `when "prose"` would parse the

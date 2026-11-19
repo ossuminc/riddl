@@ -1024,6 +1024,12 @@ object JsonModel:
   case class OneOfValueDto(collection: ValueDto, element: String, predicate: ValueDto)
       extends ValueDto
 
+  /** BACKLOG [1.27]: `{ "value": "conditional", "condition": <value>, "then": <value>, "else":
+    * <value> }`
+    */
+  case class ConditionalValueDto(condition: ValueDto, `then`: ValueDto, `else`: ValueDto)
+      extends ValueDto // field names ARE the JSON keys; JsonUnknownKeyVocabularyTest derives them
+
   /** BACKLOG [1.27]: `{ "value": "otherwise", "left": <value>, "right": <value> }` */
   case class OtherwiseValueDto(left: ValueDto, right: ValueDto) extends ValueDto
 
@@ -1937,6 +1943,8 @@ object JsonModel:
       case "contains" => MembershipValueDto(readValue(m("collection")), readValue(m("element")))
       case "durationUnits" => DurationUnitsValueDto(m("unit").str, readValue(m("duration")))
       case "otherwise" => OtherwiseValueDto(readValue(m("left")), readValue(m("right")))
+      case "conditional" =>
+        ConditionalValueDto(readValue(m("condition")), readValue(m("then")), readValue(m("else")))
       case "oneOf" =>
         OneOfValueDto(readValue(m("collection")), m("element").str, readValue(m("predicate")))
       case "sum" =>
@@ -2079,6 +2087,13 @@ object JsonModel:
           "value" -> ujson.Str("durationUnits"),
           "unit" -> ujson.Str(unit),
           "duration" -> writeValue(duration)
+        )
+      case ConditionalValueDto(condition, thenValue, elseValue) =>
+        ujson.Obj(
+          "value" -> ujson.Str("conditional"),
+          "condition" -> writeValue(condition),
+          "then" -> writeValue(thenValue),
+          "else" -> writeValue(elseValue)
         )
       case OtherwiseValueDto(left, right) =>
         ujson.Obj(

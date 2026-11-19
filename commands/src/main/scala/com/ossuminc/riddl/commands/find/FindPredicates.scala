@@ -52,7 +52,8 @@ object FindPredicates {
     "store-statement", "upsert-statement", "update-statement", "delete-statement", // B2
     "query-value", "table-reference",
     "collection-predicate", "collection-filter", "count-value", "membership-value", // B5
-    "duration-units-value", "sum-value", "one-of-value", "otherwise-value", // BACKLOG [1.27] value forms (2026-11-19)
+    "duration-units-value", "sum-value", "one-of-value", "otherwise-value",
+    "conditional-value", // BACKLOG [1.27] value forms (2026-11-19)
     // VALUES, projected since 2026-11-16 (`Finder.nestedValues`): every member of `AST.Value`
     // except the plain literals and `ValueRef`, which are not projected as value nodes. Derived
     // from each class's `kind`, not only from what the corpus happens to contain.

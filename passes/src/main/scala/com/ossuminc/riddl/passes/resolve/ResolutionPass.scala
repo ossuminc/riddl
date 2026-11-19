@@ -634,6 +634,10 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         resolveValue(ov.collection, parents); resolveValue(ov.predicate, parents)
       case ow: OtherwiseValue =>
         resolveValue(ow.value, parents); resolveValue(ow.fallback, parents)
+      case cv: ConditionalValue =>
+        resolveValue(cv.condition, parents)
+        resolveValue(cv.thenValue, parents)
+        resolveValue(cv.elseValue, parents)
       case mv: MembershipValue =>
         resolveValue(mv.collection, parents); resolveValue(mv.element, parents)
 

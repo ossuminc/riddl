@@ -167,4 +167,42 @@ abstract class ValueFormsParsingTest(using PlatformContext) extends AbstractPars
           Finder(root).recursiveFindByType[SetStatement].head.value mustBe a[OtherwiseValue]
     }
   }
+
+  "a conditional value" should {
+
+    "parse as a value with a boolean condition" in { (td: TestData) =>
+      letValue("when Data.hours > 8 then Data.hours - 8 else 0 end", td) match
+        case ConditionalValue(_, _: ComparisonExpression, _: ArithmeticExpression, _: NumericLiteral) =>
+          succeed
+        case other => fail(s"wrong shape: ${other.format}")
+    }
+
+    "nest a multi-way choice in the else" in { (td: TestData) =>
+      letValue("when Data.hours > 8 then 2 else when Data.hours > 4 then 1 else 0 end end", td) match
+        case ConditionalValue(_, _, _, _: ConditionalValue) => succeed
+        case other => fail(s"wrong shape: ${other.format}")
+    }
+
+    "be an operand without parentheses, since `end` closes it" in { (td: TestData) =>
+      letValue("when Data.hours > 8 then 2 else 1 end * Data.days", td) match
+        case ArithmeticExpression(_, ArithmeticOperator.Multiply, _: ConditionalValue, _) => succeed
+        case other => fail(s"wrong shape: ${other.format}")
+    }
+
+    "take an empty branch" in { (td: TestData) =>
+      letValue("when Data.hours > 0 then Data.hours else empty end", td) match
+        case ConditionalValue(_, _, _, ev: EmptyValue) => ev.typeRef mustBe empty
+        case other => fail(s"wrong shape: ${other.format}")
+    }
+
+    "require the else" in { (td: TestData) =>
+      parse(wrap("let v = when Data.hours > 0 then 1 end"), td) mustBe a[Left[?, ?]]
+    }
+
+    "leave the when STATEMENT alone" in { (td: TestData) =>
+      parse(wrap("""let v = 1  when Data.hours > 0 then do "x" else do "y" end"""), td) match
+        case Left(msgs) => fail(msgs.format)
+        case Right(root) => Finder(root).recursiveFindByType[WhenStatement].size mustBe 1
+    }
+  }
 }

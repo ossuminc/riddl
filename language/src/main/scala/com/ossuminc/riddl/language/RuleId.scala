@@ -589,6 +589,8 @@ enum RuleId(
   case OtherwiseNeverEmpty extends RuleId("value-otherwise-never-empty")
   /** BACKLOG [1.27]: the `otherwise` value does not fit the type of the value it stands in for. */
   case OtherwiseMismatch extends RuleId("value-otherwise-mismatch")
+  /** BACKLOG [1.27]: the two branches of a conditional value have no common type. */
+  case ConditionalBranchMismatch extends RuleId("value-conditional-branch-mismatch")
   // B4 (2026-09-21): arithmetic. Which categories may be combined by which operator is the table
   // in `ValidationPass.checkArithmetic`; anything off the table is this Error, never a coercion.
   case ArithmeticOperandMismatch extends RuleId("value-arithmetic-operand-mismatch")

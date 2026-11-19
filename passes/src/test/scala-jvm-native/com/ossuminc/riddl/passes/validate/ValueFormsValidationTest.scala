@@ -177,6 +177,13 @@ class ValueFormsValidationTest extends AbstractValidatingTest {
     "refuse a fallback of another type" in { (td: TestData) =>
       val found = mustRefuse(RuleId.OtherwiseMismatch, "Integer", "E.S.maybeN otherwise E.S.label", td)
       found.head.message must include("'E.S.maybeN'")
+      // A LITERAL fallback is held to the type as literals are everywhere else, under the
+      // literal rules' own ids.
+      Seq("E.S.maybeN otherwise \"x\"", "E.S.maybeN otherwise 1.5").foreach { arg =>
+        val msgs = messages(model("Integer", arg), td)
+        withClue(s"$arg:\n${clue(msgs)}") { errors(msgs) must not be empty }
+      }
+      mustBeClean("Integer", "E.S.maybeN otherwise 0", td)
     }
     "say when the value is never empty" in { (td: TestData) =>
       val msgs = messages(model("Integer", "E.S.n otherwise 0"), td)
@@ -201,6 +208,32 @@ class ValueFormsValidationTest extends AbstractValidatingTest {
         w.size mustBe 1
         w.head.suggestion must include("E.S.maybeN otherwise <default>")
       }
+    }
+  }
+
+  "a conditional value" should {
+    "join numeric branches, as arithmetic does" in { (td: TestData) =>
+      mustBeClean("Integer", "when E.S.flag then E.S.n else 0 end", td)
+      mustBeClean("Real", "when E.S.flag then 1.5 else E.S.n end", td)
+      mustBeClean("Integer", "when E.S.n > 1 then 2 else when E.S.n > 0 then 1 else 0 end end", td)
+    }
+    "make the other branch optional when one is a bare empty" in { (td: TestData) =>
+      mustBeClean("Integer?", "when E.S.flag then E.S.n else empty end", td)
+      mustAdvise("Integer", "when E.S.flag then E.S.n else empty end", td)
+      mustBeClean("Integer", "when E.S.flag then E.S.n else empty end otherwise 0", td)
+    }
+    "refuse branches with no common type" in { (td: TestData) =>
+      val found = mustRefuse(RuleId.ConditionalBranchMismatch, "Integer",
+        "when E.S.flag then E.S.n else E.S.label end", td)
+      found.head.message must include("'E.S.label'")
+    }
+    "require a boolean condition" in { (td: TestData) =>
+      val msgs = messages(model("Integer", "when E.S.label then 1 else 0 end"), td)
+      withClue(clue(msgs)) { errors(msgs) must not be empty }
+    }
+    "not fill a String" in { (td: TestData) =>
+      val msgs = messages(model("String", "when E.S.flag then 1 else 0 end"), td)
+      withClue(clue(msgs)) { errors(msgs) must not be empty }
     }
   }
 }

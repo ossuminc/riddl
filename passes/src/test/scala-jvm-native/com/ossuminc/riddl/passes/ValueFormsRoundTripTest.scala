@@ -53,7 +53,12 @@ class ValueFormsRoundTripTest extends AnyWordSpec with Matchers {
     "one of Data.lines as l where l.qty > 0 otherwise empty",
     "one of Data.lines as l where (l.qty otherwise 0) > 0",
     "sum of Data.lines as l by (l.qty otherwise 0)",
-    "Data.maybe.qty otherwise 0"
+    "Data.maybe.qty otherwise 0",
+    "when Data.hours > 8 then Data.hours - 8 else 0 end",
+    "when Data.hours > 8 then 2 else when Data.hours > 4 then 1 else 0 end end",
+    "when Data.hours > 8 then 2 else 1 end * Data.days",
+    "when Data.hours > 0 then Data.maybe else empty end otherwise 0",
+    "when (Data.hours otherwise 0) > 1 then 1 else 0 end"
   )
 
   private val src: String =

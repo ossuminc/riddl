@@ -7084,6 +7084,7 @@ case class ValidationPass(
     case sv: SumValue => valueReferencedDefs(sv.collection) ++ sv.by.toSeq.flatMap(valueReferencedDefs)
     case ov: OneOfValue => valueReferencedDefs(ov.collection) ++ valueReferencedDefs(ov.predicate)
     case ow: OtherwiseValue => valueReferencedDefs(ow.value) ++ valueReferencedDefs(ow.fallback)
+    case cv: ConditionalValue => valueReferencedDefs(cv.condition) ++ valueReferencedDefs(cv.thenValue) ++ valueReferencedDefs(cv.elseValue)
     case mv: MembershipValue => valueReferencedDefs(mv.collection) ++ valueReferencedDefs(mv.element)
     case cr: ConstantRef =>
       resolution.refMap.definitionOf[Constant](cr.pathId).map(cr.pathId -> _).toSeq
@@ -8253,6 +8254,10 @@ case class ValidationPass(
     case sv: SumValue => countValueFailPoints(sv.collection) + sv.by.map(countValueFailPoints).getOrElse(0)
     case ov: OneOfValue => countValueFailPoints(ov.collection) + countValueFailPoints(ov.predicate)
     case ow: OtherwiseValue => countValueFailPoints(ow.value) + countValueFailPoints(ow.fallback)
+    // [1.27]: only ONE branch runs, so a conditional counts the MAX of its branches.
+    case cv: ConditionalValue =>
+      countValueFailPoints(cv.condition) +
+        math.max(countValueFailPoints(cv.thenValue), countValueFailPoints(cv.elseValue))
     case mv: MembershipValue => countValueFailPoints(mv.collection) + countValueFailPoints(mv.element)
     // B2: a query READS the store and may fail, exactly as `get` does (1), plus its condition.
     case qv: QueryValue => 1 + qv.where.map(countValueFailPoints).getOrElse(0)
@@ -8376,6 +8381,7 @@ case class ValidationPass(
     case sv: SumValue => stateReadsIn(sv.collection) ++ sv.by.toSeq.flatMap(stateReadsIn)
     case ov: OneOfValue => stateReadsIn(ov.collection) ++ stateReadsIn(ov.predicate)
     case ow: OtherwiseValue => stateReadsIn(ow.value) ++ stateReadsIn(ow.fallback)
+    case cv: ConditionalValue => stateReadsIn(cv.condition) ++ stateReadsIn(cv.thenValue) ++ stateReadsIn(cv.elseValue)
     case mv: MembershipValue      => stateReadsIn(mv.collection) ++ stateReadsIn(mv.element)
     case _: DurationLiteral       => Seq.empty // B4: a literal
     // A17's ASK form: `when invariant Limit with <expr>`. The `with` operand is a full Value, so it
@@ -8443,6 +8449,7 @@ case class ValidationPass(
     case sv: SumValue => initiatesIn(sv.collection) ++ sv.by.toSeq.flatMap(initiatesIn)
     case ov: OneOfValue => initiatesIn(ov.collection) ++ initiatesIn(ov.predicate)
     case ow: OtherwiseValue => initiatesIn(ow.value) ++ initiatesIn(ow.fallback)
+    case cv: ConditionalValue => initiatesIn(cv.condition) ++ initiatesIn(cv.thenValue) ++ initiatesIn(cv.elseValue)
     case mv: MembershipValue      => initiatesIn(mv.collection) ++ initiatesIn(mv.element)
     case _: DurationLiteral       => Seq.empty // B4: a literal
     case ic: InvariantCondition   => ic.argument.toSeq.flatMap(initiatesIn)
@@ -8516,6 +8523,7 @@ case class ValidationPass(
     case sv: SumValue => systemValuesIn(sv.collection) ++ sv.by.toSeq.flatMap(systemValuesIn)
     case ov: OneOfValue => systemValuesIn(ov.collection) ++ systemValuesIn(ov.predicate)
     case ow: OtherwiseValue => systemValuesIn(ow.value) ++ systemValuesIn(ow.fallback)
+    case cv: ConditionalValue => systemValuesIn(cv.condition) ++ systemValuesIn(cv.thenValue) ++ systemValuesIn(cv.elseValue)
     case mv: MembershipValue      => systemValuesIn(mv.collection) ++ systemValuesIn(mv.element)
     case ic: InvariantCondition   => ic.argument.toSeq.flatMap(systemValuesIn)
     case ask: Ask                 => ask.args.toSeq.flatMap(a => systemValuesIn(a.value))
@@ -8551,6 +8559,7 @@ case class ValidationPass(
     case sv: SumValue => asksIn(sv.collection) ++ sv.by.toSeq.flatMap(asksIn)
     case ov: OneOfValue => asksIn(ov.collection) ++ asksIn(ov.predicate)
     case ow: OtherwiseValue => asksIn(ow.value) ++ asksIn(ow.fallback)
+    case cv: ConditionalValue => asksIn(cv.condition) ++ asksIn(cv.thenValue) ++ asksIn(cv.elseValue)
     case mv: MembershipValue      => asksIn(mv.collection) ++ asksIn(mv.element)
     case _: DurationLiteral       => Seq.empty // B4: a literal
     // A17's ASK form. Same reasoning as `stateReadsIn`: the `with` operand is a full Value, so an
@@ -10817,6 +10826,11 @@ case class ValidationPass(
       // own TypeExpression -- none of them a NAMED Type. See `valueTypeExpr`.
       case _: CollectionPredicate | _: CountValue | _: MembershipValue => None
       case _: DurationUnitsValue | _: OneOfValue                       => None
+      case cv: ConditionalValue =>
+        conditionalResultType(cv, parents, lets, elements).flatMap {
+          case ate: AliasedTypeExpression => resolveTypeAlias(ate)
+          case _                          => None
+        }
       case ow: OtherwiseValue =>
         otherwiseResultType(ow, parents, lets, elements).flatMap {
           case ate: AliasedTypeExpression => resolveTypeAlias(ate)
@@ -11312,6 +11326,49 @@ case class ValidationPass(
       case _: NumericType | _: Duration | _: Currency  => Some(te)
       case _                                           => None
 
+  /** BACKLOG [1.27]: the join of a conditional value's two branch types, or None when they have
+    * none. Numerics join on B4's lattice (the result of adding them); anything else must be
+    * assignable BOTH ways. Either branch admitting empty makes the result optional.
+    */
+  private def joinBranchTypes(a: TypeExpression, b: TypeExpression, loc: At): Option[TypeExpression] =
+    val ua = underlyingTypeExpr(a)
+    val ub = underlyingTypeExpr(b)
+    def plainNumeric(te: TypeExpression): Boolean = te match
+      case _: Bool        => false
+      case _: NumericType => true
+      case _              => false
+    val joined =
+      if plainNumeric(ua) && plainNumeric(ub) then
+        combineArithmetic(ArithmeticOperator.Add, ua, ub, loc)
+      else if ua.isAssignmentCompatible(ub) && ub.isAssignmentCompatible(ua) then Some(a)
+      else None
+    joined.map(j => optionalIfChained(j, admitsEmpty(a) || admitsEmpty(b)))
+
+  /** BACKLOG [1.27]: what a conditional value denotes. A bare `empty` branch has no type of its
+    * own: it takes the other branch's, made optional.
+    */
+  private def conditionalResultType(
+    cv: ConditionalValue,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Option[TypeExpression] =
+    def bareEmpty(v: Value): Boolean = v match
+      case ev: EmptyValue => ev.ascribedType.isEmpty
+      case _              => false
+    // `operandTypeExpr`, not `valueTypeExpr`: the latter has no arm for a bare numeric literal,
+    // and `then 1 else 0` is the commonest conditional there is.
+    val a = operandTypeExpr(cv.thenValue, parents, lets, elements)
+    val b = operandTypeExpr(cv.elseValue, parents, lets, elements)
+    if bareEmpty(cv.thenValue) then b.map(optionalIfChained(_, chained = true))
+    else if bareEmpty(cv.elseValue) then a.map(optionalIfChained(_, chained = true))
+    else
+      for
+        ta <- a
+        tb <- b
+        j <- joinBranchTypes(ta, tb, cv.loc)
+      yield j
+
   /** BACKLOG [1.27]: what `x otherwise y` denotes -- `x`'s type with its optionality removed
     * (`Integer?` gives `Integer`); a collection stays a collection, since a default for an empty
     * collection is itself a collection. When the fallback may itself be empty, so may the result:
@@ -11324,7 +11381,7 @@ case class ValidationPass(
     elements: Map[String, TypeExpression]
   ): Option[TypeExpression] =
     val fallbackMayBeEmpty =
-      valueTypeExpr(ow.fallback, parents, lets, elements).exists(admitsEmpty)
+      operandTypeExpr(ow.fallback, parents, lets, elements).exists(admitsEmpty)
     valueTypeExpr(ow.value, parents, lets, elements).map { te =>
       aliasFreeTypeExpr(te) match
         case opt: Optional => optionalIfChained(opt.typeExp, fallbackMayBeEmpty)
@@ -11342,7 +11399,7 @@ case class ValidationPass(
   ): Option[TypeExpression] =
     val elemType = valueTypeExpr(sv.collection, parents, lets, elements).flatMap(collectionElementType)
     val summed = sv.by match
-      case Some(b) => valueTypeExpr(b, parents, lets, sumScope(sv, elemType, elements))
+      case Some(b) => operandTypeExpr(b, parents, lets, sumScope(sv, elemType, elements))
       case None    => elemType
     summed.flatMap(summableResult(_, sv.loc))
 
@@ -11536,6 +11593,7 @@ case class ValidationPass(
         Some(optionalIfChained(Integer(du.loc), chained))
       case sv: SumValue => sumResultType(sv, parents, lets, elements)
       case ow: OtherwiseValue => otherwiseResultType(ow, parents, lets, elements)
+      case cv: ConditionalValue => conditionalResultType(cv, parents, lets, elements)
       // BACKLOG [1.27]: the matching element, or empty -- the element type made optional.
       case ov: OneOfValue =>
         valueTypeExpr(ov.collection, parents, lets, elements)
@@ -11798,7 +11856,7 @@ case class ValidationPass(
         // What is summed: the projection when there is one, else the element. Silent when it
         // cannot be typed -- an unresolved operand is reported where it is.
         val summed = sv.by match
-          case Some(b) => valueTypeExpr(b, parents, lets, scope)
+          case Some(b) => operandTypeExpr(b, parents, lets, scope)
           case None    => elemType
         summed.foreach { te =>
           val known = aliasFreeTypeExpr(te) match
@@ -11815,6 +11873,29 @@ case class ValidationPass(
               ruleId = Some(RuleId.SumNotSummable)
             )
         }
+      case cv: ConditionalValue =>
+        validateValue(cv.condition, parents, lets, elements)
+        validateValue(cv.thenValue, parents, lets, elements)
+        validateValue(cv.elseValue, parents, lets, elements)
+        cv.condition match
+          case vr: ValueRef => checkWhenValueRef(vr, parents, lets, elements)
+          case _: PromptValue => () // a typed hole the AI decides; prose is not checked here
+          case other =>
+            checkBooleanOperand(other, "a conditional value's condition", parents, lets, elements)
+        for
+          a <- operandTypeExpr(cv.thenValue, parents, lets, elements)
+          b <- operandTypeExpr(cv.elseValue, parents, lets, elements)
+          if joinBranchTypes(a, b, cv.loc).isEmpty
+        do
+          messages.addError(
+            cv.loc,
+            s"The branches of this conditional value have no common type: " +
+              s"'${cv.thenValue.format}' is a '${a.format}' and '${cv.elseValue.format}' is a " +
+              s"'${b.format}'",
+            suggestion = "Give both branches the same type. Numbers of different kinds are fine " +
+              "(they join, as in arithmetic); anything else must match exactly.",
+            ruleId = Some(RuleId.ConditionalBranchMismatch)
+          )
       case ow: OtherwiseValue =>
         validateValue(ow.value, parents, lets, elements)
         validateValue(ow.fallback, parents, lets, elements)
@@ -11832,14 +11913,22 @@ case class ValidationPass(
               ruleId = Some(RuleId.OtherwiseNeverEmpty)
             )
         }
-        for
-          expected <- otherwiseResultType(ow, parents, lets, elements)
-          actual <- valueTypeExpr(ow.fallback, parents, lets, elements)
-        do
-          checkAssignable(
-            expected, actual, None, parents, ow.fallback.loc,
-            s"The 'otherwise' value for '${ow.value.format}'", RuleId.OtherwiseMismatch
-          )
+        otherwiseResultType(ow, parents, lets, elements).foreach { expected =>
+          ow.fallback match
+            // A LITERAL default is judged as a literal is at every other typed position (a
+            // constructor argument, `put`, `return`): `"x"` for an Integer, `1.5` for an Integer.
+            // Numeric assignability itself is deliberately loose, so `checkAssignable` alone would
+            // pass both.
+            case nl: NumericLiteral => checkNumericLiteralConformance(nl, expected)
+            case other =>
+              checkLiteralConformance(other, expected)
+              operandTypeExpr(other, parents, lets, elements).foreach { actual =>
+                checkAssignable(
+                  expected, actual, None, parents, other.loc,
+                  s"The 'otherwise' value for '${ow.value.format}'", RuleId.OtherwiseMismatch
+                )
+              }
+        }
       case ov: OneOfValue =>
         validateOverCollection(
           ov.collection, Some(ov.element), Some(ov.predicate), "'one of'", parents, lets, elements

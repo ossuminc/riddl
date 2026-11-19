@@ -435,6 +435,11 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         ov.predicate match
           case _: OtherwiseValue => add("(").emitValue(ov.predicate).add(")")
           case _                 => emitValue(ov.predicate)
+      case cv: ConditionalValue => // BACKLOG [1.27]: closed by `when`/`end`, never parenthesized
+        add("when ").emitValue(cv.condition)
+        add(" then ").emitValue(cv.thenValue)
+        add(" else ").emitValue(cv.elseValue)
+        add(" end")
       case ow: OtherwiseValue => // BACKLOG [1.27]: left-associative, the loosest level
         emitValue(ow.value)
         add(" otherwise ")

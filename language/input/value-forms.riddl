@@ -4,6 +4,7 @@
 //   * `sum of xs [as e by <expr>]` -- a total, of the elements or of a per-element product
 //   * `one of xs as e where p` -- the matching element, or empty; its fields chain optionally
 //   * `x otherwise y` -- x unless it is empty, else y; the loosest value operator
+//   * `when c then a else b end` -- a conditional VALUE; only the chosen branch runs
 // The unit words are NOT reserved: `hours` is a field name below, and so is `days`.
 domain Insurance is {
   context Billing is {
@@ -28,7 +29,8 @@ domain Insurance is {
       units: Integer,
       quotedQuantity: Integer?,
       quantity: Integer,
-      deposit: Integer
+      deposit: Integer,
+      tier: Integer
     } with { briefly "e" }
 
     entity Account is {
@@ -49,7 +51,8 @@ domain Insurance is {
             units = sum of Policy.lines as l by l.quantity,
             quotedQuantity = line.quantity,
             quantity = line.quantity otherwise 0,
-            deposit = Policy.deposit.amount otherwise 0
+            deposit = Policy.deposit.amount otherwise 0,
+            tier = when Policy.days > 30 then 2 else when Policy.days > 7 then 1 else 0 end end
           )
         }
         on other is { error "unexpected" }

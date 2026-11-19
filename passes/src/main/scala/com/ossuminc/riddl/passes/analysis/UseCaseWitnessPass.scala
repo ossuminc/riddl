@@ -235,6 +235,8 @@ case class UseCaseWitnessPass(
       case sv: SumValue => getInputRefsIn(sv.collection) ++ sv.by.toSeq.flatMap(getInputRefsIn)
       case ov: OneOfValue => getInputRefsIn(ov.collection) ++ getInputRefsIn(ov.predicate)
       case ow: OtherwiseValue => getInputRefsIn(ow.value) ++ getInputRefsIn(ow.fallback)
+      case cv: ConditionalValue =>
+        getInputRefsIn(cv.condition) ++ getInputRefsIn(cv.thenValue) ++ getInputRefsIn(cv.elseValue)
       case mv: MembershipValue       => getInputRefsIn(mv.collection) ++ getInputRefsIn(mv.element)
       case _                         => Seq.empty
 

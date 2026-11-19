@@ -1707,6 +1707,12 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writeLocation(ow.loc)
         writeValue(ow.value)
         writeValue(ow.fallback)
+      case cv: ConditionalValue =>
+        writer.writeU8(26)
+        writeLocation(cv.loc)
+        writeValue(cv.condition)
+        writeValue(cv.thenValue)
+        writeValue(cv.elseValue)
       // B2 (revision 29): `query [one] <table> [where …]` -- value tag 17
       case qv: QueryValue =>
         writer.writeU8(17)
