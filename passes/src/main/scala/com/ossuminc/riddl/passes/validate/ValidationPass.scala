@@ -11175,6 +11175,28 @@ case class ValidationPass(
   private def letIndexOf(name: String, lets: Seq[LetStatement]): Int =
     lets.lastIndexWhere(_.identifier.value == name)
 
+  /** The [[TypeExpression]] the `let` at `lets(idx)` binds, or `None` when it cannot be
+    * determined (a prose `prompt(…)`, an unresolved reference). Only the locals declared before it
+    * are in scope for inference.
+    */
+  private def letTypeExpr(
+    idx: Int,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Option[TypeExpression] =
+    val ls = lets(idx)
+    val priorLets = lets.take(idx)
+    letType(ls, priorLets, parents, elements)
+      .map(_.typEx)
+      // A DECLARED predefined ascription outranks inference from the expression, exactly as a
+      // declared named Type does -- it is the same fact, written with a keyword instead of an
+      // alias. Ordered before the inference fallback for that reason, not for precedence between
+      // two guesses.
+      .orElse(letDeclaredPredefinedType(ls))
+      .orElse(valueTypeExpr(ls.expression, parents, priorLets, elements))
+  end letTypeExpr
+
   /** A55: the [[TypeExpression]] a [[ValueRef]] denotes — from the lexical `let` scope when its
     * head names a local (which SHADOWS any outer definition of the same name), otherwise from the
     * definition ResolutionPass put in the refMap.
@@ -11194,17 +11216,7 @@ case class ValidationPass(
     else
       val idx = letIndexOf(names.head, lets)
       if idx >= 0 then
-        val ls = lets(idx)
-        val priorLets = lets.take(idx)
-        letType(ls, priorLets, parents, elements)
-          .map(_.typEx)
-          // A DECLARED predefined ascription outranks inference from the expression, exactly as a
-          // declared named Type does -- it is the same fact, written with a keyword instead of an
-          // alias. Ordered before the inference fallback for that reason, not for precedence
-          // between two guesses.
-          .orElse(letDeclaredPredefinedType(ls))
-          .orElse(valueTypeExpr(ls.expression, parents, priorLets, elements))
-          .flatMap(te => typeExprOfPath(te, names.tail))
+        letTypeExpr(idx, parents, lets, elements).flatMap(te => typeExprOfPath(te, names.tail))
       else
         valueRefDefinition(vr, parents).flatMap {
           case f: Field    => Some(f.typeEx)
@@ -11458,7 +11470,19 @@ case class ValidationPass(
         case Some(_: Anything) => true
         case Some(te)          => typeExprOfPath(te, names.tail).nonEmpty
         case None =>
-          letIndexOf(names.head, lets) >= 0 || valueRefDefinition(vr, parents).nonEmpty
+          val idx = letIndexOf(names.head, lets)
+          if idx < 0 then valueRefDefinition(vr, parents).nonEmpty
+          else if names.sizeIs == 1 then true
+          else
+            // riddl-models, 2026-11-19: the head naming a `let` is NOT enough either -- the same
+            // walk the element arm above does, or `valuation.totalAssetsX.amount` validates clean.
+            // A `let` whose own type cannot be determined (prose, an unresolved expression) is not
+            // blamed for its path: nothing is knowable about its fields, and whatever made it
+            // undeterminable is reported where it was bound, if anywhere.
+            letTypeExpr(idx, parents, lets, elements) match
+              case None | Some(_: Anything) => true
+              case Some(te)                 => typeExprOfPath(te, names.tail).nonEmpty
+          end if
     }
 
   /** A value reference must name a VALUE (synapify, 2026-11-17). The resolver's last resort for a

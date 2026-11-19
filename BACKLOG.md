@@ -418,8 +418,17 @@ task files, so they were NOT physically reshuffled; this index carries the order
   (4) a `Duration` as a number of units -- minutes AND seconds ("the model
   itself may need to work in a number of minutes and we should add toSeconds
   as well"). DECLINE (5) a collection literal: "the utility is dubious and the
-  collection construction question is real". Spellings not yet settled; each
-  needs a plan, EBNF, all four reflective surfaces, and a CM entry. (1) yields
+  collection construction question is real". **Spellings RULED 2026-11-19**:
+  `one of xs as e where p` (a `T?`); `sum of xs [as e by <expr>]`;
+  `x otherwise y` (loosest); `when c then a else b end` (else mandatory);
+  `<unit> of d` for every plural duration unit (an Integer). Also ruled the
+  same day: **optional chaining** -- a path through a `T?` resolves and its
+  result is optional (today it is `value-ref-unresolved`, even
+  `E.S.opt.amount`); collections stay unwalkable (`map`). APPROVED PLAN:
+  `~/.claude/plans/dynamic-puzzling-hinton.md` (order: chaining, units, sum,
+  one of, otherwise, conditional; ~28 sites per node, inventoried there). Not
+  covered: `Date + 1 month` (calendar months are not durations), which
+  riddl-models' LifePolicy site needs beyond form 3. (1) yields
   a `T?`, so its result draws `value-optional-for-required` when given to a
   required field. When `otherwise` lands, that advisory's SUGGESTION should name
   `<value> otherwise <default>` (it names a `when … != empty` guard today).

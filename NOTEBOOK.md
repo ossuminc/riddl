@@ -71,6 +71,18 @@ fixtures, not a task).
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-19 — a path through a `let` was never walked
+
+riddl-models found `valuation.totalAssetsX.amount` (a `let` bound to an `ask`) validating
+clean. `valueRefResolves` accepted a `let`-headed path as soon as the HEAD matched; the
+`foreach`-element arm one line above already walked the tail (A25), so this was the sibling
+that fix missed -- "fix the shape, not the instance" again. Now the tail walks the `let`'s type
+(`letTypeExpr`, extracted so the walk and `valueRefTypeExpr` share one answer); a `let` whose
+own type is undeterminable (prose, unresolved) is not blamed. `LetBoundPathResolutionTest`, 7
+cases, red first. Corpus census: 0 errors over 191 entry points, so no misspelled paths were
+hiding. Found while probing: a path through a `T?` is refused everywhere (even a correct
+`E.S.opt.amount`); Reid ruled optional chaining in, as part of [1.27]'s plan.
+
 ## 2026-11-18 (late) — literals held to their type; optional into required
 
 riddl-models, replacing `prompt(...)` yield arguments with real values, read
