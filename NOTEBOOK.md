@@ -35,16 +35,15 @@ authoritative). Ask `git` for branch, tree and unpushed span — never trust a w
 **`main` is heading for 2.8.0** (Reid): undeliverable-clause rules, schema-link typing,
 `on init` as creation, `on entry`, `ask query Q(args) of P`, literals held to their type,
 the optional-for-required Advisory, let-path walking, **FORMAT_REVISION 33**.
-`../bin/riddlc` and ivy are `2.7.0-27-faf60865` (restaged 2026-11-19 at Reid's request so
-riddl-models can migrate). `morph S -> S` stays a Warning (Reid). **Owed at 3.0: BACKLOG
+`../bin/riddlc` and ivy are `2.7.0-41-67efe607` (restaged 2026-11-19 late, at Reid's
+request, via `scripts/publish-and-stage.sh`; includes [1.27] and the record-with-method fix). `morph S -> S` stays a Warning (Reid). **Owed at 3.0: BACKLOG
 [5.10]** (rename the `AST.Initiate` class to `Create`, drop the alias val). BACKLOG [5.9]
 stays DEFERRED by Reid.
 
 **[1.27] is DONE** (2026-11-19): optional chaining and all five value forms, one commit
 each (`0231d7a77` .. `cebc97f73`, then `1af9d704b` for the conditional value), CM recorded
-(top-level `7558d94`, `47ff9f8`), **FORMAT_REVISION 34**, BAST value tags 22-26. **Not
-restaged**: `../bin/riddlc` and ivy are still `2.7.0-27-faf60865`, so riddl-models cannot use
-the forms until Reid restages. Follow-up filed: BACKLOG [1.31] (B5's predicate parentheses).
+(top-level `7558d94`, `47ff9f8`), **FORMAT_REVISION 34**, BAST value tags 22-26. Restaged
+at `2.7.0-41-67efe607`, so riddl-models can now write the forms. Follow-up filed: BACKLOG [1.31] (B5's predicate parentheses).
 
 **riddl-examples is RETIRED** (Reid, 2026-11-19; riddl `06bc49add`, top-level `234ed69`). Its
 FooBar models are `language/input/foobar/`, pinned by `FooBarFixturesTest`. **The GitHub repo
