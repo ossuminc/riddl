@@ -47,12 +47,11 @@ revision); the plan `~/.claude/plans/dynamic-puzzling-hinton.md` still applies. 
 BACKLOG [1.27], `docs/claude/language-constructs.md` § [1.27]. **Not restaged**: `../bin/riddlc`
 and ivy are still `2.7.0-27-faf60865`, so riddl-models cannot use the new forms yet.
 
-**Known red: riddlc `RunRiddlcOnLocalTest` "validate shopify-cart"** (JVM and Native).
-riddl-examples' `shopify-cart.riddl:1454`, a schema `link ... field Cart.items.id to field
-Product.id`, no longer resolves. It predates [1.27] (the pre-session `2.7.0-27` binary fails
-it; 2.6.0 and the 2.7.0 certification passed), so it came in with the 2.8.0 work, possibly
-`8baddef3c` (`repo-link-type-mismatch`). Not bisected. Reid is weighing dropping
-riddl-examples altogether.
+**riddl-examples is RETIRED** (Reid, 2026-11-19; riddl `06bc49add`, top-level `234ed69`). Its
+FooBar models are `language/input/foobar/`, pinned by `FooBarFixturesTest`. **The GitHub repo
+is NOT yet archived**: `gh repo archive` was refused by the permission classifier, so Reid runs
+it. Its former shopify-cart failure was bisected to `8baddef3c` and is the MODEL's error, not
+a regression -- see the 2026-11-19 (evening) entry.
 
 ### Traps a fresh session would hit
 
@@ -93,6 +92,22 @@ Everything else from 2026-11-18/19 is in `task/done/`. riddl-models has its own 
 their `2f2291b63`). `probe-2026-09-06-adaptor/` is a leftover scratch directory, not a task.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-11-19 (evening) — riddl-examples retired; shopify-cart bisected
+
+Reid retired riddl-examples: 9 entry points against riddl-models' 191, unmigrated since
+2026-09-11, depended on by nothing outside riddl. The FooBar models moved here as fixtures.
+Two of the deleted suites had stopped measuring anything: `RunCommandsOnExamplesTest` ran
+`from ReactiveBBQ.conf` with no target command, which `from` does not accept, and its base's
+`onFailure` never failed; `RunRiddlcOnLocalTest` read a hard-coded `/Users/reid` path.
+
+**The shopify-cart failure bisects to `8baddef3c`** (0 errors at its parent, 2 at it), the
+commit that first RESOLVED a schema link's two ends. Its link was
+`field Cart.items.id to field Product.id`: an ENTITY head, then a COLLECTION field, then the
+element's field. Links name stored record fields (riddl-models' 17 all do:
+`field StoredOrder.orderId to field StoredReturn.orderId`), so it had never been valid; it was
+merely never checked. **Same family as the GBNF-era lesson: a check that never ran is not
+evidence the input was right.** Nothing to fix in riddl.
 
 ## 2026-11-19 (later) — [1.27] steps 1-5: chaining and four value forms
 
