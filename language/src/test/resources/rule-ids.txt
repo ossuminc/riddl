@@ -446,3 +446,4 @@ stmt-morph-to-current-state
 value-ask-bare-query
 value-time-literal-not-iso8601
 value-optional-for-required
+value-duration-units-not-duration

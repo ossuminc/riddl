@@ -627,6 +627,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case cf: CollectionFilter =>
         resolveValue(cf.collection, parents); resolveValue(cf.predicate, parents)
       case cv: CountValue      => resolveValue(cv.collection, parents)
+      case du: DurationUnitsValue => resolveValue(du.duration, parents)
       case mv: MembershipValue =>
         resolveValue(mv.collection, parents); resolveValue(mv.element, parents)
 

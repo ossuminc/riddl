@@ -1009,6 +1009,9 @@ object JsonModel:
   /** B5: `{ "value": "contains", "collection": <value>, "element": <value> }` */
   case class MembershipValueDto(collection: ValueDto, element: ValueDto) extends ValueDto
 
+  /** BACKLOG [1.27]: `{ "value": "durationUnits", "unit": "minutes", "duration": <value> }` */
+  case class DurationUnitsValueDto(unit: String, duration: ValueDto) extends ValueDto
+
   /** B2 (2026-09-22): `{ "value": "query", "table": "Schema.table", "one"?: true, "where"?:
     * <value> }` -- reading the repository's own storage.
     */
@@ -1917,6 +1920,7 @@ object JsonModel:
         CollectionFilterDto(readValue(m("collection")), m("element").str, readValue(m("predicate")))
       case "count"    => CountValueDto(readValue(m("collection")))
       case "contains" => MembershipValueDto(readValue(m("collection")), readValue(m("element")))
+      case "durationUnits" => DurationUnitsValueDto(m("unit").str, readValue(m("duration")))
       case "query" => // B2
         QueryValueDto(
           m("table").str,
@@ -2049,6 +2053,12 @@ object JsonModel:
           "value" -> ujson.Str("contains"),
           "collection" -> writeValue(collection),
           "element" -> writeValue(element)
+        )
+      case DurationUnitsValueDto(unit, duration) =>
+        ujson.Obj(
+          "value" -> ujson.Str("durationUnits"),
+          "unit" -> ujson.Str(unit),
+          "duration" -> writeValue(duration)
         )
       case QueryValueDto(table, one, where) =>
         ujson.Obj.from(
@@ -3082,6 +3092,7 @@ object JsonModel:
     "unit",
     "table", // B2: the storage statements and the query value
     "quantifier", // B5: the collection kinds
+    "duration", // BACKLOG [1.27]: `<unit> of <duration>`
     "collection",
     "predicate",
     "assignments",

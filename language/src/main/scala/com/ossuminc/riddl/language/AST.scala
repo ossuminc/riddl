@@ -871,7 +871,7 @@ object AST:
     GetValue | PromptValue | BooleanExpression | Call | Ask | SelfValue | SystemValue | Create |
     NumericLiteral | LookupValue | EmptyValue | ArithmeticExpression | DurationLiteral |
     QueryValue | TableRef | CollectionPredicate | CollectionFilter | CountValue |
-    MembershipValue | Requires | Returns | InvariantBlock
+    MembershipValue | DurationUnitsValue | Requires | Returns | InvariantBlock
 
   /** Type of definitions that occur in a [[Root]] without [[Include]]. [[Root]] deliberately stays
     * narrow: it is the file parse-root, not the reuse unit. [[Module]] is the reuse unit and is
@@ -3274,12 +3274,13 @@ object AST:
     * [[ConstantRef]] from a comparison-only operand to a value in its own right, because a
     * comparison's operands are now full Values (see [[ComparisonExpression]]). B2 (2026-09-22)
     * adds [[QueryValue]], the eighteenth; B5 the four collection kinds, making twenty-two.
+    * BACKLOG [1.27] (2026-11-19) adds [[DurationUnitsValue]], the twenty-third.
     */
   type Value =
     LiteralString | PromptValue | Constructor | ValueRef | GetValue | BooleanExpression | Call |
       Ask | SelfValue | SystemValue | Create | NumericLiteral | LookupValue | EmptyValue |
       ArithmeticExpression | DurationLiteral | ConstantRef | QueryValue | CollectionPredicate |
-      CollectionFilter | CountValue | MembershipValue
+      CollectionFilter | CountValue | MembershipValue | DurationUnitsValue
 
   /** A54: a single argument supplied to a [[Constructor]]. Positional when `name` is `None`; named
     * (`id = value`) when `name` is `Some`. Validation requires positional arguments to precede
@@ -4375,6 +4376,27 @@ object AST:
     override def kind: String = "Count Value"
     def format: String = s"count of ${CollectionValues.parenthesized(collection)}"
   end CountValue
+
+  /** BACKLOG [1.27] (Reid, 2026-11-19): `minutes of <d>` -- a `Duration` in whole units of
+    * `unit`, truncated toward zero, as an `Integer`. Every PLURAL unit word B4's duration literal
+    * knows (`nanoseconds` … `weeks`); the singulars are not this form.
+    *
+    * The unit words are NOT reserved: the corpus has 18 fields named `hours` or `days`, so the
+    * form is recognised only as `<unit> of`. The operand is an atom, like `count of`'s, so
+    * `minutes of d + 1` is `(minutes of d) + 1`, and an infix operand is parenthesized.
+    */
+  @JSExportTopLevel("DurationUnitsValue")
+  case class DurationUnitsValue(loc: At, unit: String, duration: Value) extends RiddlValue:
+    override def kind: String = "Duration Units Value"
+    def format: String = s"$unit of ${CollectionValues.parenthesized(duration)}"
+  end DurationUnitsValue
+
+  object DurationUnitsValue:
+    /** The unit words the form accepts, smallest first. */
+    val units: Seq[String] = Seq(
+      "nanoseconds", "microseconds", "milliseconds", "seconds", "minutes", "hours", "days", "weeks"
+    )
+  end DurationUnitsValue
 
   /** B5: the shared parenthesizing rule for a collection operand. An INFIX operand (a filter, a
     * membership test, a comparison, a logical or an arithmetic expression) binds looser than the

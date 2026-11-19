@@ -1679,6 +1679,12 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writeLocation(mv.loc)
         writeValue(mv.collection)
         writeValue(mv.element)
+      // BACKLOG [1.27] (revision 34): the value forms -- value tags 22-26
+      case du: DurationUnitsValue =>
+        writer.writeU8(22)
+        writeLocation(du.loc)
+        writeString(du.unit)
+        writeValue(du.duration)
       // B2 (revision 29): `query [one] <table> [where …]` -- value tag 17
       case qv: QueryValue =>
         writer.writeU8(17)

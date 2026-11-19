@@ -7080,6 +7080,7 @@ case class ValidationPass(
     case cf: CollectionFilter =>
       valueReferencedDefs(cf.collection) ++ valueReferencedDefs(cf.predicate)
     case cv: CountValue      => valueReferencedDefs(cv.collection)
+    case du: DurationUnitsValue => valueReferencedDefs(du.duration)
     case mv: MembershipValue => valueReferencedDefs(mv.collection) ++ valueReferencedDefs(mv.element)
     case cr: ConstantRef =>
       resolution.refMap.definitionOf[Constant](cr.pathId).map(cr.pathId -> _).toSeq
@@ -8245,6 +8246,7 @@ case class ValidationPass(
     case cf: CollectionFilter =>
       countValueFailPoints(cf.collection) + countValueFailPoints(cf.predicate)
     case cv: CountValue      => countValueFailPoints(cv.collection)
+    case du: DurationUnitsValue => countValueFailPoints(du.duration)
     case mv: MembershipValue => countValueFailPoints(mv.collection) + countValueFailPoints(mv.element)
     // B2: a query READS the store and may fail, exactly as `get` does (1), plus its condition.
     case qv: QueryValue => 1 + qv.where.map(countValueFailPoints).getOrElse(0)
@@ -8364,6 +8366,7 @@ case class ValidationPass(
     case cp: CollectionPredicate  => stateReadsIn(cp.collection) ++ stateReadsIn(cp.predicate) // B5
     case cf: CollectionFilter     => stateReadsIn(cf.collection) ++ stateReadsIn(cf.predicate)
     case cv: CountValue           => stateReadsIn(cv.collection)
+    case du: DurationUnitsValue => stateReadsIn(du.duration)
     case mv: MembershipValue      => stateReadsIn(mv.collection) ++ stateReadsIn(mv.element)
     case _: DurationLiteral       => Seq.empty // B4: a literal
     // A17's ASK form: `when invariant Limit with <expr>`. The `with` operand is a full Value, so it
@@ -8427,6 +8430,7 @@ case class ValidationPass(
     case cp: CollectionPredicate  => initiatesIn(cp.collection) ++ initiatesIn(cp.predicate) // B5
     case cf: CollectionFilter     => initiatesIn(cf.collection) ++ initiatesIn(cf.predicate)
     case cv: CountValue           => initiatesIn(cv.collection)
+    case du: DurationUnitsValue => initiatesIn(du.duration)
     case mv: MembershipValue      => initiatesIn(mv.collection) ++ initiatesIn(mv.element)
     case _: DurationLiteral       => Seq.empty // B4: a literal
     case ic: InvariantCondition   => ic.argument.toSeq.flatMap(initiatesIn)
@@ -8496,6 +8500,7 @@ case class ValidationPass(
     case cp: CollectionPredicate  => systemValuesIn(cp.collection) ++ systemValuesIn(cp.predicate)
     case cf: CollectionFilter     => systemValuesIn(cf.collection) ++ systemValuesIn(cf.predicate)
     case cv: CountValue           => systemValuesIn(cv.collection)
+    case du: DurationUnitsValue => systemValuesIn(du.duration)
     case mv: MembershipValue      => systemValuesIn(mv.collection) ++ systemValuesIn(mv.element)
     case ic: InvariantCondition   => ic.argument.toSeq.flatMap(systemValuesIn)
     case ask: Ask                 => ask.args.toSeq.flatMap(a => systemValuesIn(a.value))
@@ -8527,6 +8532,7 @@ case class ValidationPass(
     case cp: CollectionPredicate  => asksIn(cp.collection) ++ asksIn(cp.predicate) // B5
     case cf: CollectionFilter     => asksIn(cf.collection) ++ asksIn(cf.predicate)
     case cv: CountValue           => asksIn(cv.collection)
+    case du: DurationUnitsValue => asksIn(du.duration)
     case mv: MembershipValue      => asksIn(mv.collection) ++ asksIn(mv.element)
     case _: DurationLiteral       => Seq.empty // B4: a literal
     // A17's ASK form. Same reasoning as `stateReadsIn`: the `with` operand is a full Value, so an
@@ -10791,6 +10797,7 @@ case class ValidationPass(
       // B5: a predicate/count/membership denotes a predefined type, a filter its collection's
       // own TypeExpression -- none of them a NAMED Type. See `valueTypeExpr`.
       case _: CollectionPredicate | _: CountValue | _: MembershipValue => None
+      case _: DurationUnitsValue                                       => None
       case cf: CollectionFilter => valueType(cf.collection, parents, lets, elements)
       case cr: ConstantRef =>
         resolution.refMap.definitionOf[Constant](cr.pathId).flatMap { k =>
@@ -11432,6 +11439,13 @@ case class ValidationPass(
       // filter is its collection's own type. The quantifier and the membership test need no arm:
       // they extend `BooleanExpression`, whose arm above already answers Bool.
       case cv: CountValue => Some(Whole(cv.loc))
+      // BACKLOG [1.27]: a duration in whole units is a (signed) Integer -- a duration may be
+      // negative (`t1 - t2`), so not a Whole. Of an OPTIONAL duration it is optional too, the
+      // same rule as a value path chained through `?`.
+      case du: DurationUnitsValue =>
+        val chained = valueTypeExpr(du.duration, parents, lets, elements)
+          .exists(te => aliasFreeTypeExpr(te).isInstanceOf[Optional])
+        Some(optionalIfChained(Integer(du.loc), chained))
       case cf: CollectionFilter => valueTypeExpr(cf.collection, parents, lets, elements)
       case qv: QueryValue =>
         queryRecordType(qv, parents).map { t =>
@@ -11681,6 +11695,26 @@ case class ValidationPass(
         )
       case cv: CountValue =>
         validateOverCollection(cv.collection, None, None, "'count of'", parents, lets, elements)
+      case du: DurationUnitsValue =>
+        validateValue(du.duration, parents, lets, elements)
+        // Silent when the operand's type cannot be determined -- reasoning from absence is the
+        // same best-effort stance `checkArithmetic` takes.
+        valueTypeExpr(du.duration, parents, lets, elements).foreach { te =>
+          // Aliases and ONE optional are seen through (`Duration?` gives `Integer?`); a
+          // collection is not a duration. An alias that does not resolve is unknown, not wrong.
+          val u = aliasFreeTypeExpr(te) match
+            case opt: Optional => aliasFreeTypeExpr(opt.typeExp)
+            case other         => other
+          if !u.isInstanceOf[Duration] && !u.isInstanceOf[AliasedTypeExpression] then
+            messages.addError(
+              du.duration.loc,
+              s"'${du.unit} of' takes a Duration, but '${du.duration.format}' is a " +
+                s"'${te.format}' value",
+              suggestion = s"Give '${du.unit} of' a Duration -- a Duration field, a duration " +
+                "literal such as '30 minutes', or the difference of two timestamps.",
+              ruleId = Some(RuleId.DurationUnitsNotDuration)
+            )
+        }
       case mv: MembershipValue =>
         validateValue(mv.element, parents, lets, elements)
         validateOverCollection(mv.collection, None, None, "'contains'", parents, lets, elements)

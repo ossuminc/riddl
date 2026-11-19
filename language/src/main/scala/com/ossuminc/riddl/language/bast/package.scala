@@ -182,7 +182,10 @@ package object bast {
     // 32 (2026-11-17) adds on-clause discriminator 8, `on entry`; a revision-31 reader throws on it.
     // 33 (2026-11-18) appends an `ask`'s argument list (count, then the constructor args) after
     // its processor ref; a revision-32 reader would leave those bytes in the stream.
-    33 // `ask query Q(args) of P`
+    // 34 (2026-11-19) adds BACKLOG [1.27]'s value forms, value tags 22-26 (`<unit> of d`, `sum
+    // of`, `one of`, `otherwise`, the conditional value); a revision-33 reader throws on them.
+    34 // [1.27] value forms
+    // 33 was `ask query Q(args) of P`
     // 30 was B5 collection predicates, filter, count and membership
     // 23 was multi-line `do` / `prompt`
     // 22 was: `system` value: tag 13 in readValue/writeValue. A revision-21 reader hitting tag 13 throws

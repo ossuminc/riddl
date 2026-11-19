@@ -724,6 +724,22 @@ private[parsing] trait StatementParser {
     }
   }
 
+  /** BACKLOG [1.27]: `minutes of <d>` -- a Duration in whole units. `NoCut` over the whole
+    * `<unit> of` prefix: the unit words are NOT reserved (18 corpus fields are named `hours` or
+    * `days`), so a bare `hours` must backtrack to the path atom. The operand is an atom, as for
+    * `count of`, so the form binds tighter than arithmetic.
+    */
+  private def durationUnitsValue[u: P]: P[DurationUnitsValue] = {
+    P(
+      Index ~ NoCut(
+        StringIn(
+          "nanoseconds", "microseconds", "milliseconds", "seconds", "minutes", "hours", "days",
+          "weeks"
+        ).! ~~ &(Keywords.isNotKeywordChar) ~ of
+      ) ~/ arithAtom ~ Index
+    ).map { case (start, unit, d, end) => DurationUnitsValue(at(start, end), unit, d) }
+  }
+
   /** The expression ladder, for the positions that want a condition: `update`/`delete`'s
     * `where` and `query`'s. Any value may stand there; validation requires it to be boolean.
     */
@@ -900,6 +916,7 @@ private[parsing] trait StatementParser {
       // B5: keyword-led collection forms, before the literals and the bare-path atom
       collectionPredicate.map(cp => cp: Value) |
         countValue.map(cv => cv: Value) |
+        durationUnitsValue.map(du => du: Value) | // BACKLOG [1.27]
         durationLiteral.map(dl => dl: Value) |
         // `NoCut` is load-bearing: `literalString` cuts after its opening quote, and
         // `booleanExprOnly` FILTERS the ladder's result -- so `when "prose"` would parse the

@@ -231,6 +231,7 @@ case class UseCaseWitnessPass(
       case cp: CollectionPredicate   => getInputRefsIn(cp.collection) ++ getInputRefsIn(cp.predicate)
       case cf: CollectionFilter      => getInputRefsIn(cf.collection) ++ getInputRefsIn(cf.predicate)
       case cv: CountValue            => getInputRefsIn(cv.collection)
+      case du: DurationUnitsValue => getInputRefsIn(du.duration)
       case mv: MembershipValue       => getInputRefsIn(mv.collection) ++ getInputRefsIn(mv.element)
       case _                         => Seq.empty
 

@@ -581,6 +581,8 @@ enum RuleId(
   /** [1.29](a), Reid 2026-11-18: an optional value for a required field is an ADVISORY asking for
     * a guard -- emptiness is a run-time fact, and the generator proceeds and chooses. */
   case OptionalForRequired extends RuleId("value-optional-for-required")
+  /** BACKLOG [1.27], Reid 2026-11-19: `minutes of <d>` needs a Duration. */
+  case DurationUnitsNotDuration extends RuleId("value-duration-units-not-duration")
   // B4 (2026-09-21): arithmetic. Which categories may be combined by which operator is the table
   // in `ValidationPass.checkArithmetic`; anything off the table is this Error, never a coercion.
   case ArithmeticOperandMismatch extends RuleId("value-arithmetic-operand-mismatch")

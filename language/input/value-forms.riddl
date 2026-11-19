@@ -1,0 +1,45 @@
+// Exercises BACKLOG [1.27] (2026-11-19): the value forms riddl-models could not write.
+//   * optional chaining -- a value path through a `T?` reaches an optional value
+//   * `<unit> of d` -- a Duration in whole units, an Integer
+// The unit words are NOT reserved: `hours` is a field name below, and so is `days`.
+domain Insurance is {
+  context Billing is {
+    record Money is { amount: Integer, currency: String } with { briefly "m" }
+    record Line is { productId: String, quantity: Integer, price: Integer } with { briefly "l" }
+    record Policy is {
+      lines: Billing.Line*,
+      grace: Duration,
+      started: TimeStamp,
+      renewed: TimeStamp,
+      deposit: Billing.Money?,
+      days: Integer
+    } with { briefly "p" }
+
+    command Quote yields event Quoted is { productId: String } with { briefly "c" }
+    event Quoted is {
+      hours: Integer,
+      heldDays: Integer,
+      graceMinutes: Integer,
+      depositAmount: Integer?
+    } with { briefly "e" }
+
+    entity Account is {
+      state Open of record Billing.Policy
+      inlet In is command Billing.Quote with { briefly "i" }
+      outlet Out is event Billing.Quoted with { briefly "o" }
+      handler H is {
+        on q: command Billing.Quote is {
+          let graceMinutes = minutes of Policy.grace
+          let held = days of (Policy.renewed - Policy.started)
+          yield event Billing.Quoted(
+            hours = hours of Policy.grace,
+            heldDays = held + Policy.days,
+            graceMinutes = graceMinutes,
+            depositAmount = Policy.deposit.amount
+          )
+        }
+        on other is { error "unexpected" }
+      } with { briefly "h" }
+    } with { briefly "a" }
+  } with { briefly "b" }
+} with { briefly "i" }

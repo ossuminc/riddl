@@ -1635,6 +1635,8 @@ object JsonAstBuilder:
       case CollectionFilterDto(collection, element, predicate) =>
         CollectionFilter(curAt, buildValue(collection), Identifier(curAt, element), buildValue(predicate))
       case CountValueDto(collection)             => CountValue(curAt, buildValue(collection))
+      case DurationUnitsValueDto(unit, duration) =>
+        DurationUnitsValue(curAt, unit, buildValue(duration))
       case MembershipValueDto(collection, element) =>
         MembershipValue(curAt, buildValue(collection), buildValue(element))
       case QueryValueDto(table, one, where) => // B2

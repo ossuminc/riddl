@@ -416,6 +416,9 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
       case cv: CountValue =>
         add("count of ")
         emitCollectionOperand(cv.collection)
+      case du: DurationUnitsValue => // BACKLOG [1.27]
+        add(s"${du.unit} of ")
+        emitCollectionOperand(du.duration)
       case mv: MembershipValue =>
         emitCollectionOperand(mv.collection)
         add(" contains ")

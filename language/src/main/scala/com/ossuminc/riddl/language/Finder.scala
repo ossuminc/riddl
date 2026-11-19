@@ -257,6 +257,7 @@ object Finder:
     case cp: CollectionPredicate => Seq(cp.collection, cp.predicate)
     case cf: CollectionFilter    => Seq(cf.collection, cf.predicate)
     case cv: CountValue          => Seq(cv.collection)
+    case du: DurationUnitsValue  => Seq(du.duration)
     case mv: MembershipValue     => Seq(mv.collection, mv.element)
     case lt: LetStatement     => Seq(lt.expression)
     case pt: PutStatement     => Seq(pt.value)
