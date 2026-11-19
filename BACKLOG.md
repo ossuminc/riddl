@@ -409,6 +409,22 @@ task files, so they were NOT physically reshuffled; this index carries the order
   (`ossum.tech/task/riddl-every-value-typed-by-name.md`) and riddl-generator's fixture
   migration (`riddl-generator/task/riddl-2.4.0-value-typed-by-name.md`).
 
+- **[1.32]** **Calendar recurrence: a schedule that is not a fixed span.** Recurrence
+  landed 2026-11-19 in two spellings -- `send ... every <period> [starting [at] <instant>]`
+  (in `on init` only) and the timer clause `on every <period>` -- and both take a fixed
+  Duration. `30 days` is not "monthly", and nothing can say "the first of every month" or
+  "every third Wednesday of every month". Reid ruled (2026-11-19) that the language SHOULD
+  allow one -- a cron-like schedule, or a written specification such as `every third
+  wednesday of every month` -- and deferred it here. Design questions still open: whether
+  the schedule is a new value kind or a sibling of `Recurrence.period`; which spelling (cron
+  text is compact but opaque, prose is readable but needs a grammar); time zone (a calendar
+  boundary is a local-time fact, unlike a Duration); and what a generator must preserve when
+  a month has no third Wednesday's equivalent (the 31st). Workaround meanwhile: compute the
+  next instant and `send ... at` it, or re-emit at an advancing instant (CM §8.1 loop rule).
+  Today a calendar spelling does not parse, and a period that is not a Duration draws
+  `stmt-send-every-not-duration`/`handler-every-not-duration`, whose suggestion names that
+  workaround.
+
 - **[1.31]** **B5's `all/any/none of … where p` is open on its right and is never
   parenthesized as an operand.** Its predicate is a full boolean expression, so a tree such
   as `And(all of xs as e where p, q)` -- which BAST and JSON can carry, and which the parser

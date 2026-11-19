@@ -766,6 +766,19 @@ fact from that file that you had no reason to look for, it belongs back here.
   and carries the `eq` visited list, which `isDurationTypeExpr` shipped for a day
   without.
 
+- **Recurrence — `send … every <period> [starting [at] <instant>]` and `on every <period>`**
+  (Reid, 2026-11-19). **The recurring `send` is legal ONLY in `on init`**
+  (`stmt-send-every-not-in-init`): running it REGISTERS a timer, so anywhere else each handled
+  message would stack another — and that includes `on every`, which already is the timer.
+  **The message is re-evaluated at every firing**, and a replayed `on init` must NOT re-register
+  it (CM §20.7). `every` and `at` are grammar ALTERNATIVES; `Recurrence` is a trailing field on
+  `SendStatement`. Neither `every` nor `starting` is reserved (the `on entry` precedent).
+  **`OnEveryClause`s all carry the id `every`** — it is what prettify prints after `on` — so
+  `checkUniqueContent` EXCLUDES them; several per handler are legal. Periods must be POSITIVE
+  Durations (`checkRecurrencePeriod`, shared by both). Fixed spans only: calendar schedules are
+  BACKLOG [1.32]. Separately, an `on X` clause re-sending X `at <instant> + <duration>` is a
+  recurrence and exempt from `stream-graph-cycle` (`isAdvancingInstant`, `loopEdges`).
+
 - **A message delivered where nothing can receive it — two CompletenessWarnings**
   (rc.21+). `checkTellDeliverability` is the SENDING end (a `tell` whose target
   declares no clause receiving that type); `checkInletsAreReceived` is the

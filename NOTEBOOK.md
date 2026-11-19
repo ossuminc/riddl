@@ -34,9 +34,12 @@ authoritative). Ask `git` for branch, tree and unpushed span — never trust a w
 
 **`main` is heading for 2.8.0** (Reid): undeliverable-clause rules, schema-link typing,
 `on init` as creation, `on entry`, `ask query Q(args) of P`, literals held to their type,
-the optional-for-required Advisory, let-path walking, **FORMAT_REVISION 33**.
+the optional-for-required Advisory, let-path walking, [1.27]'s value forms, recurrence
+(`send … every`, `on every`; `1c69a1979`), **FORMAT_REVISION 35**.
 `../bin/riddlc` and ivy are `2.7.0-41-67efe607` (restaged 2026-11-19 late, at Reid's
-request, via `scripts/publish-and-stage.sh`; includes [1.27] and the record-with-method fix). `morph S -> S` stays a Warning (Reid). **Owed at 3.0: BACKLOG
+request, via `scripts/publish-and-stage.sh`; includes [1.27] and the record-with-method fix).
+**NOT restaged since**: recurrence (`e47af048d`, `1c69a1979`) is not in `../bin/riddlc`, so
+riddl-models cannot use it until Reid asks for a restage. `morph S -> S` stays a Warning (Reid). **Owed at 3.0: BACKLOG
 [5.10]** (rename the `AST.Initiate` class to `Create`, drop the alias val). BACKLOG [5.9]
 stays DEFERRED by Reid.
 
@@ -94,6 +97,53 @@ Empty. The [1.27] value-forms request and the record-with-method crash
 their `2f2291b63`). `probe-2026-09-06-adaptor/` is a leftover scratch directory, not a task.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-11-19 (overnight) — recurrence: three ways to say "every period"
+
+riddl-models (task `2026-11-19-recurring-scheduled-send-is-a-cycle`, usage-metering)
+had no legal spelling for a periodic timer: an `on X` clause that closes this period
+and schedules the next X was `stream-graph-cycle`, and the rule never read the `at`.
+Reid ruled three things.
+
+1. **A scheduled re-emission to an ADVANCING instant is a recurrence** (`e47af048d`).
+   "Advancing" is textual: `at <instant> + <duration>`. **The ruling's hidden hazard
+   was a PAST instant**: §20.7 delivers one immediately, so a blanket "scheduled sends
+   are exempt" would have admitted `at closeMonth.periodEnd`, which re-fires forever
+   with the same value. The task did not see this; it is why the exemption is narrow.
+   The hop leaves `loopEdges` but stays in `edges`, because a tell's route may run
+   through it — `messageCarriage` serves both rules, and dropping the hop outright
+   would have changed tell routing in silence.
+2. **A recurring send**, `send … every <period> [starting [at] <instant>]`, legal only
+   in `on init` (anywhere else timers stack). `starting [at]` was Reid's spelling.
+3. **A timer clause**, `on every <period>`, the simple form: no message, no ports.
+
+Calendar schedules ("every third Wednesday") were ruled IN but deferred: BACKLOG [1.32].
+
+**What building it taught:**
+
+- **Adding a `RiddlValue` that is not a traversal node reddens `-Werror`** in three
+  `RiddlValue` matches (Resolution, Symbols, Validation `process`), because they are
+  exhaustive over the sealed hierarchy. The fix is membership of `NonDefinitionValues`,
+  the union those matches already cover — not three new arms.
+- **Every `OnEveryClause` carries the id `every`** (it is what prettify prints after
+  `on`), so two in one handler drew `handler-duplicate-content-names`. A clause is never
+  addressed by name, so `checkUniqueContent` excludes them; making the id unique would
+  have broken the rendering instead.
+- **`NotImplemented.bast` had been regenerated from the repo root at revision 34**
+  (115 bytes, the root-relative path interned) — the very trap this notebook records
+  twice. Regenerated from its own directory it is 93 bytes again.
+- **A positional pattern is the compiler's list of sites**: a trailing field on
+  `SendStatement` made every `SendStatement(_, …)` extractor fail to compile, eleven
+  of them, which is how the field reached resolution, prettify, diagrams, JSON and
+  validation without a grep.
+
+Verified: TatSu 135/164 with ✓ on the new fixture `language/input/recurrence.riddl`;
+riddl-models EBNF 191/191; JVM language 82 suites, passes 322, commands 28 (corpus
+191/191 identical), riddlLib 35, riddlc 3; canaries for both new rules (the loop
+exemption and `on init` placement) go red when disabled. Cold tJVM/tJS/tNative +
+`riddlcNative/nativeLink`: 19 summaries, cache 0 -> 246M. **The FIRST cold run linked
+nothing on JS**: a new SHARED suite called `Riddl.parse`, which reaches `java.nio.file`; a
+JVM-only run cannot see that. Shared suites parse with `TopLevelParser.parseInput`.
 
 ## 2026-11-19 (late night) — a record with a method crashed validate; [severe] now located
 
