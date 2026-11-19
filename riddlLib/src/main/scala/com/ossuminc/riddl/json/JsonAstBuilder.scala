@@ -1063,9 +1063,16 @@ object JsonAstBuilder:
             ctx.err("on-clause of kind 'quiescence' requires a 'window'")
             LiteralString(curAt, "")
         OnQuiescenceClause(curAt, window, statements, md)
+      case "every" =>
+        // 2026-11-19: the period is any value; that it is a Duration is validation's question.
+        val period: Value = oc.period.map(buildValue).getOrElse {
+          ctx.err("on-clause of kind 'every' requires a 'period'")
+          LiteralString(curAt, "")
+        }
+        OnEveryClause(curAt, period, statements, md)
       case other =>
         ctx.err(
-          s"unknown on-clause kind '$other' (expected message|event|init|other|term|activate|passivate|entry|quiescence)"
+          s"unknown on-clause kind '$other' (expected message|event|init|other|term|activate|passivate|entry|quiescence|every)"
         )
         OnOtherClause(curAt, None, None, statements, md)
     end match
@@ -1478,8 +1485,16 @@ object JsonAstBuilder:
       case DeleteStmtDto(table, where) => DeleteStatement(curAt, tableRef(table), buildValue(where))
       case RemoveStmtDto(field, value, key) =>
         RemoveStatement(curAt, FieldRef(curAt, pathId(field)), buildValue(value), key.map(k => Identifier(curAt, k)))
-      case SendStmtDto(message, to, portlet, at) =>
-        SendStatement(curAt, buildDeliverableOperand(message), portletRef(to, portlet), at.map(buildValue))
+      case SendStmtDto(message, to, portlet, at, every, starting) =>
+        if every.isEmpty && starting.nonEmpty then
+          ctx.err("a 'send' with 'starting' requires 'every'")
+        SendStatement(
+          curAt,
+          buildDeliverableOperand(message),
+          portletRef(to, portlet),
+          at.map(buildValue),
+          every.map(p => Recurrence(curAt, buildValue(p), starting.map(buildValue)))
+        )
       case ForwardStmtDto(message, to, target) =>
         // The kind string says which shape it is: portlet kinds are exactly inlet/outlet, and a
         // processor kind is never either, so the discrimination is total without a fallback that

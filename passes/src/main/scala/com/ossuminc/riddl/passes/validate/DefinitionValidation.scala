@@ -34,7 +34,11 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
     * they are not addressable by name, so they cannot be ambiguous.
     */
   private def checkUniqueContent(definition: Branch[?]): Unit = {
-    val allNamedValues = definition.contents.definitions.filter(_.id.nonEmpty)
+    // `on every` clauses (2026-11-19) all carry the synthetic id `every` -- it is what prettify
+    // emits after `on` -- and a handler may hold several (an hourly and a daily tick). A clause is
+    // never addressed by name, so they cannot be ambiguous; leave them out.
+    val allNamedValues =
+      definition.contents.definitions.filter(d => d.id.nonEmpty && !d.isInstanceOf[OnEveryClause])
     val allNames = allNamedValues.map(_.id.value)
     if allNames.distinct.size < allNames.size then {
       val duplicates: Map[String, Seq[Definition]] =

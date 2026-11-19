@@ -60,6 +60,7 @@ is covered in that construct's phase. The builder emits references as
 | OnEntryClause | ✅ 2.8 | `kind: "entry"` |
 | OnOtherClause | ✅ Phase 1 / A57 | `kind: "other"`; A57 binding + `envelope` (the optional explicit envelope type) |
 | OnQuiescenceClause | ✅ 2026-09-07 | `kind: "quiescence"`; `window` is a `ValueDto` (literal duration or reference) — a FIELD, serialized directly; fixed point in `QuiescenceJsonRoundTripTest` |
+| OnEveryClause | ✅ 2026-11-19 | `kind: "every"`; `period` is a `ValueDto` (any Duration-typed value) — a FIELD, serialized directly; fixed point and rebuilt values in `RecurrenceJsonRoundTripTest` |
 | OnTerminationClause | ✅ Phase 1 / Task 3 | `kind: "term"`; `parameters` (first must be `Id(...)` of the enclosing processor — validation, not JSON) |
 | Invariant | ✅ Phase 1 / A28 s2 / 2026-08-04 | string `condition`, structured `expression`, or a `block` (statements + predicate) — exactly one. Plus `requires` + `requiresKind` (`state`/`type`), which decide WHERE the invariant applies, so dropping them describes a different model. |
 | Author | ✅ Phase 1 | at domain level |
@@ -159,7 +160,7 @@ is covered in that construct's phase. The builder emits references as
 | CodeStatement | ✅ Phase 3 | |
 | RequireStatement | ✅ Phase 3 / A28 s2 | condition widened: string, `invariant` name, or structured `expression` (ValueDto) |
 | SetStatement | ✅ Phase 3 / A54 | FieldRef/StateRef; value widened to ValueDto |
-| SendStatement | ✅ Phase 3 / A54 / A56 | msg = MessageRef, Constructor, or ValueRef (kind `"bound"`); + PortletRef |
+| SendStatement | ✅ Phase 3 / A54 / A56 / 2026-11-19 | msg = MessageRef, Constructor, or ValueRef (kind `"bound"`); + PortletRef; optional `at`, or optional `every` + `starting` (a `Recurrence`, flattened onto the send) |
 | MorphStatement | ✅ Phase 3 / A54 / message-value T2 | value = RecordRef, Constructor, or ValueRef (kind `"bound"`, the same reserved spelling the message operands use) |
 | BecomeStatement | ✅ Phase 3 | |
 | ForwardStatement | ✅ 2026-08-19 | `{ "kind": "forward", "message": <msgRef\|constructor\|bound>, "to": "<path>", "target": "inlet"\|"outlet"\|"entity"\|… }` — ONE `target` field, not send's `portlet` plus tell's `processor`: `forward` takes both shapes and the kind string already says which, so two fields would make "both set" and "neither set" representable for no gain |

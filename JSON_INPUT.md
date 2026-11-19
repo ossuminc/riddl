@@ -132,8 +132,10 @@ references.
 
 ```jsonc
 {
-  "kind": "message" | "init" | "other" | "term",
+  "kind": "message" | "init" | "other" | "term" | "quiescence" | "every",
   "message": { "ref": "PlaceOrder", "kind": "command" },  // for kind "message"
+  "window": <value>,                                      // for kind "quiescence"
+  "period": <value>,                                      // for kind "every" (a Duration)
   "statements": [ "record the order details" ]            // Phase 1: prompt/`do` texts
 }
 ```
@@ -247,7 +249,7 @@ Statements appear in handler on-clauses and function bodies.
 { "kind": "require", "condition": "..." }                     // or "invariant": "<name>"
 { "kind": "require", "invariant": "UnderLimit", "argument": <value> }  // for `requires <type>` invariants
 { "kind": "set", "field": "<path>", "value": "..." }          // or "state": "<path>"
-{ "kind": "send", "message": {"ref":"M","kind":"command"}, "to": "<path>", "portlet": "inlet" }  // inlet|outlet; optional "at": <value> schedules delivery for an instant
+{ "kind": "send", "message": {"ref":"M","kind":"command"}, "to": "<path>", "portlet": "inlet" }  // inlet|outlet; optional "at": <value> schedules delivery for an instant; OR optional "every": <duration value> with optional "starting": <instant value> makes it recurring (legal only in `on init`)
 { "kind": "tell", "message": {"ref":"M","kind":"command"}, "to": "<path>", "processor": "entity" } // entity|context|projector|repository|adaptor
 { "kind": "morph", "entity": "<path>", "state": "<path>", "value": {"ref":"E","kind":"event"} }
 { "kind": "become", "entity": "<path>", "handler": "<path>" }

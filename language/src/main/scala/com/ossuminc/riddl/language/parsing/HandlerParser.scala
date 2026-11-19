@@ -144,6 +144,18 @@ private[parsing] trait HandlerParser
     }
   }
 
+  /** `on every <period> is { … }` (2026-11-19): a timer clause firing once per period. Placed
+    * exactly where `on quiescence` is, in both branches of [[onClause]]. The period is any value;
+    * whether it is a Duration is validation's question.
+    */
+  private def onEveryClause[u: P](set: StatementsSet): P[OnEveryClause] = {
+    P(
+      Index ~ Keywords.onEvery ~/ value ~ is ~/ pseudoCodeBlock(set) ~ withMetaData ~/ Index
+    ).map { case (start, period, statements, descriptives, end) =>
+      OnEveryClause(at(start, end), period, statements.toContents, descriptives.toContents)
+    }
+  }
+
   private def maybeName[u: P]: P[Option[Identifier]] = {
     P((identifier ~ Punctuation.colon).?)
   }
@@ -241,11 +253,12 @@ private[parsing] trait HandlerParser
       P(
         onInitClause(set) | onTermClause(set) |
           onActivationClause(set) | onPassivationClause(set) | onEntryClause(set) |
-          onQuiescenceClause(set) | onOtherClause(set) | onMessageOrEventClause(set)
+          onQuiescenceClause(set) | onEveryClause(set) | onOtherClause(set) | onMessageOrEventClause(set)
       )
     else
       P(
-        onInitClause(set) | onTermClause(set) | onQuiescenceClause(set) | onOtherClause(set) |
+        onInitClause(set) | onTermClause(set) | onQuiescenceClause(set) | onEveryClause(set) |
+          onOtherClause(set) |
           rejectActivatePassivate | rejectEntry | onMessageOrEventClause(set)
       )
   }

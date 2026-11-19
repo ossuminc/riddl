@@ -290,9 +290,11 @@ private[parsing] trait StatementParser {
     P(
       // `at <value>` (2026-09-07) schedules delivery for an instant. `at` is a Readability token, so
       // it is optional and non-cutting; `value` follows, and a bare path there is a ValueRef.
+      // `every <period> [starting [at] <instant>]` (2026-11-19) makes it RECURRING; the two are
+      // alternatives, so `at` and `every` together is a parse error.
       Index ~ Keywords.send ~/ deliverableMessageValue ~/ to ~ (outletRef | inletRef) ~
-        (at ~ value).? ~/ Index
-    )./.map { case (start, msg, portlet, instant, end) =>
+        (sendAt | sendEvery).? ~/ Index
+    )./.map { case (start, msg, portlet, schedule, end) =>
       portlet match
         case ref: InletRef =>
           deprecation(
@@ -303,9 +305,17 @@ private[parsing] trait StatementParser {
             autoFixable = false
           )
         case _ => ()
-      SendStatement(at(start, end), msg, portlet, instant)
+      SendStatement(at(start, end), msg, portlet, schedule.flatMap(_.left.toOption), schedule.flatMap(_.toOption))
     }
   }
+
+  private def sendAt[u: P]: P[Either[Value, Recurrence]] =
+    P(at ~ value).map(Left(_))
+
+  private def sendEvery[u: P]: P[Either[Value, Recurrence]] =
+    P(Index ~ Keywords.every ~/ value ~ (Keywords.starting ~/ at.? ~ value).? ~~ Index).map {
+      case (start, period, starting, end) => Right(Recurrence(at(start, end), period, starting))
+    }
 
   /** `forward <operand> to <portlet|processor>` -- pass the handled message on and discharge the
     * response obligation.

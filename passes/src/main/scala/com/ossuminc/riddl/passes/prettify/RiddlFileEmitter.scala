@@ -894,7 +894,7 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
           addIndent("do {").nl.incr
           what.foreach(ls => addIndent(ls.format).nl)
           decr.addIndent("}").nl
-      case SendStatement(_, msg, portlet, instant) =>
+      case SendStatement(_, msg, portlet, instant, every) =>
         // A20: `msg` is `MessageRef | Constructor | ValueRef`; a `Constructor` argument can carry a
         // `PromptValue` ascription, so this routes through `emitConstructorOperand` (-> `emitValue`)
         // rather than `.format`.
@@ -906,6 +906,16 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         instant.foreach { v =>
           add(" at ")
           emitValue(v)
+        }
+        // `every <period> [starting at <instant>]` (2026-11-19), through `emitValue` for the same
+        // reason. `starting` is always written WITH `at`, the canonical spelling.
+        every.foreach { r =>
+          add(" every ")
+          emitValue(r.period)
+          r.starting.foreach { v =>
+            add(" starting at ")
+            emitValue(v)
+          }
         }
         nl
       case TellStatement(_, msg, target, by) =>

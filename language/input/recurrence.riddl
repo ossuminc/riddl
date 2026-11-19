@@ -1,0 +1,52 @@
+// Corpus fixture for recurrence (2026-11-19). Checked by BOTH the fastparse parser and the
+// EBNF/TatSu grammar validator over **/input/**.
+//   - a recurring send, `send <msg> to <outlet> every <period> [starting [at] <instant>]`,
+//     legal only in `on init`; the message is re-evaluated at every firing
+//   - a timer clause, `on every <period> is { ... }`, firing once per period
+// The period is a Duration: a literal (`30 days`), a duration string, or a Duration constant.
+domain Billing is {
+  context Metering is {
+    command CloseMonth is { periodEnd: TimeStamp }
+    constant Monthly: Duration = 30 days
+    constant FirstClose: TimeStamp = "2026-12-01T00:00:00Z"
+    inlet MonthsIn is command CloseMonth
+    outlet MonthsOut is command CloseMonth
+    connector 'Month Clock' is from outlet Metering.MonthsOut to inlet Metering.MonthsIn
+
+    record MeterData is { count: Integer }
+    entity Meter is {
+      outlet Closes is command CloseMonth
+      handler Lifecycle is {
+        on init is {
+          send command CloseMonth(periodEnd = system.now + 30 days) to outlet Meter.Closes
+            every 30 days starting at FirstClose
+          send command CloseMonth(periodEnd = system.now) to outlet Meter.Closes every Monthly
+          send command CloseMonth(periodEnd = system.now) to outlet Meter.Closes
+            every "PT1H" starting system.now + 1 hour
+          morph entity Billing.Metering.Meter to state Billing.Metering.Meter.Counting
+            with record Billing.Metering.MeterData(count = 0)
+        }
+      }
+      state Counting of record Billing.Metering.MeterData is {
+        handler CountingHandler is {
+          on every 1 hour is { do "checkpoint the count while counting" }
+        }
+      }
+    }
+
+    handler MeteringBoundary is {
+      on every 30 days is {
+        do "roll this month's usage up"
+      }
+      on every Monthly {
+        do "archive the month"
+      }
+      on every "PT15M" is {
+        do "sample the meters"
+      }
+      on closeMonth: command CloseMonth is {
+        do "close the month"
+      }
+    }
+  }
+}

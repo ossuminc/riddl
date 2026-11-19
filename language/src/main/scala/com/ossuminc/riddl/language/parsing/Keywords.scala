@@ -301,6 +301,18 @@ object Keywords {
 
   def onQuiescence[u: P]: P[Unit] = keyword("on quiescence")
 
+  /** `on every <period>` (2026-11-19). Only the two-word form is a keyword: `every` alone is NOT
+    * reserved, the `on entry` precedent -- nothing needs it reserved, and a corpus field named
+    * `every` must keep parsing.
+    */
+  def onEvery[u: P]: P[Unit] = keyword("on every")
+
+  /** `send ... every <period> [starting [at] <instant>]` (2026-11-19). Neither word is reserved:
+    * each follows a complete portlet reference or value, which cannot run on across whitespace.
+    */
+  def every[u: P]: P[Unit] = keyword("every")
+  def starting[u: P]: P[Unit] = keyword("starting")
+
   def onTerm[u: P]: P[Unit] = keyword("on term")
 
   def one[u: P]: P[Unit] = keyword(Keyword.one)

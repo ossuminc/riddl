@@ -253,7 +253,7 @@ any_interaction_ref = flow_group_ref | processor_ref | saga_ref | input_ref | ou
 handler = ["initial"] "handler" identifier is "{" handler_body "}" [with_metadata] ;
 handler_body = {undefined | handler_contents} ;
 handler_contents = {on_clause | comment} ;
-on_clause = on_init_clause | on_other_clause | on_term_clause | on_activate_clause | on_passivate_clause | on_entry_clause | on_quiescence_clause | on_event_clause | on_message_clause ;
+on_clause = on_init_clause | on_other_clause | on_term_clause | on_activate_clause | on_passivate_clause | on_entry_clause | on_quiescence_clause | on_every_clause | on_event_clause | on_message_clause ;
 (* Task 3: parameters, so `on init`/`on term` become invocable (a later change). The parameter
    list is OPTIONAL syntax for both clauses -- whether `on term` was given a correctly-typed
    leading Id(...) parameter is a VALIDATION question, not a grammar one, since the grammar alone
@@ -278,6 +278,11 @@ on_entry_clause = "on" "entry" is pseudo_code_block [with_metadata] ;
    by a bare path. A `let` cannot be named here -- lets are clause-local statements. *)
 on_quiescence_clause = "on" "quiescence" quiescence_window is pseudo_code_block [with_metadata] ;
 quiescence_window = literal_string | path_identifier ;
+(* 2026-11-19: a TIMER clause firing once per period -- the simpler spelling of a recurrence than a
+   recurring `send` in `on init`. Only `on every` is a keyword; `every` alone is not reserved. The
+   period is any value; that it is a Duration (a literal such as `30 days`, a duration string, or a
+   Duration constant or field) is enforced in validation. Several may share a handler. *)
+on_every_clause = "on" "every" value is pseudo_code_block [with_metadata] ;
 (* A55: an optional local name may be bound to the handled message with type ascription:
    `on foo: command Foo { ... }`. Within the body the name denotes the whole message. *)
 on_event_clause = "on" [identifier ":"] event_ref ["from" [identifier ":"] message_origins] is pseudo_code_block [with_metadata] ;
@@ -335,7 +340,12 @@ deliverable_message_value = message_value | path_identifier ;
 (* `at <value>` schedules the delivery for an instant (TimeStamp, DateTime or ZonedDateTime); a
    past instant is delivered immediately. `send` only: `tell`'s target may itself be a value, so
    `tell m to x at t` already parses as a lookup. *)
-send_statement = "send" deliverable_message_value "to" (outlet_ref | inlet_ref) [ "at" value ] ;
+(* 2026-11-19: `every <period> [starting [at] <instant>]` makes the send RECURRING -- legal only in
+   `on init`, enforced in validation, as is the period being a Duration and the start an instant.
+   `at` and `every` are alternatives; neither `every` nor `starting` is reserved. *)
+send_statement = "send" deliverable_message_value "to" (outlet_ref | inlet_ref)
+                 [ "at" value | send_recurrence ] ;
+send_recurrence = "every" value [ "starting" ["at"] value ] ;
 (* The addressee is EITHER a keyword-led processor_ref naming a processor statically, OR a value
    typed `Id(entity E)` naming WHICH INSTANCE to tell (`to self.id`, `to order.siteId`). They are
    told apart by the keyword leading the reference -- every processor_ref alternative is

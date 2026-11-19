@@ -546,6 +546,11 @@ enum RuleId(
   // onto the same outlet twice. Non-blocking: the generator delivers both, as the model says.
   case DuplicateSendSameOutlet extends RuleId("stmt-duplicate-send-same-outlet")
   case SendAtNotInstant extends RuleId("stmt-send-at-not-instant")
+  // Reid, 2026-11-19 (riddl-models' usage-metering): recurrence. A recurring `send` registers a
+  // timer each time it runs, so it is legal only where it runs once per instance, in `on init`.
+  case SendEveryNotInInit extends RuleId("stmt-send-every-not-in-init")
+  case SendEveryNotDuration extends RuleId("stmt-send-every-not-duration")
+  case EveryPeriodNotDuration extends RuleId("handler-every-not-duration")
   // B6/B8 (riddl-generator's 2026-09-17 list; landed 2026-09-21): two lints on prose holes.
   case YieldArgumentPrompt extends RuleId("stmt-yield-argument-prompt")
   case DoValidatesARange extends RuleId("stmt-do-validates-a-range")

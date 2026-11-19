@@ -1441,6 +1441,21 @@ case class ValidationPass(
                 "correlation's 'times out after' block.",
             ruleId = Some(RuleId.QuiescenceInCorrelation)
           )
+      case oec: OnEveryClause =>
+        // 2026-11-19: a timer clause. An effect block like `on quiescence`, so it gets the full
+        // on-clause treatment. Several may share a handler, so it is NOT in the one-of-each rule.
+        checkDefinition(parentsAsSeq, oec)
+        validateOnClause(oec)
+        // The period is a header value, recorded under the CLAUSE by ResolutionPass, so look it up
+        // there (`oec +: parents`), as the quiescence window is.
+        checkRecurrencePeriod(
+          oec.period,
+          s"The period of ${oec.identify}",
+          oec +: parentsAsSeq,
+          Seq.empty,
+          Map.empty,
+          RuleId.EveryPeriodNotDuration
+        )
       case ooc: OnOtherClause =>
         checkDefinition(parentsAsSeq, ooc)
         checkOnOtherBinding(ooc, parentsAsSeq) // A57
@@ -1557,6 +1572,53 @@ case class ValidationPass(
         }
   end checkQuiescenceWindow
 
+  /** The period of a recurrence -- `on every <period>` or `send ... every <period>` (Reid,
+    * 2026-11-19) -- must be a POSITIVE Duration: a zero period would fire continuously, which is the
+    * infinite loop the recurrence exists to bound. A duration STRING is checked exactly as the
+    * quiescence window and correlation timeout are (`checkPreciseDuration`); a duration LITERAL
+    * (`30 days`) for its sign; anything else must type as Duration. Undeterminable stays silent.
+    */
+  private def checkRecurrencePeriod(
+    period: Value,
+    subject: String,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression],
+    rule: RuleId
+  ): Unit =
+    period match
+      case ls: LiteralString =>
+        checkPreciseDuration(
+          ls,
+          subject,
+          "Give the recurrence a period greater than zero; a zero period would fire continuously."
+        )
+      case dl: DurationLiteral =>
+        val digits = dl.amount.text.dropWhile(c => c == '+' || c == '-')
+        val zero = digits.forall(c => c == '0' || c == '.')
+        if dl.amount.text.startsWith("-") || zero then
+          messages.addError(
+            dl.loc,
+            s"$subject has a non-positive duration '${dl.format}'; it must be positive",
+            suggestion =
+              "Give the recurrence a period greater than zero; a zero period would fire continuously.",
+            ruleId = Some(RuleId.NonPositiveDuration)
+          )
+      case other =>
+        valueTypeExpr(other, parents, lets, elements).foreach { te =>
+          if !isDurationTypeExpr(te) then
+            messages.addError(
+              other.loc,
+              s"$subject is '${other.format}', typed ${te.format}, not Duration",
+              suggestion =
+                "Write a duration such as `30 days` or \"PT1H\", or name a constant or field " +
+                  "declared as Duration. A calendar schedule (the first of every month) is not yet " +
+                  "expressible; compute the next instant and use `send ... at` instead.",
+              ruleId = Some(rule)
+            )
+        }
+  end checkRecurrencePeriod
+
   private def isDurationTypeExpr(te: TypeExpression): Boolean =
     aliasFreeTypeExpr(te) match
       case _: Duration => true
@@ -1586,7 +1648,8 @@ case class ValidationPass(
     instant: Value,
     parents: Parents,
     lets: Seq[LetStatement],
-    elements: Map[String, TypeExpression]
+    elements: Map[String, TypeExpression],
+    keyword: String = "at" // `starting at` for a recurrence's first delivery (2026-11-19)
   ): Unit =
     valueTypeExpr(instant, parents, lets, elements).foreach { te =>
       aliasFreeTypeExpr(te) match
@@ -1594,7 +1657,7 @@ case class ValidationPass(
         case _ =>
           messages.addError(
             instant.loc,
-            s"The 'at' instant of 'send ${s.msg.format}' is typed ${te.format}, not TimeStamp, " +
+            s"The '$keyword' instant of 'send ${s.msg.format}' is typed ${te.format}, not TimeStamp, " +
               "DateTime or ZonedDateTime",
             suggestion =
               "Schedule with a value that names a point in time: a TimeStamp/DateTime/ZonedDateTime " +
@@ -3067,7 +3130,7 @@ case class ValidationPass(
       // the table and the row scope are checked in `checkStatementScopes`, which threads the
       // `let`/element scope a row field needs. The repository-only rule is the PARSER's.
       case _: StoreStatement | _: UpsertStatement | _: UpdateStatement | _: DeleteStatement => ()
-      case SendStatement(_, msg, portlet, _) =>
+      case SendStatement(_, msg, portlet, _, _) =>
         // A54: a bare MessageRef is checked here; a Constructor AND a bare ValueRef are validated in
         // checkStatementScopes (both need the threaded `let`/element scope — A56/message-value-source).
         msg match
@@ -6244,7 +6307,7 @@ case class ValidationPass(
                     resolution.refMap.definitionOf[Type](omc.msg.pathId).foreach(referenced += _)
                   case _ => ()
                 walkStatements(clause.contents) {
-                  case SendStatement(_, msg, _, _)    => clauseOperandType(msg, clause).foreach(referenced += _)
+                  case SendStatement(_, msg, _, _, _) => clauseOperandType(msg, clause).foreach(referenced += _)
                   case TellStatement(_, msg, _, _)    => clauseOperandType(msg, clause).foreach(referenced += _)
                   case ForwardStatement(_, msg, _)    => clauseOperandType(msg, clause).foreach(referenced += _)
                   case LetStatement(_, _, Some(tr), _) =>
@@ -6343,8 +6406,8 @@ case class ValidationPass(
           adaptor.handlers.foreach { handler =>
             handler.clauses.foreach { clause =>
               walkStatements(clause.contents) {
-                case SendStatement(_, mr: MessageRef, _, _) => sendTellRefs.append(mr)
-                case SendStatement(_, ctor: Constructor, _, _) =>
+                case SendStatement(_, mr: MessageRef, _, _, _) => sendTellRefs.append(mr)
+                case SendStatement(_, ctor: Constructor, _, _, _) =>
                   ctor.ref match
                     case mr: MessageRef => sendTellRefs.append(mr)
                     case _              => ()
@@ -8315,7 +8378,9 @@ case class ValidationPass(
       case let: LetStatement    => Seq(let.expression)
       case put: PutStatement    => Seq(put.value)
       case ret: ReturnStatement => Seq(ret.value)
-      case snd: SendStatement   => Seq(snd.msg) ++ snd.at.toSeq // `at <instant>` is a full Value
+      case snd: SendStatement   =>
+        // `at <instant>` and a recurrence's period/start (2026-11-19) are full Values
+        Seq(snd.msg) ++ snd.at.toSeq ++ snd.every.toSeq.flatMap(r => r.period +: r.starting.toSeq)
       case tel: TellStatement   => Seq(tel.msg)
       case yld: YieldStatement  => Seq(yld.msg)
       case rpl: ReplyStatement  => Seq(rpl.msg)
@@ -13004,7 +13069,7 @@ case class ValidationPass(
       // parameter list (a message clause's local name is A55's `binding`, taken from the handled
       // message), and enumerating is what makes a seventh clause kind a compile error here.
       case _: OnMessageLikeClause | _: OnActivationClause | _: OnPassivationClause |
-          _: OnEntryClause | _: OnOtherClause | _: OnQuiescenceClause =>
+          _: OnEntryClause | _: OnOtherClause | _: OnQuiescenceClause | _: OnEveryClause =>
         Seq.empty[MethodArgument]
     parameters.map(a => a.name -> a.typeEx).toMap
   end clauseParameterScope
@@ -13540,6 +13605,35 @@ case class ValidationPass(
           s.at.foreach { instant =>
             validateValue(instant, parents, lets, elements)
             checkSendAtInstant(s, instant, parents, lets, elements)
+          }
+          // `send ... every <period> [starting at <instant>]` (Reid, 2026-11-19). Running a
+          // recurring send registers a timer, so it may run only ONCE per instance: in `on init`.
+          // Anywhere else every handled message would add another recurrence. Everything else about
+          // the send -- A6 reachability, outlet ownership, portlet typing, A23 -- is unchanged.
+          s.every.foreach { r =>
+            if !parents.exists(_.isInstanceOf[OnInitializationClause]) then
+              messages.addError(
+                s.loc,
+                s"'send ${s.msg.format}' recurs ('${r.format}') outside 'on init'; each time it " +
+                  "ran it would register another recurrence",
+                suggestion =
+                  "Move the recurring send into the processor's 'on init' clause, or use an " +
+                    "'on every <period>' clause, which fires once per period with no message.",
+                ruleId = Some(RuleId.SendEveryNotInInit)
+              )
+            validateValue(r.period, parents, lets, elements)
+            checkRecurrencePeriod(
+              r.period,
+              s"The period of 'send ${s.msg.format}'",
+              parents,
+              lets,
+              elements,
+              RuleId.SendEveryNotDuration
+            )
+            r.starting.foreach { instant =>
+              validateValue(instant, parents, lets, elements)
+              checkSendAtInstant(s, instant, parents, lets, elements, "starting at")
+            }
           }
         case s: ForwardStatement =>
           s.msg match

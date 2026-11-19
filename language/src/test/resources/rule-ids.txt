@@ -451,3 +451,6 @@ value-sum-not-summable
 value-otherwise-never-empty
 value-otherwise-mismatch
 value-conditional-branch-mismatch
+stmt-send-every-not-in-init
+stmt-send-every-not-duration
+handler-every-not-duration

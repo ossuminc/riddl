@@ -871,7 +871,7 @@ object AST:
     GetValue | PromptValue | BooleanExpression | Call | Ask | SelfValue | SystemValue | Create |
     NumericLiteral | LookupValue | EmptyValue | ArithmeticExpression | DurationLiteral |
     QueryValue | TableRef | CollectionPredicate | CollectionFilter | CountValue |
-    MembershipValue | DurationUnitsValue | SumValue | OneOfValue | OtherwiseValue | ConditionalValue | Requires | Returns | InvariantBlock
+    MembershipValue | DurationUnitsValue | SumValue | OneOfValue | OtherwiseValue | ConditionalValue | Requires | Returns | InvariantBlock | Recurrence
 
   /** Type of definitions that occur in a [[Root]] without [[Include]]. [[Root]] deliberately stays
     * narrow: it is the file parse-root, not the reuse unit. [[Module]] is the reuse unit and is
@@ -4696,12 +4696,34 @@ object AST:
     // a scheduled send, so the idiom is to schedule to yourself and decide at fire time. TRAILING and
     // defaulted, because `@JSExportTopLevel` requires defaulted parameters to come last. Absent ⇒ the
     // send is exactly what it was before this field existed.
-    at: Option[Value] = None
+    at: Option[Value] = None,
+    // `send ... every <duration> [starting [at] <instant>]` (Reid, 2026-11-19): a RECURRING delivery,
+    // legal only in `on init` (anywhere else each handled message would register another one).
+    // Mutually exclusive with `at` -- the parser admits one or the other. TRAILING and defaulted for
+    // the same reason as `at`.
+    every: Option[Recurrence] = None
   ) extends Statement {
     override def kind: String = "Send Statement"
     override def canFail: Boolean = true // A12: sending to a portlet may fail
     def format: String =
-      s"send ${msg.format} to ${portlet.format}" + at.map(v => s" at ${v.format}").getOrElse("")
+      s"send ${msg.format} to ${portlet.format}" + at.map(v => s" at ${v.format}").getOrElse("") +
+        every.map(r => s" ${r.format}").getOrElse("")
+  }
+
+  /** The schedule of a recurring `send` (Reid, 2026-11-19): `every <period> [starting at <instant>]`.
+    *
+    * `period` is any [[Value]] -- a duration literal (`30 days`), a duration string, a path to a
+    * Duration constant or field, or B4 arithmetic -- and whether it IS a Duration is validation's
+    * question, as for the quiescence window. `starting` is the first delivery's instant (typed like
+    * `send ... at`); absent, the first delivery is one period after the `send` runs. The message is
+    * re-evaluated at every firing. Fixed spans only: a CALENDAR schedule ("the first of every month")
+    * is BACKLOG [1.32].
+    */
+  @JSExportTopLevel("Recurrence")
+  case class Recurrence(loc: At, period: Value, starting: Option[Value] = None) extends RiddlValue {
+    override def kind: String = "Recurrence"
+    override def format: String =
+      s"every ${period.format}" + starting.map(v => s" starting at ${v.format}").getOrElse("")
   }
 
   /** Pass the handled message onward and DISCHARGE the response obligation, because whatever
@@ -5743,6 +5765,30 @@ object AST:
     override def format: String = s"on quiescence ${window.format}"
   }
 
+  /** `on every <period>` (Reid, 2026-11-19): a TIMER clause that fires once per period, with no
+    * message, port or connector -- the simpler spelling of a recurrence than a recurring `send` in
+    * `on init`. Legal wherever `on quiescence` is, and like it an EFFECT block; inside a State's
+    * handler it is armed only while that state is active. Several may share a handler (an hourly and
+    * a daily tick), unlike the special clauses that allow one each.
+    *
+    * `period` is any [[Value]] and must be a Duration (validation). It is a FIELD declared
+    * undefaulted BEFORE `contents` (the `@JSExportTopLevel` trailing-default rule) and is rendered by
+    * `Declaration.ascription`, as the quiescence window is, so a round trip cannot drop it.
+    */
+  @JSExportTopLevel("OnEveryClause")
+  case class OnEveryClause(
+    loc: At,
+    period: Value,
+    contents: Contents[Statements] = Contents.empty[Statements](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
+  ) extends OnClause {
+    def id: Identifier = Identifier(loc, s"every")
+
+    override def kind: String = "On Every"
+
+    override def format: String = s"on every ${period.format}"
+  }
+
   ///////////////////////////////////////////////////////////////////////////////////////// HANDLER
 
   /** A named handler of messages (commands, events, queries) that bundles together a set of
@@ -5975,6 +6021,8 @@ object AST:
       // lives here for the same reason `on other`'s binding does -- one implementation for both
       // surfaces, so the prettifier cannot silently drop it.
       case oqc: OnQuiescenceClause => s" ${oqc.window.format}"
+      // 2026-11-19: `on every <period>`, for the same reason.
+      case oec: OnEveryClause => s" ${oec.period.format}"
       case _ => ""
     end ascription
 

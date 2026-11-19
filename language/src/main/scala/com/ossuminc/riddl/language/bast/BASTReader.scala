@@ -1021,7 +1021,12 @@ class BASTReader(
         val msg = readMessageOperand() // A54: bare ref or constructor
         val portlet = readPortletRef()
         val instant = readOption(readValue()) // `send ... at <instant>`, FORMAT_REVISION 24
-        SendStatement(loc, msg, portlet, instant)
+        val every = readOption { // `send ... every <period> [starting at <instant>]`, rev 35
+          val rloc = readLocation()
+          val period = readValue()
+          Recurrence(rloc, period, readOption(readValue()))
+        }
+        SendStatement(loc, msg, portlet, instant, every)
 
       case 7 => // Morph
         val entity = readEntityRef()
@@ -1423,6 +1428,12 @@ class BASTReader(
         val contents = readContentsDeferred[Statements]()
         val metadata = readMetadataDeferred()
         OnEntryClause(loc, contents, metadata)
+
+      case 9 => // Every (rev 35) -- the period value, then contents
+        val period = readValue()
+        val contents = readContentsDeferred[Statements]()
+        val metadata = readMetadataDeferred()
+        OnEveryClause(loc, period, contents, metadata)
 
       case other =>
         // Never fabricate a clause: a byte this reader does not know means a newer FORMAT_REVISION

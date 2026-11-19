@@ -218,6 +218,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case oc: OnActivationClause     => writeOnActivationClause(oc)
       case oc: OnPassivationClause    => writeOnPassivationClause(oc)
       case oc: OnEntryClause          => writeOnEntryClause(oc)
+      case oc: OnEveryClause          => writeOnEveryClause(oc)
       case oc: OnQuiescenceClause     => writeOnQuiescenceClause(oc)
       case oc: OnOtherClause          => writeOnOtherClause(oc)
 
@@ -872,6 +873,14 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeContents(oc.contents)
   }
 
+  def writeOnEveryClause(oc: OnEveryClause): Unit = {
+    writeNodeTag(NODE_ON_CLAUSE, oc.metadata.nonEmpty)
+    writer.writeU8(9) // Every clause (rev 35) -- period value, then contents, as quiescence's window
+    writeLocation(oc.loc)
+    writeValue(oc.period)
+    writeContents(oc.contents)
+  }
+
   def writeOnQuiescenceClause(oc: OnQuiescenceClause): Unit = {
     writeNodeTag(NODE_ON_CLAUSE, oc.metadata.nonEmpty)
     writer.writeU8(7) // Quiescence clause type (rev 24) — window value, then contents
@@ -1217,6 +1226,12 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeMessageOperand(s.msg) // A54: bare ref or constructor
     writePortletRef(s.portlet)
     writeOption(s.at)(writeValue) // `send ... at <instant>`, FORMAT_REVISION 24
+    // `send ... every <period> [starting at <instant>]`, FORMAT_REVISION 35
+    writeOption(s.every) { r =>
+      writeLocation(r.loc)
+      writeValue(r.period)
+      writeOption(r.starting)(writeValue)
+    }
   }
 
   /** `append <value> to field F` -- sub-kind 22 (FORMAT_REVISION 25). */

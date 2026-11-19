@@ -144,6 +144,10 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         oqc.window match
           case vr: ValueRef => resolveValue(vr, parents)
           case _            => ()
+      // 2026-11-19: `on every <period>` -- the same, but the period is any Value (a duration
+      // literal, a string, a path or arithmetic), so it goes through the general resolver.
+      case oec: OnEveryClause =>
+        resolveValue(oec.period, parents)
       case e: Entity =>
         addEntity(e, parents)
       case s: State =>
@@ -414,10 +418,15 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case BecomeStatement(_, entity, handler) =>
         associateUsage[Entity](parents.head, resolveARef[Entity](entity, parents))
         associateUsage[Handler](parents.head, resolveARef[Handler](handler, parents))
-      case SendStatement(_, msg, portlet, instant) =>
+      case SendStatement(_, msg, portlet, instant, every) =>
         resolveMessageOperand(msg, parents)
         associateUsage[Portlet](parents.head, resolveARef[Portlet](portlet, parents))
         instant.foreach(v => resolveValue(v, parents)) // `send ... at <instant>`
+        // `send ... every <period> [starting at <instant>]` (2026-11-19): both are full Values.
+        every.foreach { r =>
+          resolveValue(r.period, parents)
+          r.starting.foreach(v => resolveValue(v, parents))
+        }
       case MorphStatement(_, entity, state, message) =>
         associateUsage[Entity](parents.head, resolveARef[Entity](entity, parents))
         associateUsage[State](parents.head, resolveARef[State](state, parents))
@@ -1059,6 +1068,10 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
           resolveMessageOperand(s.msg, parents)
           associateUsage[Portlet](parents.head, resolveARef[Portlet](s.portlet, parents))
           s.at.foreach(v => resolveValue(v, parents)) // `send ... at <instant>`
+          s.every.foreach { r => // `send ... every <period> [starting at <instant>]`
+            resolveValue(r.period, parents)
+            r.starting.foreach(v => resolveValue(v, parents))
+          }
         }
       case s: TellStatement =>
         quietly {

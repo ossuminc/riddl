@@ -596,7 +596,9 @@ object JsonModel:
     parameters: Seq[MethodArgDto] = Nil,
     // 2026-09-07: the `on quiescence` window (`kind: "quiescence"` only) -- a literal duration
     // string or a reference to a Duration-typed constant or field, as a ValueDto.
-    window: Option[ValueDto] = None
+    window: Option[ValueDto] = None,
+    // 2026-11-19: the `on every` period (`kind: "every"` only), any Duration-typed value.
+    period: Option[ValueDto] = None
   )
 
   case class MessageRefDto(ref: String, kind: String)
@@ -791,7 +793,11 @@ object JsonModel:
     to: String,
     portlet: String,
     // `send ... at <instant>` -- optional `"at": <value>`; absent means an unscheduled send.
-    at: Option[ValueDto] = None
+    at: Option[ValueDto] = None,
+    // `send ... every <period> [starting at <instant>]` (2026-11-19) -- optional `"every"` and
+    // `"starting"`; `starting` without `every` is a malformed document.
+    every: Option[ValueDto] = None,
+    starting: Option[ValueDto] = None
   ) extends StatementDto
 
   /** `{ "kind": "forward", "message": <msgRef|constructor>, "to": "<path>", "target":
@@ -2265,7 +2271,9 @@ object JsonModel:
               readMsgOperand(m("message")),
               m("to").str,
               m("portlet").str,
-              m.get("at").map(readValue)
+              m.get("at").map(readValue),
+              m.get("every").map(readValue),
+              m.get("starting").map(readValue)
             )
           case "forward" =>
             ForwardStmtDto(readMsgOperand(m("message")), m("to").str, m("target").str)
@@ -2419,14 +2427,16 @@ object JsonModel:
             "value" -> writeValue(value)
           ) ++ key.map(k => "key" -> (ujson.Str(k): ujson.Value))
         )
-      case SendStmtDto(message, to, portlet, at) =>
+      case SendStmtDto(message, to, portlet, at, every, starting) =>
         ujson.Obj.from(
           Seq[(String, ujson.Value)](
             "kind" -> ujson.Str("send"),
             "message" -> writeMsgOperand(message),
             "to" -> ujson.Str(to),
             "portlet" -> ujson.Str(portlet)
-          ) ++ at.map(v => "at" -> (writeValue(v): ujson.Value))
+          ) ++ at.map(v => "at" -> (writeValue(v): ujson.Value)) ++
+            every.map(v => "every" -> (writeValue(v): ujson.Value)) ++
+            starting.map(v => "starting" -> (writeValue(v): ujson.Value))
         )
       case ForwardStmtDto(message, to, target) =>
         ujson.Obj(
@@ -3027,6 +3037,9 @@ object JsonModel:
     */
   val knownKeys: Set[String] = Set(
     "at", // SendStmtDto: `send ... at <instant>`
+    "every", // SendStmtDto: `send ... every <period>` (2026-11-19)
+    "starting", // SendStmtDto: `... starting at <instant>`
+    "period", // OnClauseDto: `on every <period>` (2026-11-19)
     "key", // RemoveStmtDto: the keyed form's element-field name (2026-09-14)
     "window",
     "$at",

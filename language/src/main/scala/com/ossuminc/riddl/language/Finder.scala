@@ -239,6 +239,7 @@ object Finder:
     case ss: SagaStep         => ss.doStatements.toSeq ++ ss.undoStatements.toSeq
     case cr: Correlation => cr.timeoutStatements.toSeq // `.contents` already walked as a Container
     case oq: OnQuiescenceClause => Seq(oq.window) // the window is a field; `.contents` is walked
+    case oe: OnEveryClause      => Seq(oe.period) // likewise the timer clause's period
     case iv: Invariant   => iv.condition.toSeq
     case ib: InvariantBlock => ib.statements.toSeq :+ ib.predicate
 
@@ -266,7 +267,9 @@ object Finder:
     case lt: LetStatement     => Seq(lt.expression)
     case pt: PutStatement     => Seq(pt.value)
     case rt: ReturnStatement  => Seq(rt.value)
-    case sn: SendStatement    => Seq(sn.msg) ++ sn.at.toSeq // the `at` instant is a full Value
+    case sn: SendStatement    =>
+      // the `at` instant and a recurrence's period/start are full Values
+      Seq(sn.msg) ++ sn.at.toSeq ++ sn.every.toSeq.flatMap(r => r.period +: r.starting.toSeq)
     case tl: TellStatement    => Seq(tl.msg)
     case yl: YieldStatement   => Seq(yl.msg)
     case rp: ReplyStatement   => Seq(rp.msg)

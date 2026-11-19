@@ -110,6 +110,7 @@ case class BASTWriterPass(input: PassInput, outputs: PassesOutput)(using pc: Pla
       case oc: OnEntryClause          => traverseOnClause(oc, oc.contents, parents)
       case oc: OnOtherClause          => traverseOnClause(oc, oc.contents, parents)
       case oc: OnQuiescenceClause     => traverseOnClause(oc, oc.contents, parents)
+      case oc: OnEveryClause          => traverseOnClause(oc, oc.contents, parents)
 
       // Other Branch types with metadata
       case h: Handler  => traverseOnClause(h, h.contents, parents)

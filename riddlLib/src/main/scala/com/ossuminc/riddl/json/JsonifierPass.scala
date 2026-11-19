@@ -879,6 +879,18 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
                 window = Some(serializeValue(oqc.window))
               )
             )
+          case oec: OnEveryClause =>
+            // 2026-11-19: the period is a FIELD, serialized directly, as the quiescence window is.
+            Some(
+              OnClauseDto(
+                "every",
+                None,
+                statements,
+                metadata = metaOf(oec.metadata),
+                brief = briefOf(oec.metadata),
+                period = Some(serializeValue(oec.period))
+              )
+            )
           case ooc: OnOtherClause =>
             // A57: `on other as x [: <envelope>]`. Explicit arm rather than the wildcard below,
             // so the binding is carried instead of silently dropped on the way to JSON.
@@ -1430,9 +1442,16 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case DeleteStatement(_, table, where) => DeleteStmtDto(table.format, serializeValue(where))
     case RemoveStatement(_, field, value, key) =>
       RemoveStmtDto(path(field.pathId), serializeValue(value), key.map(_.value))
-    case SendStatement(_, msg, portlet, instant) =>
+    case SendStatement(_, msg, portlet, instant, every) =>
       val (pp, pk) = portletRef(portlet)
-      SendStmtDto(serializeDeliverableOperand(msg), pp, pk, instant.map(serializeValue))
+      SendStmtDto(
+        serializeDeliverableOperand(msg),
+        pp,
+        pk,
+        instant.map(serializeValue),
+        every.map(r => serializeValue(r.period)),
+        every.flatMap(_.starting).map(serializeValue)
+      )
     case ForwardStatement(_, msg, target) =>
       // Both shapes collapse to one (path, kind) pair -- the kind string distinguishes them.
       val (fp, fk) = target match
