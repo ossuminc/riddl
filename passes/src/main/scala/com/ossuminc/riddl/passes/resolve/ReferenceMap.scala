@@ -72,6 +72,22 @@ case class ReferenceMap(messages: Messages.Accumulator) {
   def anyDefinitionOf(pathId: PathIdentifier, parent: Definition): Option[Definition] =
     map.get(Key(pathId.format, parent))
 
+  private val optionalChains: mutable.HashSet[Key] = mutable.HashSet.empty
+
+  /** BACKLOG [1.27] Q-A: record that the VALUE path `pathId`, under `parent`, reached its target by
+    * passing THROUGH an optional (`T?`) field. The definition it resolved to says nothing about
+    * that -- `m.amount` resolves to `amount`, which is a required `Integer` -- so the fact has to
+    * travel beside it: the value the path denotes is `Integer?`, not `Integer`.
+    */
+  def markOptionalChain(pathId: PathIdentifier, parent: Definition): Unit =
+    optionalChains.add(Key(pathId.format, parent))
+
+  /** Whether [[markOptionalChain]] recorded `pathId` under `parent`: the value is optional even
+    * when the definition it resolved to is not.
+    */
+  def isOptionalChain(pathId: PathIdentifier, parent: Definition): Boolean =
+    optionalChains.contains(Key(pathId.format, parent))
+
   def definitionOf[T <: Definition: ClassTag](
     pathId: PathIdentifier
   )(using PlatformContext): Option[T] = {

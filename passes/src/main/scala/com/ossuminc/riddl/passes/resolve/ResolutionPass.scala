@@ -693,6 +693,18 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
     try body
     finally quiet = false
 
+  /** BACKLOG [1.27] Q-A (Reid, 2026-11-19: optional chaining): set while a VALUE path is walked, so
+    * the walk may pass through an optional (`T?`) field. Every other path -- a type reference, a
+    * `foreach … in field` collection, a `set field` target -- still refuses `?`, with
+    * `cardinalityRefusal`'s diagnostic.
+    */
+  private var chainOptionals: Boolean = false
+
+  /** Set by [[candidatesFromTypeExpression]] when a walk under [[chainOptionals]] actually passed
+    * through a `?`, so [[resolveValueRef]] can record that the value is optional.
+    */
+  private var chainedThroughOptional: Boolean = false
+
   /** A55: resolve a [[ValueRef]]'s path into the refMap using the SAME engine every other reference
     * uses — [[resolvePathFromAnchor]] and its [[findMatchingCandidate]] walk. Only the ANCHOR is
     * chosen differently, because a ValueRef's leading name is not a global symbol: it names
@@ -731,7 +743,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
   private def resolveValueRef(vr: ValueRef, parents: Parents): Unit =
     val names = vr.path.value
     if names.nonEmpty && parents.nonEmpty then
-      quietly {
+      chainOptionals = true
+      chainedThroughOptional = false
+      try quietly {
         val head = names.head
         val parent = parents.head
         parents.collectFirst {
@@ -799,6 +813,10 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
                   case None => resolveAPathId[Definition](vr.path, parents)
         end match
       }
+      finally chainOptionals = false
+      if chainedThroughOptional && refMap.anyDefinitionOf(vr.path, parents.head).nonEmpty then
+        refMap.markOptionalChain(vr.path, parents.head)
+      chainedThroughOptional = false
     end if
   end resolveValueRef
 
@@ -1984,6 +2002,11 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
 
         // Return the name and candidates we should next search for
         definition match
+          case optType: Type if chainOptionals && optType.typEx.isInstanceOf[Optional] =>
+            // `type MaybeMoney is Money?`: a Type naming an optional has no contents of its own,
+            // so a value path chains through to what the optional holds.
+            defStack.push(optType)
+            candidatesFromTypeExpression(optType.typEx, defStack)
           case foundType: Branch[?] =>
             defStack.push(foundType)
             foundType.contents.directDefinitions
@@ -2014,8 +2037,13 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         candidatesFromPathIdentifier[Type](pid, parentStack)
       case EntityReferenceTypeExpression(_, entityRef) =>
         candidatesFromPathIdentifier[Entity](entityRef, parentStack)
+      case opt: Optional if chainOptionals =>
+        // BACKLOG [1.27] Q-A: a VALUE path chains through `?`; the value it reaches is optional,
+        // which `resolveValueRef` records once the walk is done.
+        chainedThroughOptional = true
+        candidatesFromTypeExpression(opt.typeExp, parentStack)
       case _: Cardinality =>
-        // Deliberately NOT descended into. A path reaches through a field to name something
+        // Deliberately NOT descended into, except `?` for a VALUE path (the arm above). A path reaches through a field to name something
         // inside its type, which is only meaningful when the field denotes EXACTLY ONE value.
         // `?` may be absent, `*`/`+` are many -- there is no single value to reach through.
         // `cardinalityRefusal` turns this empty result into a diagnostic that says so, instead

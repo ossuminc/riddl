@@ -11125,9 +11125,27 @@ case class ValidationPass(
     * and cannot walk the rest for us. Everything else comes from the refMap.
     */
   private def typeExprOfPath(start: TypeExpression, names: Seq[String]): Option[TypeExpression] =
-    names.foldLeft(Option(start)) { (acc, n) =>
-      acc.flatMap(te => aggregateFieldsOf(te).find(_.id.value == n).map(_.typeEx))
-    }
+    // BACKLOG [1.27] Q-A (optional chaining): a step may pass THROUGH a `T?` -- written inline or
+    // behind a type name -- and then the value reached is optional too. Collections do not chain:
+    // `aggregateFieldsOf` has no arm for `*`, `+` or a range, so the walk stops there as before.
+    var chained = false
+    def throughOptional(te: TypeExpression): TypeExpression = aliasFreeTypeExpr(te) match
+      case opt: Optional =>
+        chained = true
+        opt.typeExp
+      case _ => te
+    names
+      .foldLeft(Option(start)) { (acc, n) =>
+        acc.flatMap(te => aggregateFieldsOf(throughOptional(te)).find(_.id.value == n).map(_.typeEx))
+      }
+      .map(optionalIfChained(_, chained))
+  end typeExprOfPath
+
+  /** The type a value path denotes when it chained through an optional: `T` becomes `T?`, while a
+    * type that already admits empty is left as written.
+    */
+  private def optionalIfChained(te: TypeExpression, chained: Boolean): TypeExpression =
+    if chained && !admitsEmpty(te) then Optional(te.loc, te) else te
 
   /** A55: the named [[Type]] a `let`-local denotes — its `let x: T = …` annotation when present,
     * otherwise INFERRED from the bound expression. Inference is required for `let bar = foo;
@@ -11218,12 +11236,15 @@ case class ValidationPass(
       if idx >= 0 then
         letTypeExpr(idx, parents, lets, elements).flatMap(te => typeExprOfPath(te, names.tail))
       else
-        valueRefDefinition(vr, parents).flatMap {
-          case f: Field    => Some(f.typeEx)
-          case t: Type     => Some(t.typEx)
-          case k: Constant => Some(k.typeEx)
-          case _           => None
-        }
+        val chained = parents.headOption.exists(resolution.refMap.isOptionalChain(vr.path, _))
+        valueRefDefinition(vr, parents)
+          .flatMap {
+            case f: Field    => Some(f.typeEx)
+            case t: Type     => Some(t.typEx)
+            case k: Constant => Some(k.typeEx)
+            case _           => None
+          }
+          .map(optionalIfChained(_, chained))
       end if
   end valueRefTypeExpr
 
