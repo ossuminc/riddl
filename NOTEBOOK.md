@@ -33,11 +33,24 @@ authoritative). Ask `git` for branch, tree and unpushed span — never trust a w
 ### In flight
 
 **`main` is heading for 2.8.0** (Reid): undeliverable-clause rules, schema-link typing,
-`on init` as creation, `on entry`, `ask query Q(args) of P`, **FORMAT_REVISION 33**.
-`../bin/riddlc` and ivy are `2.7.0-25-2d17025b` (restaged at Reid's request so riddl-models can migrate). `morph S -> S`
-stays a Warning (Reid). **Owed at 3.0: BACKLOG [5.10]**
-(rename the `AST.Initiate` class to `Create`, drop the alias val). BACKLOG [5.9] stays
-DEFERRED by Reid.
+`on init` as creation, `on entry`, `ask query Q(args) of P`, literals held to their type,
+the optional-for-required Advisory, let-path walking, **FORMAT_REVISION 33**.
+`../bin/riddlc` and ivy are `2.7.0-27-faf60865` (restaged 2026-11-19 at Reid's request so
+riddl-models can migrate). `morph S -> S` stays a Warning (Reid). **Owed at 3.0: BACKLOG
+[5.10]** (rename the `AST.Initiate` class to `Create`, drop the alias val). BACKLOG [5.9]
+stays DEFERRED by Reid.
+
+**NEXT: BACKLOG [1.27], the four value forms — plan APPROVED 2026-11-19, nothing coded
+yet.** The plan is `~/.claude/plans/dynamic-puzzling-hinton.md`; it carries the ruled
+spellings, the semantics for the CM, the new rule ids, and a file:line inventory of the ~28
+sites each new value node touches (modelled on `CountValue`/`CollectionPredicate`). Work order,
+each TDD and through every reflective surface before the next: (1) optional chaining — a path
+through a `T?` resolves with an optional result (`ResolutionPass` ValueRef walk and
+`typeExprOfPath`; today even `E.S.opt.amount` is `value-ref-unresolved`); (2) `<unit> of d`;
+(3) `sum of xs [as e by expr]`; (4) `one of xs as e where p`; (5) `x otherwise y`, plus the
+advisory suggestion naming it; (6) `when c then a else b end` as a value. One commit per form;
+new BAST value tags start at 22, FORMAT_REVISION 33 → 34. New words (`sum`, `otherwise`, the
+unit words) must stay CONTEXT-SENSITIVE: the corpus has 18 fields named `hours`/`days`.
 
 ### Traps a fresh session would hit
 
@@ -66,8 +79,11 @@ known-bad model.
 
 ### task/
 
-Empty of task files (`probe-2026-09-06-adaptor/` is a leftover scratch directory of probe
-fixtures, not a task).
+One open file: `2026-11-18-value-forms-the-corpus-cannot-write.md` (riddl-models), the
+input to [1.27]; spellings are appended to it, and it moves to `done/` when the forms land.
+Everything else from 2026-11-18/19 is in `task/done/`. riddl-models has its own task
+`2026-11-19-riddl-value-checks-corpus-findings.md` (the 8 Natural fields are already fixed in
+their `2f2291b63`). `probe-2026-09-06-adaptor/` is a leftover scratch directory, not a task.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
