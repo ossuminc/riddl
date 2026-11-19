@@ -134,4 +134,27 @@ class ValueFormsValidationTest extends AbstractValidatingTest {
       withClue(clue(msgs)) { errors(msgs) must not be empty }
     }
   }
+
+  "`one of`" should {
+    "be the element type, made optional" in { (td: TestData) =>
+      mustBeClean("C.Line?", "one of E.S.lines as l where l.sku == g.sku", td)
+      mustAdvise("C.Line", "one of E.S.lines as l where l.sku == g.sku", td)
+    }
+    "chain into a field of the result, which is optional" in { (td: TestData) =>
+      val line = "let line = one of E.S.lines as l where l.sku == g.sku"
+      mustBeClean("Integer?", "line.qty", td, line)
+      mustAdvise("Integer", "line.qty", td, line)
+      val bad = messages(model("Integer?", "line.nosuch", line), td)
+      withClue(clue(bad)) { errors(bad) must not be empty }
+    }
+    "require a boolean predicate and a collection" in { (td: TestData) =>
+      val notBool = messages(model("C.Line?", "one of E.S.lines as l where l.sku"), td)
+      withClue(clue(notBool)) { errors(notBool) must not be empty }
+      mustRefuse(RuleId.NotACollection, "C.Line?", "one of E.S.n as l where l.qty > 0", td)
+    }
+    "bind the element in the predicate only" in { (td: TestData) =>
+      val msgs = messages(model("C.Line?", "one of E.S.lines as l where l.nosuch > 0"), td)
+      withClue(clue(msgs)) { errors(msgs) must not be empty }
+    }
+  }
 }

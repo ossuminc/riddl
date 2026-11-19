@@ -1696,6 +1696,12 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
             writeIdentifierInline(e)
             writeValue(b)
           case None => writer.writeU8(0)
+      case ov: OneOfValue =>
+        writer.writeU8(24)
+        writeLocation(ov.loc)
+        writeValue(ov.collection)
+        writeIdentifierInline(ov.element)
+        writeValue(ov.predicate)
       // B2 (revision 29): `query [one] <table> [where …]` -- value tag 17
       case qv: QueryValue =>
         writer.writeU8(17)

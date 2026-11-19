@@ -871,7 +871,7 @@ object AST:
     GetValue | PromptValue | BooleanExpression | Call | Ask | SelfValue | SystemValue | Create |
     NumericLiteral | LookupValue | EmptyValue | ArithmeticExpression | DurationLiteral |
     QueryValue | TableRef | CollectionPredicate | CollectionFilter | CountValue |
-    MembershipValue | DurationUnitsValue | SumValue | Requires | Returns | InvariantBlock
+    MembershipValue | DurationUnitsValue | SumValue | OneOfValue | Requires | Returns | InvariantBlock
 
   /** Type of definitions that occur in a [[Root]] without [[Include]]. [[Root]] deliberately stays
     * narrow: it is the file parse-root, not the reuse unit. [[Module]] is the reuse unit and is
@@ -3275,13 +3275,13 @@ object AST:
     * comparison's operands are now full Values (see [[ComparisonExpression]]). B2 (2026-09-22)
     * adds [[QueryValue]], the eighteenth; B5 the four collection kinds, making twenty-two.
     * BACKLOG [1.27] (2026-11-19) adds [[DurationUnitsValue]], the twenty-third, and
-    * [[SumValue]].
+    * [[SumValue]] and [[OneOfValue]].
     */
   type Value =
     LiteralString | PromptValue | Constructor | ValueRef | GetValue | BooleanExpression | Call |
       Ask | SelfValue | SystemValue | Create | NumericLiteral | LookupValue | EmptyValue |
       ArithmeticExpression | DurationLiteral | ConstantRef | QueryValue | CollectionPredicate |
-      CollectionFilter | CountValue | MembershipValue | DurationUnitsValue | SumValue
+      CollectionFilter | CountValue | MembershipValue | DurationUnitsValue | SumValue | OneOfValue
 
   /** A54: a single argument supplied to a [[Constructor]]. Positional when `name` is `None`; named
     * (`id = value`) when `name` is `Some`. Validation requires positional arguments to precede
@@ -4050,7 +4050,8 @@ object AST:
     right: Value
   ) extends BooleanExpression:
     override def kind: String = "Comparison Expression"
-    def format: String = s"${left.format} ${op.symbol} ${right.format}"
+    def format: String =
+      s"${CollectionValues.operand(left)} ${op.symbol} ${CollectionValues.operand(right)}"
   end ComparisonExpression
 
   /** A28: a binary logical connective (`left and right`, `left or right`). Left-associative; the
@@ -4067,7 +4068,7 @@ object AST:
     override def kind: String = "Logical Expression"
     private def paren(v: Value): String = v match
       case _: LogicalExpression => s"(${v.format})"
-      case _                    => v.format
+      case _                    => CollectionValues.operand(v)
     def format: String = s"${paren(left)} ${op.symbol} ${paren(right)}"
   end LogicalExpression
 
@@ -4079,7 +4080,7 @@ object AST:
     override def kind: String = "Not Expression"
     def format: String = expr match
       case _: LogicalExpression => s"not (${expr.format})"
-      case _                    => s"not ${expr.format}"
+      case _                    => s"not ${CollectionValues.operand(expr)}"
   end NotExpression
 
   /** B4: the four arithmetic operators. Nothing else -- no power, no roots, no math-library
@@ -4132,7 +4133,7 @@ object AST:
       case sv if SumValue.isOpenRight(sv) &&
           ArithmeticOperator.precedence(op) == ArithmeticOperator.precedence(ArithmeticOperator.Multiply) =>
         s"(${v.format})"
-      case _ => v.format
+      case _ => CollectionValues.operand(v)
     def format: String = s"${paren(left, isRight = false)} ${op.symbol} ${paren(right, isRight = true)}"
   end ArithmeticExpression
 
@@ -4442,6 +4443,25 @@ object AST:
       case _            => false
   end SumValue
 
+  /** BACKLOG [1.27] (Reid, 2026-11-19): `one of <coll> as <e> where <pred>` -- the element that
+    * satisfies the predicate, or EMPTY when none does, so its type is the element type made
+    * optional (`Line?`). For a sequence it is the first match in order; for anything else, any
+    * one of the matches. It answers a question about a collection and builds nothing, so B5's
+    * no-`map` line holds. Read a field of the result through optional chaining (`line.qty` is
+    * `Integer?`) and supply the empty case with `otherwise`.
+    *
+    * The predicate is a full boolean expression, so the form is open on its right: as an operand
+    * of any operator it is parenthesized ([[CollectionValues.alwaysParenthesized]]).
+    */
+  @JSExportTopLevel("OneOfValue")
+  case class OneOfValue(loc: At, collection: Value, element: Identifier, predicate: Value)
+      extends RiddlValue:
+    override def kind: String = "One Of Value"
+    def format: String =
+      s"one of ${CollectionValues.parenthesized(collection)} as ${element.format} where " +
+        predicate.format
+  end OneOfValue
+
   /** B5: the shared parenthesizing rule for a collection operand. An INFIX operand (a filter, a
     * membership test, a comparison, a logical or an arithmetic expression) binds looser than the
     * `additive` these forms take, so it must be parenthesized to re-parse as the same tree.
@@ -4452,8 +4472,19 @@ object AST:
           _: LogicalExpression | _: ArithmeticExpression =>
         true
       case v if SumValue.isOpenRight(v) => true // [1.27]
+      case v if alwaysParenthesized(v)  => true
       case _                            => false
     def parenthesized(v: Value): String = if needsParens(v) then s"(${v.format})" else v.format
+
+    /** BACKLOG [1.27]: a value that must be parenthesized as the operand of ANY operator,
+      * because its own right edge is a full expression that would absorb whatever follows it.
+      * Comparison, logical, `not` and arithmetic formats consult it, and so do their hand
+      * copies in `RiddlFileEmitter`.
+      */
+    def alwaysParenthesized(v: Value): Boolean = v match
+      case _: OneOfValue => true
+      case _             => false
+    def operand(v: Value): String = if alwaysParenthesized(v) then s"(${v.format})" else v.format
   end CollectionValues
 
   /** B5: `<coll> contains <value>` -- membership, by value equality of the element type.

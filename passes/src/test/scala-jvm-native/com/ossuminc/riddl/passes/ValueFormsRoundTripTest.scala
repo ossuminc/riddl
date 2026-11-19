@@ -37,7 +37,13 @@ class ValueFormsRoundTripTest extends AnyWordSpec with Matchers {
     "(sum of Data.lines as l by l.qty) * 2",
     "2 * (sum of Data.lines as l by l.qty) * 3",
     "count of (sum of Data.lines as l by l.qty)",
-    "sum of Data.lines as l by minutes of Data.wait"
+    "sum of Data.lines as l by minutes of Data.wait",
+    "one of Data.lines as l where l.sku == \"x\"",
+    "one of Data.lines as l where l.qty > 0 and l.price < 10",
+    "(one of Data.lines as l where l.qty > 0) != empty",
+    "not (one of Data.lines as l where l.qty > 0) == empty",
+    "Data.days > 0 and (one of Data.lines as l where l.qty > 0) != empty",
+    "count of (one of Data.lines as l where l.qty > 0)"
   )
 
   private val src: String =

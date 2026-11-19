@@ -2,6 +2,7 @@
 //   * optional chaining -- a value path through a `T?` reaches an optional value
 //   * `<unit> of d` -- a Duration in whole units, an Integer
 //   * `sum of xs [as e by <expr>]` -- a total, of the elements or of a per-element product
+//   * `one of xs as e where p` -- the matching element, or empty; its fields chain optionally
 // The unit words are NOT reserved: `hours` is a field name below, and so is `days`.
 domain Insurance is {
   context Billing is {
@@ -23,7 +24,8 @@ domain Insurance is {
       graceMinutes: Integer,
       depositAmount: Integer?,
       total: Integer,
-      units: Integer
+      units: Integer,
+      quotedQuantity: Integer?
     } with { briefly "e" }
 
     entity Account is {
@@ -34,13 +36,15 @@ domain Insurance is {
         on q: command Billing.Quote is {
           let graceMinutes = minutes of Policy.grace
           let held = days of (Policy.renewed - Policy.started)
+          let line = one of Policy.lines as l where l.productId == q.productId
           yield event Billing.Quoted(
             hours = hours of Policy.grace,
             heldDays = held + Policy.days,
             graceMinutes = graceMinutes,
             depositAmount = Policy.deposit.amount,
             total = sum of Policy.lines as l by l.quantity * l.price,
-            units = sum of Policy.lines as l by l.quantity
+            units = sum of Policy.lines as l by l.quantity,
+            quotedQuantity = line.quantity
           )
         }
         on other is { error "unexpected" }

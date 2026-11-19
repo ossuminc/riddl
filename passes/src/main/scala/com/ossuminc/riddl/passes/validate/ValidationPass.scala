@@ -7082,6 +7082,7 @@ case class ValidationPass(
     case cv: CountValue      => valueReferencedDefs(cv.collection)
     case du: DurationUnitsValue => valueReferencedDefs(du.duration)
     case sv: SumValue => valueReferencedDefs(sv.collection) ++ sv.by.toSeq.flatMap(valueReferencedDefs)
+    case ov: OneOfValue => valueReferencedDefs(ov.collection) ++ valueReferencedDefs(ov.predicate)
     case mv: MembershipValue => valueReferencedDefs(mv.collection) ++ valueReferencedDefs(mv.element)
     case cr: ConstantRef =>
       resolution.refMap.definitionOf[Constant](cr.pathId).map(cr.pathId -> _).toSeq
@@ -8249,6 +8250,7 @@ case class ValidationPass(
     case cv: CountValue      => countValueFailPoints(cv.collection)
     case du: DurationUnitsValue => countValueFailPoints(du.duration)
     case sv: SumValue => countValueFailPoints(sv.collection) + sv.by.map(countValueFailPoints).getOrElse(0)
+    case ov: OneOfValue => countValueFailPoints(ov.collection) + countValueFailPoints(ov.predicate)
     case mv: MembershipValue => countValueFailPoints(mv.collection) + countValueFailPoints(mv.element)
     // B2: a query READS the store and may fail, exactly as `get` does (1), plus its condition.
     case qv: QueryValue => 1 + qv.where.map(countValueFailPoints).getOrElse(0)
@@ -8370,6 +8372,7 @@ case class ValidationPass(
     case cv: CountValue           => stateReadsIn(cv.collection)
     case du: DurationUnitsValue => stateReadsIn(du.duration)
     case sv: SumValue => stateReadsIn(sv.collection) ++ sv.by.toSeq.flatMap(stateReadsIn)
+    case ov: OneOfValue => stateReadsIn(ov.collection) ++ stateReadsIn(ov.predicate)
     case mv: MembershipValue      => stateReadsIn(mv.collection) ++ stateReadsIn(mv.element)
     case _: DurationLiteral       => Seq.empty // B4: a literal
     // A17's ASK form: `when invariant Limit with <expr>`. The `with` operand is a full Value, so it
@@ -8435,6 +8438,7 @@ case class ValidationPass(
     case cv: CountValue           => initiatesIn(cv.collection)
     case du: DurationUnitsValue => initiatesIn(du.duration)
     case sv: SumValue => initiatesIn(sv.collection) ++ sv.by.toSeq.flatMap(initiatesIn)
+    case ov: OneOfValue => initiatesIn(ov.collection) ++ initiatesIn(ov.predicate)
     case mv: MembershipValue      => initiatesIn(mv.collection) ++ initiatesIn(mv.element)
     case _: DurationLiteral       => Seq.empty // B4: a literal
     case ic: InvariantCondition   => ic.argument.toSeq.flatMap(initiatesIn)
@@ -8506,6 +8510,7 @@ case class ValidationPass(
     case cv: CountValue           => systemValuesIn(cv.collection)
     case du: DurationUnitsValue => systemValuesIn(du.duration)
     case sv: SumValue => systemValuesIn(sv.collection) ++ sv.by.toSeq.flatMap(systemValuesIn)
+    case ov: OneOfValue => systemValuesIn(ov.collection) ++ systemValuesIn(ov.predicate)
     case mv: MembershipValue      => systemValuesIn(mv.collection) ++ systemValuesIn(mv.element)
     case ic: InvariantCondition   => ic.argument.toSeq.flatMap(systemValuesIn)
     case ask: Ask                 => ask.args.toSeq.flatMap(a => systemValuesIn(a.value))
@@ -8539,6 +8544,7 @@ case class ValidationPass(
     case cv: CountValue           => asksIn(cv.collection)
     case du: DurationUnitsValue => asksIn(du.duration)
     case sv: SumValue => asksIn(sv.collection) ++ sv.by.toSeq.flatMap(asksIn)
+    case ov: OneOfValue => asksIn(ov.collection) ++ asksIn(ov.predicate)
     case mv: MembershipValue      => asksIn(mv.collection) ++ asksIn(mv.element)
     case _: DurationLiteral       => Seq.empty // B4: a literal
     // A17's ASK form. Same reasoning as `stateReadsIn`: the `with` operand is a full Value, so an
@@ -10803,7 +10809,7 @@ case class ValidationPass(
       // B5: a predicate/count/membership denotes a predefined type, a filter its collection's
       // own TypeExpression -- none of them a NAMED Type. See `valueTypeExpr`.
       case _: CollectionPredicate | _: CountValue | _: MembershipValue => None
-      case _: DurationUnitsValue                                       => None
+      case _: DurationUnitsValue | _: OneOfValue                       => None
       case sv: SumValue =>
         sumResultType(sv, parents, lets, elements).flatMap {
           case ate: AliasedTypeExpression => resolveTypeAlias(ate)
@@ -11498,6 +11504,11 @@ case class ValidationPass(
           .exists(te => aliasFreeTypeExpr(te).isInstanceOf[Optional])
         Some(optionalIfChained(Integer(du.loc), chained))
       case sv: SumValue => sumResultType(sv, parents, lets, elements)
+      // BACKLOG [1.27]: the matching element, or empty -- the element type made optional.
+      case ov: OneOfValue =>
+        valueTypeExpr(ov.collection, parents, lets, elements)
+          .flatMap(collectionElementType)
+          .map(optionalIfChained(_, chained = true))
       case cf: CollectionFilter => valueTypeExpr(cf.collection, parents, lets, elements)
       case qv: QueryValue =>
         queryRecordType(qv, parents).map { t =>
@@ -11772,6 +11783,10 @@ case class ValidationPass(
               ruleId = Some(RuleId.SumNotSummable)
             )
         }
+      case ov: OneOfValue =>
+        validateOverCollection(
+          ov.collection, Some(ov.element), Some(ov.predicate), "'one of'", parents, lets, elements
+        )
       case du: DurationUnitsValue =>
         validateValue(du.duration, parents, lets, elements)
         // Silent when the operand's type cannot be determined -- reasoning from absence is the

@@ -395,13 +395,13 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
       case NotExpression(_, expr) =>
         expr match
           case _: LogicalExpression => add("not (").emitValue(expr).add(")")
-          case _                    => add("not ").emitValue(expr)
+          case _                    => add("not ").emitOperand(expr)
       // B4 (2026-09-21): a comparison's operands are full Values, so route them through this
       // dispatch (an operand may hold a nested prompt ascription); before, `.format`.
       case ComparisonExpression(_, op, left, right) =>
-        emitValue(left)
+        emitOperand(left)
         add(s" ${op.symbol} ")
-        emitValue(right)
+        emitOperand(right)
       // B5 (2026-09-23): the collection forms. Operands route through `emitValue` for the usual
       // A20 reason (a nested `prompt(...) as T`).
       case cp: CollectionPredicate =>
@@ -428,6 +428,11 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
           if SumValue.byNeedsParens(b) then add("(").emitValue(b).add(")") else emitValue(b)
         }
         this
+      case ov: OneOfValue => // BACKLOG [1.27]
+        add("one of ")
+        emitCollectionOperand(ov.collection)
+        add(s" as ${ov.element.format} where ")
+        emitValue(ov.predicate)
       case mv: MembershipValue =>
         emitCollectionOperand(mv.collection)
         add(" contains ")
@@ -482,15 +487,21 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
       case sv if SumValue.isOpenRight(sv) &&
           pp == ArithmeticOperator.precedence(ArithmeticOperator.Multiply) =>
         add("(").emitValue(v).add(")")
-      case _ => emitValue(v)
+      case _ => emitOperand(v)
 
   /** A `LogicalExpression` operand is parenthesized when it is itself a `LogicalExpression` — same
     * rule as `LogicalExpression.format`'s private `paren` helper, kept in step by hand since this
     * emitter cannot call that helper (it is private to `AST.scala`).
     */
+  /** BACKLOG [1.27]: `AST.CollectionValues.operand`, which this emitter may call -- a value whose
+    * right edge would absorb what follows (`one of … where p`) is parenthesized as ANY operand.
+    */
+  private def emitOperand(v: Value): this.type =
+    if CollectionValues.alwaysParenthesized(v) then add("(").emitValue(v).add(")") else emitValue(v)
+
   private def emitLogicalOperand(v: Value): this.type = v match
     case le: LogicalExpression => add("(").emitValue(le).add(")")
-    case _                     => emitValue(v)
+    case _                     => emitOperand(v)
 
   /** A single [[ConstructorArg]]: `<name> = <value>` when named, bare `<value>` when positional.
     * The value recurses through `emitValue` so a `PromptValue` argument's ascription renders

@@ -513,7 +513,7 @@ multiplicative_expression = arithmetic_atom { ("*" | "/") arithmetic_atom } ;
 (* BACKLOG [1.26]: `empty_value` is an atom so `x == empty` compares -- the opposite operand
    supplies its type. Before boolean_atom, whose bare path would read `empty` as a reference. *)
 arithmetic_atom = collection_predicate | count_value | duration_units_value | sum_value
-                | duration_literal
+                | one_of_value | duration_literal
                 | literal_string | constant_ref | numeric_literal | empty_value | boolean_atom ;
 (* B5: `all of xs as e where p` and its `any`/`none` siblings -- a boolean; the element binding
    is explicit and scoped to the predicate. `count of xs` is a Whole. *)
@@ -529,6 +529,9 @@ duration_units_value = duration_units_word "of" arithmetic_atom ;
    the projection per element. `sum` is not reserved. The projection is a PRODUCT, so a projection
    that adds is parenthesized and `sum of xs as e by e.a + 1` adds 1 to the sum. *)
 sum_value = "sum" "of" arithmetic_atom [ "as" identifier "by" multiplicative_expression ] ;
+(* BACKLOG [1.27]: `one of xs as e where p` -- the element satisfying p, or empty when none does.
+   The predicate is a full value, so as an operand of any operator the form is parenthesized. *)
+one_of_value = "one" "of" arithmetic_atom "as" identifier "where" value ;
 duration_units_word = "nanoseconds" | "microseconds" | "milliseconds" | "seconds" | "minutes"
                     | "hours" | "days" | "weeks" ;
 (* `30 days`, `1 hour`: a numeric literal and a unit word, singular or plural. The abbreviated and

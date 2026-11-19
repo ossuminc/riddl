@@ -1018,6 +1018,12 @@ object JsonModel:
   case class SumValueDto(collection: ValueDto, element: Option[String], by: Option[ValueDto])
       extends ValueDto
 
+  /** BACKLOG [1.27]: `{ "value": "oneOf", "collection": <value>, "element": "e", "predicate":
+    * <value> }`
+    */
+  case class OneOfValueDto(collection: ValueDto, element: String, predicate: ValueDto)
+      extends ValueDto
+
   /** B2 (2026-09-22): `{ "value": "query", "table": "Schema.table", "one"?: true, "where"?:
     * <value> }` -- reading the repository's own storage.
     */
@@ -1927,6 +1933,8 @@ object JsonModel:
       case "count"    => CountValueDto(readValue(m("collection")))
       case "contains" => MembershipValueDto(readValue(m("collection")), readValue(m("element")))
       case "durationUnits" => DurationUnitsValueDto(m("unit").str, readValue(m("duration")))
+      case "oneOf" =>
+        OneOfValueDto(readValue(m("collection")), m("element").str, readValue(m("predicate")))
       case "sum" =>
         SumValueDto(readValue(m("collection")), m.get("element").map(_.str), m.get("by").map(readValue))
       case "query" => // B2
@@ -2067,6 +2075,13 @@ object JsonModel:
           "value" -> ujson.Str("durationUnits"),
           "unit" -> ujson.Str(unit),
           "duration" -> writeValue(duration)
+        )
+      case OneOfValueDto(collection, element, predicate) =>
+        ujson.Obj(
+          "value" -> ujson.Str("oneOf"),
+          "collection" -> writeValue(collection),
+          "element" -> ujson.Str(element),
+          "predicate" -> writeValue(predicate)
         )
       case SumValueDto(collection, element, by) =>
         ujson.Obj.from(

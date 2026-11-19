@@ -109,4 +109,28 @@ abstract class ValueFormsParsingTest(using PlatformContext) extends AbstractPars
       letValue("sum + 1", td) mustBe a[ArithmeticExpression]
     }
   }
+
+  "`one of`" should {
+
+    "parse with an element binding and a full predicate" in { (td: TestData) =>
+      letValue("""one of Data.lines as l where l.sku == "x" and l.qty > 0""", td) match
+        case OneOfValue(_, _: ValueRef, e, _: LogicalExpression) => e.value mustBe "l"
+        case other => fail(s"wrong shape: ${other.format}")
+    }
+
+    "compare when parenthesized" in { (td: TestData) =>
+      letValue("""(one of Data.lines as l where l.sku == "x") != empty""", td) match
+        case ComparisonExpression(_, _, _: OneOfValue, _: EmptyValue) => succeed
+        case other => fail(s"wrong shape: ${other.format}")
+    }
+
+    "leave the `one of { … }` type form alone" in { (td: TestData) =>
+      val src =
+        """domain D is { context C is {
+          |  type Pick is one of { A, B }
+          |} with { briefly "c" } } with { briefly "d" }
+          |""".stripMargin
+      parse(src, td) mustBe a[Right[?, ?]]
+    }
+  }
 }

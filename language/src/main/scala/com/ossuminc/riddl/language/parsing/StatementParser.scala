@@ -754,6 +754,17 @@ private[parsing] trait StatementParser {
     }
   }
 
+  /** BACKLOG [1.27]: `one of <coll> as <e> where <pred>` -- the matching element, or empty.
+    * `one` is already reserved (it leads the `one of { … }` type form), so the prefix commits;
+    * `NoCut` is kept anyway so a filtering caller can still backtrack, as for `count of`.
+    */
+  private def oneOfValue[u: P]: P[OneOfValue] = {
+    P(
+      Index ~ NoCut(Keywords.one ~ of) ~/ arithAtom ~ as ~/ identifier ~ Keywords.where ~/
+        booleanExpr ~ Index
+    ).map { case (start, coll, element, pred, end) => OneOfValue(at(start, end), coll, element, pred) }
+  }
+
   /** The expression ladder, for the positions that want a condition: `update`/`delete`'s
     * `where` and `query`'s. Any value may stand there; validation requires it to be boolean.
     */
@@ -932,6 +943,7 @@ private[parsing] trait StatementParser {
         countValue.map(cv => cv: Value) |
         durationUnitsValue.map(du => du: Value) | // BACKLOG [1.27]
         sumValue.map(sv => sv: Value) |
+        oneOfValue.map(ov => ov: Value) |
         durationLiteral.map(dl => dl: Value) |
         // `NoCut` is load-bearing: `literalString` cuts after its opening quote, and
         // `booleanExprOnly` FILTERS the ladder's result -- so `when "prose"` would parse the
