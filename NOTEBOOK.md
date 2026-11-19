@@ -36,10 +36,9 @@ authoritative). Ask `git` for branch, tree and unpushed span — never trust a w
 `on init` as creation, `on entry`, `ask query Q(args) of P`, literals held to their type,
 the optional-for-required Advisory, let-path walking, [1.27]'s value forms, recurrence
 (`send … every`, `on every`; `1c69a1979`), **FORMAT_REVISION 35**.
-`../bin/riddlc` and ivy are `2.7.0-41-67efe607` (restaged 2026-11-19 late, at Reid's
-request, via `scripts/publish-and-stage.sh`; includes [1.27] and the record-with-method fix).
-**NOT restaged since**: recurrence (`e47af048d`, `1c69a1979`) is not in `../bin/riddlc`, so
-riddl-models cannot use it until Reid asks for a restage. `morph S -> S` stays a Warning (Reid). **Owed at 3.0: BACKLOG
+`../bin/riddlc` and ivy are `2.7.0-45-1ac25949` (restaged 2026-11-19 overnight, at Reid's
+request, via `scripts/publish-and-stage.sh`): includes [1.27], the record-with-method fix and
+recurrence, so riddl-models can use all three recurrence forms. `morph S -> S` stays a Warning (Reid). **Owed at 3.0: BACKLOG
 [5.10]** (rename the `AST.Initiate` class to `Create`, drop the alias val). BACKLOG [5.9]
 stays DEFERRED by Reid.
 
