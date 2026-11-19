@@ -9,7 +9,7 @@ package com.ossuminc.riddl.commands
 import com.ossuminc.riddl.command.{Command, CommandOptions, CommonOptionsHelper}
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.{At, Messages}
-import com.ossuminc.riddl.passes.PassesResult
+import com.ossuminc.riddl.passes.{PassFailure, PassesResult}
 import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext}
 import org.ekrich.config.*
 import java.nio.file.Path
@@ -287,7 +287,8 @@ object Commands:
       end match
     catch
       case NonFatal(exception) =>
-        Left(List(severe("Exception Thrown:", exception, At.empty)))
+        val loc = exception match { case f: PassFailure => f.loc; case _ => At.empty }
+        Left(List(severe("Exception Thrown:", exception, loc)))
   end runMainForTest
 
   def runMain(args: Array[String])(using pc: PlatformContext): Int =

@@ -71,7 +71,7 @@ case class BASTWriterPass(input: PassInput, outputs: PassesOutput)(using pc: Pla
 
   // Override traverse to write metadata count AFTER contents items
   // and to handle nodes with multiple Contents fields
-  override protected def traverse(definition: RiddlValue, parents: ParentStack): Unit = {
+  override protected def traverse(definition: RiddlValue, parents: ParentStack): Unit = locating(definition) {
     definition match {
       case root: Root =>
         process(root, parents)

@@ -26,6 +26,44 @@ import scala.annotation.unused
 import scala.collection.mutable
 import scala.util.control.NonFatal
 
+/** An exception thrown inside a pass, carrying WHERE it happened.
+  *
+  * The last-resort reporter in [[Pass.runThesePasses]] used to receive a bare exception and so could
+  * only report it at [[At.empty]], which renders as `empty(1:1->1)` and made one crash read as an
+  * empty-file problem (riddl-models, 2026-11-19). Each `traverse` wraps its node with
+  * [[Pass.locating]], so the INNERMOST node being visited when the exception escaped names itself;
+  * outer frames pass an already-located failure through untouched. A failure outside the traversal
+  * (`preProcess`, `postProcess`, `result`) has no node and names its phase instead.
+  *
+  * @param passName
+  *   The [[Pass.name]] of the pass that threw
+  * @param phase
+  *   `traverse`, `preProcess`, `postProcess` or `result`
+  * @param node
+  *   The node being visited, when the failure happened during the traversal
+  * @param cause
+  *   The exception actually thrown
+  */
+final case class PassFailure(
+  passName: String,
+  phase: String,
+  node: Option[RiddlValue],
+  cause: Throwable
+) extends RuntimeException(cause):
+
+  /** The location of the node, or [[At.empty]] when the failure has none */
+  def loc: At = node.map(_.loc).getOrElse(At.empty)
+
+  /** What was being processed, for a person reading the message */
+  def where: String = node match
+    case Some(d: Definition) => d.identify
+    case Some(v)             => s"${v.getClass.getSimpleName} at ${v.loc.format}"
+    case None                => s"its $phase step"
+  end where
+
+  override def getMessage: String = s"The $passName pass failed while processing $where: $cause"
+end PassFailure
+
 /** A function type that creates a Pass instance */
 type PassCreator = (PassInput, PassesOutput) => Pass
 
@@ -308,6 +346,18 @@ abstract class Pass(
     */
   def close(): Unit = ()
 
+  /** Run `body` -- the traversal of `node` -- so that an exception escaping it names `node` as a
+    * [[PassFailure]]. Every `traverse` in this repository wraps its body in this; an override
+    * elsewhere that does not still gets a failure naming the pass, from [[Pass.runOnePass]].
+    */
+  protected final def locating(node: RiddlValue)(body: => Unit): Unit =
+    try body
+    catch
+      case failure: PassFailure => throw failure
+      case NonFatal(exception)  => throw PassFailure(name, "traverse", Some(node), exception)
+    end try
+  end locating
+
   /** A method for the traversal of the AST hierarchy. While subclasses implement this differently,
     * there is generally no need to override in non-RIDDL code. This implementation is width first
     *
@@ -316,7 +366,7 @@ abstract class Pass(
     * @param parents
     *   The parents of the definition
     */
-  protected def traverse(definition: RiddlValue, parents: ParentStack): Unit = {
+  protected def traverse(definition: RiddlValue, parents: ParentStack): Unit = locating(definition) {
     definition match {
       case root: Root =>
         process(root, parents)
@@ -457,7 +507,7 @@ abstract class DepthFirstPass(
     * @param parents
     *   The parents of the definition
     */
-  override protected def traverse(definition: RiddlValue, parents: ParentStack): Unit = {
+  override protected def traverse(definition: RiddlValue, parents: ParentStack): Unit = locating(definition) {
     definition match {
       case root: Root =>
         parents.push(root)
@@ -575,7 +625,7 @@ abstract class HierarchyPass(
   protected def openBASTImport(bi: BASTImport, parents: Parents): Unit = ()
   protected def closeBASTImport(bi: BASTImport, parents: Parents): Unit = ()
 
-  override protected def traverse(definition: RiddlValue, parents: ParentStack): Unit = {
+  override protected def traverse(definition: RiddlValue, parents: ParentStack): Unit = locating(definition) {
     definition match {
       case include: Include[?] => // treat includes specially
         val def_parents = parents.toParents
@@ -1000,13 +1050,21 @@ object Pass {
         // This is the LAST-RESORT reporter for every in-pass exception, so whatever it prints is
         // all the author gets. `exception.toString` at minimum names the exception class and its
         // message, which is enough to start.
-        val stackTrace = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n")
+        //
+        // And NEVER emit it at `At.empty` when the failure knows better (riddl-models, 2026-11-19):
+        // `empty(1:1->1)` made a ClassCastException in a constructor check read as an empty-file
+        // problem. A [[PassFailure]] carries the pass, and the node being visited when it threw.
+        val (thrown, where, loc) = exception match
+          case failure: PassFailure =>
+            (failure.cause, s"The ${failure.passName} pass failed while processing ${failure.where}:\n", failure.loc)
+          case other => (other, "", At.empty)
+        val stackTrace = ExceptionUtils.getRootCauseStackTrace(thrown).mkString("\n")
         val message =
-          if stackTrace.trim.nonEmpty then stackTrace
+          if stackTrace.trim.nonEmpty then where + stackTrace
           else
-            val described = Option(exception.toString).map(_.trim).filter(_.nonEmpty)
-            described.getOrElse(s"${exception.getClass.getName} (no message, no stack trace)")
-        val messages: Messages.Messages = List(Messages.severe(message, At.empty))
+            val described = Option(thrown.toString).map(_.trim).filter(_.nonEmpty)
+            where + described.getOrElse(s"${thrown.getClass.getName} (no message, no stack trace)")
+        val messages: Messages.Messages = List(Messages.severe(message, loc))
         PassesResult(input, outputs, messages ++ input.parseMessages)
     }
   }
@@ -1072,13 +1130,22 @@ object Pass {
     mkPass: => Pass
   )(using io: PlatformContext): PassOutput = {
     val pass: Pass = mkPass
+    // Each step names itself on failure, so the reporter can say which pass and which phase threw.
+    // `traverse` names its own node (`Pass.locating`); a PassFailure is never re-wrapped.
+    def step[T](phase: String)(body: => T): T =
+      try body
+      catch
+        case failure: PassFailure => throw failure
+        case NonFatal(exception)  => throw PassFailure(pass.name, phase, None, exception)
+      end try
+    end step
     Timer.time[PassOutput](pass.name, io.options.showTimes) {
       val parents: ParentStack = ParentStack.empty
-      val root1: PassRoot = pass.preProcess(root)
-      pass.traverse(root1, parents)
-      pass.postProcess(root1)
+      val root1: PassRoot = step("preProcess")(pass.preProcess(root))
+      step("traverse")(pass.traverse(root1, parents))
+      step("postProcess")(pass.postProcess(root1))
       pass.close()
-      pass.result(root1)
+      step("result")(pass.result(root1))
     }
   }
 }
