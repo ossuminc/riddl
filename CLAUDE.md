@@ -1748,6 +1748,25 @@ resolution and type-checking — in `checkStatementScopes`.
   `on other` (`adaptor-no-on-other` is an Error), so `stream-inlet-not-received`
   can never fire inside one.
 
+- **Opacity is ONE rule for both sides of a processor (Reid, 2026-11-19).**
+  `isOpaqueProcessor` governs the SEND side and `checkInletsAreReceived` the
+  RECEIVE side, and they disagreed: a handler-less application context was
+  trusted to send on outlets it had no clause to send from, while its inlets
+  were judged literally. Now:
+  - **Opaque on BOTH sides:** `external context`, predefined, and `???`.
+  - **A handler-less entity, streamlet, repository or adaptor** stays opaque.
+    Its own "should have a handler" rule states the omission once.
+  - **A handler-less Context or Projector** (`lacksNoHandlerRule`) is
+    LITERAL on both sides. Its outlets count as used only through a group
+    INPUT (a user's command) or a clause's `send`.
+
+  **Do not restore the asymmetry in either direction.** Adding a kind to one
+  side means adding it to the other.
+
+  A group input means a USER issues the command. A process issues it from a
+  handler: `on every`, or `send … every` in `on init` (CM §31.1, §8.1).
+  Pinned by `HandlerlessProcessorSidesTest`.
+
 - **`adaptor-direction-advisory` counts a far-context reference ANYWHERE in the
   adaptor, and resolves the referent parent-independently.** It used to read only
   the `on`-clauses' handled types, so under A103 it fired on every correctly

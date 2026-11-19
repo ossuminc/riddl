@@ -97,6 +97,35 @@ their `2f2291b63`). `probe-2026-09-06-adaptor/` is a leftover scratch directory,
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-19 (overnight, later) — opacity is one rule for both sides
+
+riddl-models (task `2026-11-19-handlerless-app-sends-but-cannot-receive`) measured that a
+handler-less `application context` was trusted to SEND (`isOpaqueProcessor`: no clauses ⇒
+opaque) but held literally to RECEIVE (`checkInletsAreReceived` exempts Context and Projector
+via `lacksNoHandlerRule`). Reid's question settled it: with no clause, where would the `send`
+be written? Four rulings, all accepted: a handler-less Context/Projector is LITERAL on both
+sides; an `external context` is opaque on both (its inlets were still reported -- a second
+asymmetry the task did not see); handler-less entities/streamlets/repositories/adaptors stay
+opaque because their own "should have a handler" rule speaks once; a group input means a USER
+issues the command, a process uses `on every` / `send … every`. CM §8.1 and §31.1.
+
+**The diagnosis was narrower than the report.** The asymmetry was never "applications"; it was
+the two kinds that have no "should have a handler" rule, for which "opaque" had come to mean
+"nothing reports anything".
+
+**Two false zeros in my own census script before it measured anything**, both macOS-isms: BSD
+`sed -E` has no `\s` (every entry-point path came out empty, so all 191 models were skipped
+and the totals printed blank), and BSD `sed` has no `\x1b` (ANSI would have survived, so
+`^[error]` could never match). `perl -pe 's/\e\[[0-9;]*m//g'` and `[[:space:]]` fix both;
+the counters were then calibrated on a known positive. Script kept at the session scratchpad,
+not committed.
+
+**Corpus: no movement at all** -- 191 models, `stream-outlet-never-sent` 3 → 3,
+`stream-inlet-not-received` 0 → 0, `msg-clause-undeliverable` 41 → 41, errors 0 → 0, no per-model
+difference. Trusted only after a positive control: the old binary reports 0 and the new one 1 on
+a handler-less app with a fed-by-nothing outlet. riddl-models had already given code-generator a
+group, so nothing in the corpus has the shape.
+
 ## 2026-11-19 (overnight) — recurrence: three ways to say "every period"
 
 riddl-models (task `2026-11-19-recurring-scheduled-send-is-a-cycle`, usage-metering)
