@@ -2404,16 +2404,29 @@ object AST:
           // The bug was old and latent. It became reachable only when constructor arguments
           // started being type-checked (2026-08-24), which is the shape worth remembering: a
           // dormant comparison defect surfaces the moment something first asks the question.
+          //
+          // **Members are compared PAIRWISE BY KIND** (riddl-models, 2026-11-19). This was a `for`
+          // whose body read `myField: Field = named.asInstanceOf[Field] if named.isInstanceOf[Field]`
+          // -- and a value definition in a `for` is evaluated BEFORE the guard after it, so the
+          // guard protected nothing: any record declaring a METHOD threw `ClassCastException:
+          // Method cannot be cast to Field` the first time a value of it was type-checked, which
+          // `validate` reported as a location-less `[severe]`. Had the guard run first it would
+          // still have been wrong, dropping the method and so judging the record incompatible with
+          // ITSELF. A name that is a field on one side and a method on the other is a mismatch.
           val otherValues = oate.contents.filter[AggregateValue].toSeq
           val validity: Seq[Boolean] = for
-            ofield: AggregateValue <- otherValues
-            named <- contents.find(ofield.id.value)
-            myField: Field = named.asInstanceOf[Field] if named.isInstanceOf[Field]
-            myTypEx = myField.typeEx
-            oTypeEx = ofield.typeEx
-          yield {
-            myTypEx.isAssignmentCompatible(oTypeEx)
-          }
+            other: AggregateValue <- otherValues
+            named <- contents.find(other.id.value)
+          yield (named, other) match
+            case (mine: Field, theirs: Field) =>
+              mine.typeEx.isAssignmentCompatible(theirs.typeEx)
+            case (mine: Method, theirs: Method) =>
+              mine.typeEx.isAssignmentCompatible(theirs.typeEx) &&
+              mine.args.size == theirs.args.size &&
+              mine.args.zip(theirs.args).forall { (a, b) =>
+                a.typeEx.isAssignmentCompatible(b.typeEx)
+              }
+            case _ => false
           (validity.size == otherValues.size) && validity.forall(_ == true)
         case _ =>
           super.isAssignmentCompatible(other)
