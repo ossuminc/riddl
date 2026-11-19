@@ -157,4 +157,50 @@ class ValueFormsValidationTest extends AbstractValidatingTest {
       withClue(clue(msgs)) { errors(msgs) must not be empty }
     }
   }
+
+  "`otherwise`" should {
+    "remove the optionality, so a required field is filled in silence" in { (td: TestData) =>
+      mustBeClean("Integer", "E.S.maybeN otherwise 0", td)
+      mustBeClean("Integer", "E.S.maybeN otherwise E.S.n", td)
+      val line = "let line = one of E.S.lines as l where l.sku == g.sku"
+      mustBeClean("Integer", "line.qty otherwise 0", td, line)
+    }
+    "stay optional when the fallback may be empty too" in { (td: TestData) =>
+      val either = "one of E.S.lines as l where l.sku == g.sku otherwise " +
+        "one of E.S.lines as l where l.qty > 0"
+      mustBeClean("C.Line?", either, td)
+      mustAdvise("C.Line", either, td)
+    }
+    "keep a collection a collection" in { (td: TestData) =>
+      mustBeClean("Integer*", "E.S.counts otherwise E.S.counts", td)
+    }
+    "refuse a fallback of another type" in { (td: TestData) =>
+      val found = mustRefuse(RuleId.OtherwiseMismatch, "Integer", "E.S.maybeN otherwise E.S.label", td)
+      found.head.message must include("'E.S.maybeN'")
+    }
+    "say when the value is never empty" in { (td: TestData) =>
+      val msgs = messages(model("Integer", "E.S.n otherwise 0"), td)
+      withClue(clue(msgs)) {
+        errors(msgs) mustBe empty
+        val w = of(msgs, RuleId.OtherwiseNeverEmpty)
+        w.size mustBe 1
+        w.head.kind mustBe Messages.StyleWarning
+      }
+    }
+    "be what the optional-for-required Advisory suggests" in { (td: TestData) =>
+      // Suggestions are stripped unless tips are asked for.
+      var msgs: Seq[Message] = Seq.empty
+      pc.withOptions(CommonOptions.default.copy(provideTips = true)) { _ =>
+        msgs = Riddl.parseAndValidate(RiddlParserInput(model("Integer", "E.S.maybeN"), td),
+          shouldFailOnError = false) match
+          case Right(result) => result.messages
+          case Left(m)       => m
+      }
+      val w = of(msgs, RuleId.OptionalForRequired)
+      withClue(clue(msgs)) {
+        w.size mustBe 1
+        w.head.suggestion must include("E.S.maybeN otherwise <default>")
+      }
+    }
+  }
 }

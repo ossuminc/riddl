@@ -380,7 +380,11 @@ let_statement = "let" identifier [":" type_ref] "=" value ;
    (B4, 2026-09-21: `"a" + b` and `5 * n` need them as operands). *)
 (* `empty_value` sits BEFORE boolean_expression: that rule's atom accepts a bare path and would
    otherwise swallow `empty` as a value_ref, leaving any ascription dangling. *)
-value = prompt_value | call | ask | create | query_value | constructor | get_value
+(* BACKLOG [1.27] (2026-11-19): `x otherwise y` -- x when it is not empty, else y, which is
+   evaluated only when needed. The LOOSEST value operator, left-associative: `a + b otherwise c`
+   is `(a + b) otherwise c`. *)
+value = value_operand { "otherwise" value_operand } ;
+value_operand = prompt_value | call | ask | create | query_value | constructor | get_value
       | empty_value | boolean_expression ;
 (* B2: reading the repository's own storage. `query one` is the first match or empty; without
    `one` it is every match, in UNSPECIFIED order. Tried before `constructor`, whose `query Q(…)`
@@ -421,13 +425,13 @@ reserved_word =
     "initiate" | "inlet" | "inlets" | "input" | "invariant" | "items" | "key" | "label" | "let" |
     "link" | "log" | "many" | "mapping" | "match" | "merge" | "message" | "module" | "morph" |
     "name" | "nebula" | "node" | "none" | "on" | "one" | "option" | "optional" | "options" |
-    "or" | "organization" | "other" | "out" | "outlet" | "outlets" | "output" | "parallel" |
+    "or" | "organization" | "other" | "otherwise" | "out" | "outlet" | "outlets" | "output" | "parallel" |
     "passivate" | "pipe" | "plant" | "presents" | "processor" | "projector" | "prompt" | "put" |
     "query" | "quiescence" | "range" | "record" | "reference" | "refuses" | "relationship" |
     "remove" | "replica" | "replies" | "reply" | "repository" | "require" | "required" |
     "requires" | "result" | "results" | "return" | "returns" | "reverted" | "router" | "saga" |
     "schema" | "selects" | "self" | "send" | "sequence" | "set" | "show" | "shown" | "sink" |
-    "source" | "split" | "state" | "step" | "stop" | "store" | "story" | "streamlet" | "system" |
+    "source" | "split" | "state" | "step" | "stop" | "store" | "story" | "streamlet" | "sum" | "system" |
     "table" | "take" | "tell" | "term" | "terminate" | "then" | "times" | "title" | "type" |
     "update" | "updates" | "upsert" | "url" | "user" | "version" | "void" | "when" | "where" |
     "with" | "yield" | "yields" ;
@@ -557,7 +561,7 @@ comparison_operator = "==" | "!=" | "<=" | ">=" | "<" | ">" ;
    comparison operator, pointing past the real problem. The bare spelling (`when X`) also works,
    via value_ref, and always has. `self_value` likewise MUST precede value_ref: `self` is not a
    definition keyword, so a bare `self` would otherwise be consumed as an ordinary path. *)
-boolean_atom = boolean_literal | "(" boolean_expression ")" | get_value | invariant_test
+boolean_atom = boolean_literal | "(" value ")" | get_value | invariant_test
              | self_value | system_value | ref_or_lookup ;
 invariant_test = "invariant" path_identifier ["with" value] ;
 boolean_literal = "true" | "false" ;

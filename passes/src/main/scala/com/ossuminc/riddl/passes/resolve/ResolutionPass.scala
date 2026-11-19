@@ -632,6 +632,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         resolveValue(sv.collection, parents); sv.by.foreach(resolveValue(_, parents))
       case ov: OneOfValue =>
         resolveValue(ov.collection, parents); resolveValue(ov.predicate, parents)
+      case ow: OtherwiseValue =>
+        resolveValue(ow.value, parents); resolveValue(ow.fallback, parents)
       case mv: MembershipValue =>
         resolveValue(mv.collection, parents); resolveValue(mv.element, parents)
 

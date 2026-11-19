@@ -566,6 +566,7 @@ object Keywords {
           Keyword.optional,
           Keyword.options,
           Keyword.other,
+          Keyword.otherwise,
           Keyword.out,
           Keyword.outlet,
           Keyword.outlets,
@@ -615,6 +616,7 @@ object Keywords {
           Keyword.stop,
           Keyword.story,
           Keyword.streamlet,
+          Keyword.sum,
           Keyword.table,
           Keyword.take,
           Keyword.tell,
@@ -760,6 +762,7 @@ object Keyword {
   final val optional = "optional"
   final val options = "options"
   final val other = "other"
+  final val otherwise = "otherwise" // BACKLOG [1.27]: `x otherwise y`
   final val out = "out"
   final val outlet = "outlet"
   final val outlets = "outlets"
@@ -813,6 +816,7 @@ object Keyword {
   final val stop = "stop"
   final val story = "story"
   final val streamlet = "streamlet"
+  final val sum = "sum" // BACKLOG [1.27]: `sum of xs`
   final val table = "table"
   final val take = "take"
   final val tell = "tell"
@@ -947,6 +951,7 @@ object Keyword {
     optional,
     options,
     other,
+    otherwise,
     outlet,
     outlets,
     output,
@@ -993,6 +998,7 @@ object Keyword {
     stop,
     story,
     streamlet,
+    sum,
     table,
     take,
     tell,

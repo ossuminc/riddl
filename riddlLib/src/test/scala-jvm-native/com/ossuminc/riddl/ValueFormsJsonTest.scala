@@ -33,6 +33,7 @@ class ValueFormsJsonTest extends AnyWordSpec with Matchers {
       |          let c = sum of Data.lines
       |          let d = sum of Data.lines as l by l.qty * l.price
       |          let e = one of Data.lines as l where l.sku == "x"
+      |          let f = Data.t1 otherwise Data.t2 otherwise Data.t1
       |        }
       |      } with { briefly "h" }
       |    } with { briefly "e" }
@@ -57,6 +58,7 @@ class ValueFormsJsonTest extends AnyWordSpec with Matchers {
       json must include("\"value\":\"sum\"")
       json must include("\"by\":")
       json must include("\"value\":\"oneOf\"")
+      json must include("\"value\":\"otherwise\"")
     }
 
     "round-trip to the same values and be a fixed point" in {

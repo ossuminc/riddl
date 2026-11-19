@@ -1637,6 +1637,8 @@ object JsonAstBuilder:
       case CountValueDto(collection)             => CountValue(curAt, buildValue(collection))
       case DurationUnitsValueDto(unit, duration) =>
         DurationUnitsValue(curAt, unit, buildValue(duration))
+      case OtherwiseValueDto(left, right) =>
+        OtherwiseValue(curAt, buildValue(left), buildValue(right))
       case OneOfValueDto(collection, element, predicate) =>
         OneOfValue(curAt, buildValue(collection), Identifier(curAt, element), buildValue(predicate))
       case SumValueDto(collection, element, by) =>

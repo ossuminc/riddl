@@ -260,6 +260,7 @@ object Finder:
     case du: DurationUnitsValue  => Seq(du.duration)
     case sv: SumValue            => sv.collection +: sv.by.toSeq
     case ov: OneOfValue          => Seq(ov.collection, ov.predicate)
+    case ow: OtherwiseValue      => Seq(ow.value, ow.fallback)
     case mv: MembershipValue     => Seq(mv.collection, mv.element)
     case lt: LetStatement     => Seq(lt.expression)
     case pt: PutStatement     => Seq(pt.value)

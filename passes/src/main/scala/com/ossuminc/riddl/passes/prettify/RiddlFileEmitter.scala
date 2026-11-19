@@ -432,7 +432,15 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         add("one of ")
         emitCollectionOperand(ov.collection)
         add(s" as ${ov.element.format} where ")
-        emitValue(ov.predicate)
+        ov.predicate match
+          case _: OtherwiseValue => add("(").emitValue(ov.predicate).add(")")
+          case _                 => emitValue(ov.predicate)
+      case ow: OtherwiseValue => // BACKLOG [1.27]: left-associative, the loosest level
+        emitValue(ow.value)
+        add(" otherwise ")
+        ow.fallback match
+          case _: OtherwiseValue => add("(").emitValue(ow.fallback).add(")")
+          case _                 => emitValue(ow.fallback)
       case mv: MembershipValue =>
         emitCollectionOperand(mv.collection)
         add(" contains ")

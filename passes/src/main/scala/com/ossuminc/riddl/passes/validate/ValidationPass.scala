@@ -7083,6 +7083,7 @@ case class ValidationPass(
     case du: DurationUnitsValue => valueReferencedDefs(du.duration)
     case sv: SumValue => valueReferencedDefs(sv.collection) ++ sv.by.toSeq.flatMap(valueReferencedDefs)
     case ov: OneOfValue => valueReferencedDefs(ov.collection) ++ valueReferencedDefs(ov.predicate)
+    case ow: OtherwiseValue => valueReferencedDefs(ow.value) ++ valueReferencedDefs(ow.fallback)
     case mv: MembershipValue => valueReferencedDefs(mv.collection) ++ valueReferencedDefs(mv.element)
     case cr: ConstantRef =>
       resolution.refMap.definitionOf[Constant](cr.pathId).map(cr.pathId -> _).toSeq
@@ -8251,6 +8252,7 @@ case class ValidationPass(
     case du: DurationUnitsValue => countValueFailPoints(du.duration)
     case sv: SumValue => countValueFailPoints(sv.collection) + sv.by.map(countValueFailPoints).getOrElse(0)
     case ov: OneOfValue => countValueFailPoints(ov.collection) + countValueFailPoints(ov.predicate)
+    case ow: OtherwiseValue => countValueFailPoints(ow.value) + countValueFailPoints(ow.fallback)
     case mv: MembershipValue => countValueFailPoints(mv.collection) + countValueFailPoints(mv.element)
     // B2: a query READS the store and may fail, exactly as `get` does (1), plus its condition.
     case qv: QueryValue => 1 + qv.where.map(countValueFailPoints).getOrElse(0)
@@ -8373,6 +8375,7 @@ case class ValidationPass(
     case du: DurationUnitsValue => stateReadsIn(du.duration)
     case sv: SumValue => stateReadsIn(sv.collection) ++ sv.by.toSeq.flatMap(stateReadsIn)
     case ov: OneOfValue => stateReadsIn(ov.collection) ++ stateReadsIn(ov.predicate)
+    case ow: OtherwiseValue => stateReadsIn(ow.value) ++ stateReadsIn(ow.fallback)
     case mv: MembershipValue      => stateReadsIn(mv.collection) ++ stateReadsIn(mv.element)
     case _: DurationLiteral       => Seq.empty // B4: a literal
     // A17's ASK form: `when invariant Limit with <expr>`. The `with` operand is a full Value, so it
@@ -8439,6 +8442,7 @@ case class ValidationPass(
     case du: DurationUnitsValue => initiatesIn(du.duration)
     case sv: SumValue => initiatesIn(sv.collection) ++ sv.by.toSeq.flatMap(initiatesIn)
     case ov: OneOfValue => initiatesIn(ov.collection) ++ initiatesIn(ov.predicate)
+    case ow: OtherwiseValue => initiatesIn(ow.value) ++ initiatesIn(ow.fallback)
     case mv: MembershipValue      => initiatesIn(mv.collection) ++ initiatesIn(mv.element)
     case _: DurationLiteral       => Seq.empty // B4: a literal
     case ic: InvariantCondition   => ic.argument.toSeq.flatMap(initiatesIn)
@@ -8511,6 +8515,7 @@ case class ValidationPass(
     case du: DurationUnitsValue => systemValuesIn(du.duration)
     case sv: SumValue => systemValuesIn(sv.collection) ++ sv.by.toSeq.flatMap(systemValuesIn)
     case ov: OneOfValue => systemValuesIn(ov.collection) ++ systemValuesIn(ov.predicate)
+    case ow: OtherwiseValue => systemValuesIn(ow.value) ++ systemValuesIn(ow.fallback)
     case mv: MembershipValue      => systemValuesIn(mv.collection) ++ systemValuesIn(mv.element)
     case ic: InvariantCondition   => ic.argument.toSeq.flatMap(systemValuesIn)
     case ask: Ask                 => ask.args.toSeq.flatMap(a => systemValuesIn(a.value))
@@ -8545,6 +8550,7 @@ case class ValidationPass(
     case du: DurationUnitsValue => asksIn(du.duration)
     case sv: SumValue => asksIn(sv.collection) ++ sv.by.toSeq.flatMap(asksIn)
     case ov: OneOfValue => asksIn(ov.collection) ++ asksIn(ov.predicate)
+    case ow: OtherwiseValue => asksIn(ow.value) ++ asksIn(ow.fallback)
     case mv: MembershipValue      => asksIn(mv.collection) ++ asksIn(mv.element)
     case _: DurationLiteral       => Seq.empty // B4: a literal
     // A17's ASK form. Same reasoning as `stateReadsIn`: the `with` operand is a full Value, so an
@@ -10439,8 +10445,9 @@ case class ValidationPass(
       messages.addAdvisory(
         loc,
         s"$what is required, but '${value.format}' may be empty",
-        suggestion = s"Guard it -- e.g. 'when ${value.format} != empty then ... end' -- so the model " +
-          "says what happens when it is empty; otherwise the generator must choose.",
+        suggestion = s"Say what happens when it is empty: supply a default with " +
+          s"'${value.format} otherwise <default>', or guard it with 'when ${value.format} != " +
+          "empty then ... end'. Without either, the generator must choose.",
         ruleId = Some(RuleId.OptionalForRequired)
       )
   end checkOptionalIntoRequired
@@ -10810,6 +10817,11 @@ case class ValidationPass(
       // own TypeExpression -- none of them a NAMED Type. See `valueTypeExpr`.
       case _: CollectionPredicate | _: CountValue | _: MembershipValue => None
       case _: DurationUnitsValue | _: OneOfValue                       => None
+      case ow: OtherwiseValue =>
+        otherwiseResultType(ow, parents, lets, elements).flatMap {
+          case ate: AliasedTypeExpression => resolveTypeAlias(ate)
+          case _                          => None
+        }
       case sv: SumValue =>
         sumResultType(sv, parents, lets, elements).flatMap {
           case ate: AliasedTypeExpression => resolveTypeAlias(ate)
@@ -11300,6 +11312,25 @@ case class ValidationPass(
       case _: NumericType | _: Duration | _: Currency  => Some(te)
       case _                                           => None
 
+  /** BACKLOG [1.27]: what `x otherwise y` denotes -- `x`'s type with its optionality removed
+    * (`Integer?` gives `Integer`); a collection stays a collection, since a default for an empty
+    * collection is itself a collection. When the fallback may itself be empty, so may the result:
+    * `a otherwise b` with both optional is optional.
+    */
+  private def otherwiseResultType(
+    ow: OtherwiseValue,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Option[TypeExpression] =
+    val fallbackMayBeEmpty =
+      valueTypeExpr(ow.fallback, parents, lets, elements).exists(admitsEmpty)
+    valueTypeExpr(ow.value, parents, lets, elements).map { te =>
+      aliasFreeTypeExpr(te) match
+        case opt: Optional => optionalIfChained(opt.typeExp, fallbackMayBeEmpty)
+        case _             => te
+    }
+
   /** BACKLOG [1.27]: what `sum of` denotes -- [[summableResult]] of the projection, or of the
     * element when there is none.
     */
@@ -11504,6 +11535,7 @@ case class ValidationPass(
           .exists(te => aliasFreeTypeExpr(te).isInstanceOf[Optional])
         Some(optionalIfChained(Integer(du.loc), chained))
       case sv: SumValue => sumResultType(sv, parents, lets, elements)
+      case ow: OtherwiseValue => otherwiseResultType(ow, parents, lets, elements)
       // BACKLOG [1.27]: the matching element, or empty -- the element type made optional.
       case ov: OneOfValue =>
         valueTypeExpr(ov.collection, parents, lets, elements)
@@ -11783,6 +11815,31 @@ case class ValidationPass(
               ruleId = Some(RuleId.SumNotSummable)
             )
         }
+      case ow: OtherwiseValue =>
+        validateValue(ow.value, parents, lets, elements)
+        validateValue(ow.fallback, parents, lets, elements)
+        valueTypeExpr(ow.value, parents, lets, elements).foreach { te =>
+          val known = aliasFreeTypeExpr(te) match
+            case _: AliasedTypeExpression | _: Anything => false
+            case _                                      => true
+          if known && !admitsEmpty(te) then
+            messages.addStyle(
+              ow.value.loc,
+              s"'${ow.value.format}' is a '${te.format}', which is never empty, so " +
+                s"'otherwise ${ow.fallback.format}' is never used",
+              suggestion = s"Drop 'otherwise ${ow.fallback.format}', or give " +
+                s"'${ow.value.format}' a type that may be empty.",
+              ruleId = Some(RuleId.OtherwiseNeverEmpty)
+            )
+        }
+        for
+          expected <- otherwiseResultType(ow, parents, lets, elements)
+          actual <- valueTypeExpr(ow.fallback, parents, lets, elements)
+        do
+          checkAssignable(
+            expected, actual, None, parents, ow.fallback.loc,
+            s"The 'otherwise' value for '${ow.value.format}'", RuleId.OtherwiseMismatch
+          )
       case ov: OneOfValue =>
         validateOverCollection(
           ov.collection, Some(ov.element), Some(ov.predicate), "'one of'", parents, lets, elements

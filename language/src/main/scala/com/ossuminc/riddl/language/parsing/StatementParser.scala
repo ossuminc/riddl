@@ -770,7 +770,19 @@ private[parsing] trait StatementParser {
     */
   private def booleanExprValue[u: P]: P[Value] = booleanExpr
 
+  /** BACKLOG [1.27]: `x otherwise y` is the LOOSEST value level, a left fold over the operands
+    * below it, so `a + b otherwise c` is `(a + b) otherwise c`. `otherwise` is in the keyword
+    * table, which is what stops `empty`'s optional ascription from reading it as a type name.
+    */
   def value[u: P]: P[Value] = {
+    P(
+      Index ~ valueOperand ~ (Keywords.keyword(Keyword.otherwise) ~/ valueOperand).rep ~ Index
+    ).map { case (start, first, rest, end) =>
+      rest.foldLeft(first)((l, r) => OtherwiseValue(at(start, end), l, r): Value)
+    }
+  }
+
+  private def valueOperand[u: P]: P[Value] = {
     P(
       promptValue.map(pv => pv: Value) |
         callValue.map(c => c: Value) | // A24: `call function F(args)` (keyword-led)
@@ -1084,7 +1096,9 @@ private[parsing] trait StatementParser {
   private def booleanAtom[u: P]: P[Value] = {
     P(
       booleanLiteral.map(bl => bl: Value) |
-        (Punctuation.roundOpen ~ booleanExpr ~ Punctuation.roundClose) |
+        // BACKLOG [1.27]: a FULL value in parentheses, so `(a otherwise b) + 1` can be written;
+        // `otherwise` sits above `booleanExpr`, which is all the parentheses used to admit.
+        (Punctuation.roundOpen ~ value ~ Punctuation.roundClose) |
         getValue.map(gv => gv: Value) |
         invariantCondition.map(ic => ic: Value) |
         selfValue.map(sv => sv: Value) | // before valueRef: `self` is a keyword, not a path

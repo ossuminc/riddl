@@ -3,6 +3,7 @@
 //   * `<unit> of d` -- a Duration in whole units, an Integer
 //   * `sum of xs [as e by <expr>]` -- a total, of the elements or of a per-element product
 //   * `one of xs as e where p` -- the matching element, or empty; its fields chain optionally
+//   * `x otherwise y` -- x unless it is empty, else y; the loosest value operator
 // The unit words are NOT reserved: `hours` is a field name below, and so is `days`.
 domain Insurance is {
   context Billing is {
@@ -25,7 +26,9 @@ domain Insurance is {
       depositAmount: Integer?,
       total: Integer,
       units: Integer,
-      quotedQuantity: Integer?
+      quotedQuantity: Integer?,
+      quantity: Integer,
+      deposit: Integer
     } with { briefly "e" }
 
     entity Account is {
@@ -44,7 +47,9 @@ domain Insurance is {
             depositAmount = Policy.deposit.amount,
             total = sum of Policy.lines as l by l.quantity * l.price,
             units = sum of Policy.lines as l by l.quantity,
-            quotedQuantity = line.quantity
+            quotedQuantity = line.quantity,
+            quantity = line.quantity otherwise 0,
+            deposit = Policy.deposit.amount otherwise 0
           )
         }
         on other is { error "unexpected" }

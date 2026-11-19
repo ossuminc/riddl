@@ -448,3 +448,5 @@ value-time-literal-not-iso8601
 value-optional-for-required
 value-duration-units-not-duration
 value-sum-not-summable
+value-otherwise-never-empty
+value-otherwise-mismatch

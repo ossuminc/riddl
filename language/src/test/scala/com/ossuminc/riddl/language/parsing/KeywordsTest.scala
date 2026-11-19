@@ -48,7 +48,7 @@ class KeywordsTest extends AbstractTestingBasis {
       // a definitionKeyword, and both are reached only behind a `NoCut` keyword pair, so the 24
       // corpus fields named `count` and `none`'s role as `empty`'s synonym are unaffected.
       // (`contains` was already a keyword; membership reuses it.)
-      Keyword.allKeywords.size must be(177)
+      Keyword.allKeywords.size must be(179)
     }
   }
 

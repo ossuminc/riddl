@@ -1024,6 +1024,9 @@ object JsonModel:
   case class OneOfValueDto(collection: ValueDto, element: String, predicate: ValueDto)
       extends ValueDto
 
+  /** BACKLOG [1.27]: `{ "value": "otherwise", "left": <value>, "right": <value> }` */
+  case class OtherwiseValueDto(left: ValueDto, right: ValueDto) extends ValueDto
+
   /** B2 (2026-09-22): `{ "value": "query", "table": "Schema.table", "one"?: true, "where"?:
     * <value> }` -- reading the repository's own storage.
     */
@@ -1933,6 +1936,7 @@ object JsonModel:
       case "count"    => CountValueDto(readValue(m("collection")))
       case "contains" => MembershipValueDto(readValue(m("collection")), readValue(m("element")))
       case "durationUnits" => DurationUnitsValueDto(m("unit").str, readValue(m("duration")))
+      case "otherwise" => OtherwiseValueDto(readValue(m("left")), readValue(m("right")))
       case "oneOf" =>
         OneOfValueDto(readValue(m("collection")), m("element").str, readValue(m("predicate")))
       case "sum" =>
@@ -2075,6 +2079,12 @@ object JsonModel:
           "value" -> ujson.Str("durationUnits"),
           "unit" -> ujson.Str(unit),
           "duration" -> writeValue(duration)
+        )
+      case OtherwiseValueDto(left, right) =>
+        ujson.Obj(
+          "value" -> ujson.Str("otherwise"),
+          "left" -> writeValue(left),
+          "right" -> writeValue(right)
         )
       case OneOfValueDto(collection, element, predicate) =>
         ujson.Obj(

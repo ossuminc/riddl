@@ -133,4 +133,38 @@ abstract class ValueFormsParsingTest(using PlatformContext) extends AbstractPars
       parse(src, td) mustBe a[Right[?, ?]]
     }
   }
+
+  "`otherwise`" should {
+
+    "bind loosest of all" in { (td: TestData) =>
+      letValue("Data.hours + 1 otherwise 0", td) match
+        case OtherwiseValue(_, _: ArithmeticExpression, _: NumericLiteral) => succeed
+        case other => fail(s"wrong shape: ${other.format}")
+    }
+
+    "fold left" in { (td: TestData) =>
+      letValue("Data.hours otherwise Data.days otherwise 0", td) match
+        case OtherwiseValue(_, OtherwiseValue(_, _, _), _: NumericLiteral) => succeed
+        case other => fail(s"wrong shape: ${other.format}")
+    }
+
+    "stop an `empty` ascription" in { (td: TestData) =>
+      letValue("empty otherwise 0", td) match
+        case OtherwiseValue(_, ev: EmptyValue, _) => ev.typeRef mustBe empty
+        case other => fail(s"wrong shape: ${other.format}")
+    }
+
+    "follow a `one of`, outside its predicate" in { (td: TestData) =>
+      letValue("""one of Data.lines as l where l.sku == "x" otherwise empty""", td) match
+        case OtherwiseValue(_, _: OneOfValue, _: EmptyValue) => succeed
+        case other => fail(s"wrong shape: ${other.format}")
+    }
+
+    "fill a constructor argument" in { (td: TestData) =>
+      parse(wrap("let v = Data.hours otherwise 0  set field S.hours to Data.days otherwise 1"), td) match
+        case Left(msgs) => fail(msgs.format)
+        case Right(root) =>
+          Finder(root).recursiveFindByType[SetStatement].head.value mustBe a[OtherwiseValue]
+    }
+  }
 }

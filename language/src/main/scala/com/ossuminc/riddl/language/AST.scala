@@ -871,7 +871,7 @@ object AST:
     GetValue | PromptValue | BooleanExpression | Call | Ask | SelfValue | SystemValue | Create |
     NumericLiteral | LookupValue | EmptyValue | ArithmeticExpression | DurationLiteral |
     QueryValue | TableRef | CollectionPredicate | CollectionFilter | CountValue |
-    MembershipValue | DurationUnitsValue | SumValue | OneOfValue | Requires | Returns | InvariantBlock
+    MembershipValue | DurationUnitsValue | SumValue | OneOfValue | OtherwiseValue | Requires | Returns | InvariantBlock
 
   /** Type of definitions that occur in a [[Root]] without [[Include]]. [[Root]] deliberately stays
     * narrow: it is the file parse-root, not the reuse unit. [[Module]] is the reuse unit and is
@@ -3275,13 +3275,14 @@ object AST:
     * comparison's operands are now full Values (see [[ComparisonExpression]]). B2 (2026-09-22)
     * adds [[QueryValue]], the eighteenth; B5 the four collection kinds, making twenty-two.
     * BACKLOG [1.27] (2026-11-19) adds [[DurationUnitsValue]], the twenty-third, and
-    * [[SumValue]] and [[OneOfValue]].
+    * [[SumValue]], [[OneOfValue]] and [[OtherwiseValue]].
     */
   type Value =
     LiteralString | PromptValue | Constructor | ValueRef | GetValue | BooleanExpression | Call |
       Ask | SelfValue | SystemValue | Create | NumericLiteral | LookupValue | EmptyValue |
       ArithmeticExpression | DurationLiteral | ConstantRef | QueryValue | CollectionPredicate |
-      CollectionFilter | CountValue | MembershipValue | DurationUnitsValue | SumValue | OneOfValue
+      CollectionFilter | CountValue | MembershipValue | DurationUnitsValue | SumValue | OneOfValue |
+      OtherwiseValue
 
   /** A54: a single argument supplied to a [[Constructor]]. Positional when `name` is `None`; named
     * (`id = value`) when `name` is `Some`. Validation requires positional arguments to precede
@@ -4435,7 +4436,7 @@ object AST:
       case _: CollectionFilter | _: MembershipValue | _: ComparisonExpression |
           _: LogicalExpression =>
         true
-      case _ => false
+      case v => CollectionValues.alwaysParenthesized(v)
     def byFormat(v: Value): String = if byNeedsParens(v) then s"(${v.format})" else v.format
     /** A sum WITH a `by` is open on its right: a following `*`/`/` would join its projection. */
     def isOpenRight(v: Value): Boolean = v match
@@ -4459,8 +4460,30 @@ object AST:
     override def kind: String = "One Of Value"
     def format: String =
       s"one of ${CollectionValues.parenthesized(collection)} as ${element.format} where " +
-        predicate.format
+        (predicate match
+          case _: OtherwiseValue => s"(${predicate.format})"
+          case _                 => predicate.format)
   end OneOfValue
+
+  /** BACKLOG [1.27] (Reid, 2026-11-19): `<value> otherwise <fallback>` -- `value` when it is not
+    * empty, else `fallback`, which is evaluated only when needed. `value` must admit empty (`T?`,
+    * `T*`, `T{0,n}`); of an optional the result is the type inside it, so `line.qty otherwise 0`
+    * is an `Integer`.
+    *
+    * The LOOSEST value operator and left-associative: `a + b otherwise c` is `(a + b) otherwise
+    * c`, and `a otherwise b otherwise c` tries each in turn. So as the operand of any OTHER
+    * operator it is parenthesized ([[CollectionValues.alwaysParenthesized]]), and as the RIGHT
+    * operand of another `otherwise` too.
+    */
+  @JSExportTopLevel("OtherwiseValue")
+  case class OtherwiseValue(loc: At, value: Value, fallback: Value) extends RiddlValue:
+    override def kind: String = "Otherwise Value"
+    def format: String =
+      val right = fallback match
+        case _: OtherwiseValue => s"(${fallback.format})"
+        case _                 => fallback.format
+      s"${value.format} otherwise $right"
+  end OtherwiseValue
 
   /** B5: the shared parenthesizing rule for a collection operand. An INFIX operand (a filter, a
     * membership test, a comparison, a logical or an arithmetic expression) binds looser than the
@@ -4482,8 +4505,8 @@ object AST:
       * copies in `RiddlFileEmitter`.
       */
     def alwaysParenthesized(v: Value): Boolean = v match
-      case _: OneOfValue => true
-      case _             => false
+      case _: OneOfValue | _: OtherwiseValue => true
+      case _                                 => false
     def operand(v: Value): String = if alwaysParenthesized(v) then s"(${v.format})" else v.format
   end CollectionValues
 
