@@ -735,6 +735,15 @@ enum RuleId(
   case SagaStepTooManyFailPoints extends RuleId("saga-step-too-many-fail-points")
   // BACKLOG [2.21]: a finite-state-machine entity whose handlers (entity or state) never transition.
   case EntityFsmNoTransitions extends RuleId("entity-fsm-no-transitions")
+  // BACKLOG [1.32] (Reid, 2026-11-20): calendar and cron schedules.
+  case ScheduleDayOutOfRange extends RuleId("value-schedule-day-out-of-range")
+  case ScheduleDateNeverExists extends RuleId("value-schedule-date-never-exists")
+  case ScheduleIntervalNotPositive extends RuleId("value-schedule-interval-not-positive")
+  case ScheduleDuplicateWeekday extends RuleId("value-schedule-duplicate-weekday")
+  case ScheduleTimeOutOfRange extends RuleId("value-schedule-time-out-of-range")
+  case ScheduleDaySkipsMonths extends RuleId("value-schedule-day-skips-months")
+  case CronMalformed extends RuleId("value-cron-malformed")
+  case TimeZoneMalformed extends RuleId("value-time-zone-malformed")
 end RuleId
 
 object RuleId:

@@ -1609,6 +1609,9 @@ case class ValidationPass(
               "Give the recurrence a period greater than zero; a zero period would fire continuously.",
             ruleId = Some(RuleId.NonPositiveDuration)
           )
+      // BACKLOG [1.32]: a calendar or cron schedule IS a period; only its own content is judged.
+      case cs: CalendarSchedule => checkCalendarSchedule(cs, subject)
+      case cr: CronSchedule     => checkCronSchedule(cr, subject)
       case other =>
         valueTypeExpr(other, parents, lets, elements).foreach { te =>
           if !isDurationTypeExpr(te) then
@@ -1616,13 +1619,171 @@ case class ValidationPass(
               other.loc,
               s"$subject is '${other.format}', typed ${te.format}, not Duration",
               suggestion =
-                "Write a duration such as `30 days` or \"PT1H\", or name a constant or field " +
-                  "declared as Duration. A calendar schedule (the first of every month) is not yet " +
-                  "expressible; compute the next instant and use `send ... at` instead.",
+                "Write a duration such as `30 days` or \"PT1H\", name a constant or field " +
+                  "declared as Duration, or write a calendar schedule such as `month on day 1`, " +
+                  "`weekday at 08:30` or `cron \"0 9 1 * *\"`.",
               ruleId = Some(rule)
             )
         }
   end checkRecurrencePeriod
+
+  /** BACKLOG [1.32] (Reid, 2026-11-20): a calendar schedule's own content. ERRORS for what can
+    * never fire or cannot be read; an ADVISORY for a day only SOME months have, which is legal and
+    * skips the months that lack it (Reid's ruling) -- `on last day` is the month-end spelling.
+    */
+  private def checkCalendarSchedule(cs: CalendarSchedule, subject: String): Unit =
+    import CalendarSchedule.*
+    def interval(i: Option[String]): Unit =
+      i.foreach { n =>
+        if n.forall(_ == '0') then
+          messages.addError(
+            cs.loc,
+            s"$subject has a non-positive interval '$n' in '${cs.format}'; it must be at least 1",
+            suggestion = "Write an interval of 1 or more, or omit it to mean every one.",
+            ruleId = Some(RuleId.ScheduleIntervalNotPositive)
+          )
+      }
+    def dayInRange(day: String): Boolean =
+      val d = day.toIntOption.getOrElse(Int.MaxValue)
+      if d < 1 || d > 31 then
+        messages.addError(
+          cs.loc,
+          s"$subject names day $day in '${cs.format}'; a day of the month is 1 to 31",
+          suggestion = "Name a day from 1 to 31, or write `on last day` for month-end.",
+          ruleId = Some(RuleId.ScheduleDayOutOfRange)
+        )
+        false
+      else true
+    def skips(what: String): Unit =
+      messages.addAdvisory(
+        cs.loc,
+        s"$subject fires on $what, which some months do not have; in those months it does not " +
+          "fire at all",
+        suggestion = "If you mean month-end, write `on last day`, which fires on the last day of " +
+          "every month whatever its length.",
+        ruleId = Some(RuleId.ScheduleDaySkipsMonths)
+      )
+    cs.cadence match
+      case Monthly(i, _, anchor) =>
+        interval(i)
+        anchor match
+          case DayOfMonth(day) =>
+            if dayInRange(day) && day.toInt > 28 then skips(s"day $day")
+          case LastDayOfMonth | NthWeekdayOfMonth(_, _) => ()
+      case Yearly(i, _, anchor) =>
+        interval(i)
+        anchor match
+          case OnDate(month, day) =>
+            if dayInRange(day) then
+              val d = day.toInt
+              val most = CalendarSchedule.months.indexOf(month) match
+                case 1               => 29
+                case 3 | 5 | 8 | 10  => 30
+                case _               => 31
+              if d > most then
+                messages.addError(
+                  cs.loc,
+                  s"$subject names $month $day in '${cs.format}', a date no year has",
+                  suggestion = s"Name a day of $month from 1 to $most.",
+                  ruleId = Some(RuleId.ScheduleDateNeverExists)
+                )
+              else if month == "february" && d == 29 then skips("february 29")
+          case NthWeekdayOf(_, _, _) => ()
+      case OnWeekdays(days) =>
+        days.groupBy(identity).collect { case (d, ds) if ds.sizeIs > 1 => d }.toSeq.sorted.foreach {
+          d =>
+            messages.addError(
+              cs.loc,
+              s"$subject names $d more than once in '${cs.format}'",
+              suggestion = s"Name $d once.",
+              ruleId = Some(RuleId.ScheduleDuplicateWeekday)
+            )
+        }
+      case Daily | Weekdays => ()
+    end match
+    cs.at.foreach { t =>
+      // The lexer admits 00-29 hours and 00-59 minutes/seconds; only the hour can be too large.
+      if t.take(2).toIntOption.exists(_ > 23) then
+        messages.addError(
+          cs.loc,
+          s"$subject is at $t in '${cs.format}'; a time of day is 00:00 to 23:59:59",
+          suggestion = "Write a time from 00:00 to 23:59:59; midnight is 00:00.",
+          ruleId = Some(RuleId.ScheduleTimeOutOfRange)
+        )
+    }
+    cs.zone.foreach(checkTimeZone(_, subject))
+  end checkCalendarSchedule
+
+  /** BACKLOG [1.32]: the cron escape hatch -- five space-separated fields (minute, hour,
+    * day-of-month, month, day-of-week), each `*`, a number, a range `a-b`, a step `x/n`, or a comma
+    * list of those; day-of-month also takes `L` (last day), day-of-week `n#k` (k-th n-day of the
+    * month) and `nL`. Numbers are range-checked per field. Written without regex lookahead (Native).
+    */
+  private def checkCronSchedule(cr: CronSchedule, subject: String): Unit =
+    val fields = cr.expression.s.trim.split("\\s+").toSeq.filter(_.nonEmpty)
+    val ranges = Seq((0, 59, "minute"), (0, 23, "hour"), (1, 31, "day of month"), (1, 12, "month"),
+      (0, 7, "day of week"))
+    def num(t: String, lo: Int, hi: Int): Boolean = t.nonEmpty && t.forall(_.isDigit) &&
+      t.toIntOption.exists(n => n >= lo && n <= hi)
+    def item(t: String, idx: Int): Boolean =
+      val (lo, hi, _) = ranges(idx)
+      def base(b: String): Boolean = b == "*" || num(b, lo, hi) || (b.split("-", -1) match
+        case Array(a, z) => num(a, lo, hi) && num(z, lo, hi) && a.toInt <= z.toInt
+        case _           => false)
+      t.split("/", -1) match
+        case Array(b)       => base(b) || (idx == 2 && t == "L") ||
+          (idx == 4 && (t.split("#", -1) match
+            case Array(d, k) => num(d, 0, 7) && num(k, 1, 5)
+            case _           => t.endsWith("L") && num(t.dropRight(1), 0, 7)))
+        case Array(b, step) => base(b) && num(step, 1, hi.max(1))
+        case _              => false
+    val problem: Option[String] =
+      if fields.sizeIs != 5 then
+        Some(s"it has ${fields.size} field${if fields.size == 1 then "" else "s"}, not five")
+      else
+        fields.zipWithIndex.collectFirst {
+          case (f, i) if !f.split(",", -1).forall(item(_, i)) =>
+            s"its ${ranges(i)._3} field '$f' is not cron syntax in ${ranges(i)._1}..${ranges(i)._2}"
+        }
+    problem.foreach { why =>
+      messages.addError(
+        cr.loc,
+        s"$subject has the cron expression ${cr.expression.format}, but $why",
+        suggestion = "Write five fields -- minute, hour, day of month, month, day of week -- each " +
+          "`*`, a number, a range `a-b`, a step `*/n`, or a comma list; or write the schedule in " +
+          "words, such as `month on day 1 at 09:00`.",
+        ruleId = Some(RuleId.CronMalformed)
+      )
+    }
+    cr.zone.foreach(checkTimeZone(_, subject))
+  end checkCronSchedule
+
+  /** BACKLOG [1.32]: a schedule's `in "<zone>"`, judged by SHAPE, not against a zone database:
+    * `scala-java-time` ships without its tzdb data on JS and Native, and a JVM-only check would
+    * make the platforms disagree. `UTC`/`GMT`/`Z`, an offset `±HH:MM`, or an IANA-shaped
+    * `Area/Location[/Sub]`.
+    */
+  private def checkTimeZone(zone: LiteralString, subject: String): Unit =
+    val z = zone.s
+    def part(p: String): Boolean =
+      p.nonEmpty && p.head.isLetter && p.forall(c => c.isLetterOrDigit || c == '_' || c == '-' || c == '+')
+    val offset: Boolean =
+      (z.length == 6) && (z.head == '+' || z.head == '-') && z(3) == ':' &&
+        z.slice(1, 3).forall(_.isDigit) && z.slice(4, 6).forall(_.isDigit) &&
+        z.slice(1, 3).toInt <= 14 && z.slice(4, 6).toInt <= 59
+    val ok = z == "UTC" || z == "GMT" || z == "Z" || offset ||
+      (z.split("/", -1).toSeq match
+        case parts if parts.sizeIs >= 2 && parts.sizeIs <= 3 => parts.forall(part)
+        case _                                               => false)
+    if !ok then
+      messages.addError(
+        zone.loc,
+        s"$subject is in the time zone ${zone.format}, which is not a zone name or offset",
+        suggestion = "Write an IANA zone such as \"America/Toronto\", \"UTC\", or an offset such " +
+          "as \"+05:30\". Omit `in` to mean UTC.",
+        ruleId = Some(RuleId.TimeZoneMalformed)
+      )
+  end checkTimeZone
 
   private def isDurationTypeExpr(te: TypeExpression): Boolean =
     aliasFreeTypeExpr(te) match

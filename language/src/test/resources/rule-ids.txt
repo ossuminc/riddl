@@ -455,3 +455,11 @@ stmt-send-every-not-in-init
 stmt-send-every-not-duration
 handler-every-not-duration
 entity-fsm-no-transitions
+value-schedule-day-out-of-range
+value-schedule-date-never-exists
+value-schedule-interval-not-positive
+value-schedule-duplicate-weekday
+value-schedule-time-out-of-range
+value-schedule-day-skips-months
+value-cron-malformed
+value-time-zone-malformed
