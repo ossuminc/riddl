@@ -8,6 +8,7 @@ package com.ossuminc.riddl.passes
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{At, Finder}
+import com.ossuminc.riddl.language.bast.BASTReader
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.passes.prettify.{PrettifyOutput, PrettifyPass}
 import com.ossuminc.riddl.utils.pc
@@ -125,6 +126,17 @@ class CalendarScheduleRoundTripTest extends AnyWordSpec with Matchers {
       val original = parse(source, "src")
       val again = parse(prettify(original), "regen")
       trees(again) mustBe trees(original)
+    }
+
+    "survive BAST to the same trees" in {
+      val original = parse(source, "src")
+      val written = Pass
+        .runThesePasses(PassInput(original), Seq(BASTWriterPass.creator()))
+        .outputOf[BASTOutput](BASTWriterPass.name)
+        .getOrElse(fail("no BAST output"))
+      BASTReader.read(written.bytes) match
+        case Right(back)  => trees(back) mustBe trees(original)
+        case Left(errors) => fail(s"BAST read failed: ${errors.format}")
     }
 
     "fall back to a VALUE when the words after `every` are not a whole schedule" in {

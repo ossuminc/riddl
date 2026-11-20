@@ -1728,6 +1728,44 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writeValue(cv.condition)
         writeValue(cv.thenValue)
         writeValue(cv.elseValue)
+      // BACKLOG [1.32] (revision 36): a calendar schedule -- value tag 27. After the location, a
+      // cadence byte (0 day, 1 weekday, 2 named weekdays, 3 monthly, 4 yearly) and its payload,
+      // then the optional time of day and the optional zone (location + text).
+      case cs: CalendarSchedule =>
+        import CalendarSchedule.*
+        writer.writeU8(27)
+        writeLocation(cs.loc)
+        cs.cadence match
+          case Daily    => writer.writeU8(0)
+          case Weekdays => writer.writeU8(1)
+          case OnWeekdays(days) =>
+            writer.writeU8(2)
+            writeSeq(days)(writeString)
+          case Monthly(interval, unit, anchor) =>
+            writer.writeU8(3)
+            writeOption(interval)(writeString)
+            writeString(unit)
+            anchor match
+              case DayOfMonth(d) => writer.writeU8(0); writeString(d)
+              case LastDayOfMonth => writer.writeU8(1)
+              case NthWeekdayOfMonth(o, wd) => writer.writeU8(2); writeString(o); writeString(wd)
+          case Yearly(interval, unit, anchor) =>
+            writer.writeU8(4)
+            writeOption(interval)(writeString)
+            writeString(unit)
+            anchor match
+              case OnDate(m, d) => writer.writeU8(0); writeString(m); writeString(d)
+              case NthWeekdayOf(o, wd, m) =>
+                writer.writeU8(1); writeString(o); writeString(wd); writeString(m)
+        writeOption(cs.at)(writeString)
+        writeOption(cs.zone) { z => writeLocation(z.loc); writeString(z.s) }
+      // BACKLOG [1.32] (revision 36): the cron escape hatch -- value tag 28.
+      case cr: CronSchedule =>
+        writer.writeU8(28)
+        writeLocation(cr.loc)
+        writeLocation(cr.expression.loc)
+        writeString(cr.expression.s)
+        writeOption(cr.zone) { z => writeLocation(z.loc); writeString(z.s) }
       // B2 (revision 29): `query [one] <table> [where …]` -- value tag 17
       case qv: QueryValue =>
         writer.writeU8(17)

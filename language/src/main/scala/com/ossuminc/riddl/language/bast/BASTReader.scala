@@ -2814,6 +2814,47 @@ class BASTReader(
         val cond = readValue()
         val a = readValue()
         ConditionalValue(loc, cond, a, readValue())
+      case 27 => // BACKLOG [1.32]: CalendarSchedule (revision 36)
+        import CalendarSchedule.*
+        val loc = readLocation()
+        val cadence: Cadence = reader.readU8() match
+          case 0 => Daily
+          case 1 => Weekdays
+          case 2 => OnWeekdays(readSeq(() => readString()))
+          case 3 =>
+            val interval = readOption(readString())
+            val unit = readString()
+            val anchor: MonthAnchor = reader.readU8() match
+              case 0 => DayOfMonth(readString())
+              case 1 => LastDayOfMonth
+              case 2 =>
+                val o = readString()
+                NthWeekdayOfMonth(o, readString())
+              case other => throw new RuntimeException(s"Invalid month anchor discriminator: $other")
+            Monthly(interval, unit, anchor)
+          case 4 =>
+            val interval = readOption(readString())
+            val unit = readString()
+            val anchor: YearAnchor = reader.readU8() match
+              case 0 =>
+                val m = readString()
+                OnDate(m, readString())
+              case 1 =>
+                val o = readString()
+                val wd = readString()
+                NthWeekdayOf(o, wd, readString())
+              case other => throw new RuntimeException(s"Invalid year anchor discriminator: $other")
+            Yearly(interval, unit, anchor)
+          case other => throw new RuntimeException(s"Invalid cadence discriminator: $other")
+        val time = readOption(readString())
+        val zone = readOption { val zl = readLocation(); LiteralString(zl, readString()) }
+        CalendarSchedule(loc, cadence, time, zone)
+      case 28 => // BACKLOG [1.32]: CronSchedule (revision 36)
+        val loc = readLocation()
+        val exprLoc = readLocation()
+        val expr = LiteralString(exprLoc, readString())
+        val zone = readOption { val zl = readLocation(); LiteralString(zl, readString()) }
+        CronSchedule(loc, expr, zone)
       case 17 => // B2: QueryValue (revision 29)
         val loc = readLocation()
         val table = readTableRef()

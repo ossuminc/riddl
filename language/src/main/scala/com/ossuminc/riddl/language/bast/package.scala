@@ -187,7 +187,11 @@ package object bast {
     // 35 (2026-11-19) adds on-clause discriminator byte 9 (`on every`, a period value before the
     // contents count) and an optional recurrence after the send statement's `at` (location, period,
     // optional start): a revision-34 reader would leave those bytes in the stream.
-    35 // recurrence: `on every`, `send ... every`
+    // 36 (2026-11-20) adds BACKLOG [1.32]'s schedules, value tags 27 (a calendar schedule: cadence
+    // byte and payload, optional time of day, optional zone) and 28 (a cron schedule); a
+    // revision-35 reader throws on them.
+    36 // calendar and cron schedules
+    // 35 was recurrence: `on every`, `send ... every`
     // 34 was [1.27] value forms
     // 33 was `ask query Q(args) of P`
     // 30 was B5 collection predicates, filter, count and membership
