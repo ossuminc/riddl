@@ -5079,7 +5079,9 @@ case class ValidationPass(
       )
     }
     if entity.hasOption("finite-state-machine") && entity.states.sizeIs >= 2 then {
-      val hasMorphOrBecome = entity.handlers.exists { handler =>
+      // BACKLOG [2.21]: a transition is usually written in a STATE's handler, so read those too.
+      // Until 2026-11-20 only `entity.handlers` was read, and a morph inside a state went unseen.
+      val hasMorphOrBecome = (entity.handlers ++ entity.states.flatMap(_.handlers)).exists { handler =>
         handler.clauses.exists { clause =>
           val finder = Finder(clause.contents)
           finder.recursiveFindByType[MorphStatement].nonEmpty ||
@@ -5092,38 +5094,27 @@ case class ValidationPass(
           s"${entity.identify} is declared as a finite-state-machine but its handlers contain no morph or become statements",
           suggestion =
             "Add 'morph' or 'become' statements so the FSM transitions between its states.",
-          ruleId = Some(RuleId.FsmSingleState)
+          // [2.21]: was `entity-fsm-single-state`, a name for a condition this never reports.
+          ruleId = Some(RuleId.EntityFsmNoTransitions)
         )
     }
-    if entity.states.nonEmpty then {
-      val statesWithoutHandlers = entity.states.filter { state =>
-        state.handlers.isEmpty && entity.handlers.isEmpty
-      }
-      for state <- statesWithoutHandlers do
-        messages.add(
-          Message(
-            state.errorLoc,
-            s"${state.identify} in ${entity.identify} has no handlers.",
-            Messages.Error,
-            suggestion =
-              s"Add a handler to ${state.identify} (or to ${entity.identify}) to process messages in this state.",
-            ruleId = Some(RuleId.EntityStateNoHandlers)
-          )
-        )
-      end for
-    } else if entity.handlers.isEmpty && !entity.isEmpty then {
-      messages.add(
-        Message(
-          entity.errorLoc,
-          s"${entity.identify} has no handlers and no states with handlers. " +
-            "Add a handler to the entity or add a state with a handler.",
-          Messages.Error,
+    // BACKLOG [2.20] (Reid, 2026-11-20): an entity with no handlers ANYWHERE is reported ONCE, by
+    // Completeness 4f below. It used to be reported twice -- also as an Error here
+    // (`entity-no-handlers-or-states`, or `entity-state-no-handlers` per state) -- one omission,
+    // two kinds. Reid ruled the Completeness kind right: the entity is unfinished, not
+    // contradictory. What survives here is the case 4f cannot see: SOME states have handlers and
+    // this one, with no entity-level handler to fall back on, has none. Same code, Completeness.
+    if entity.handlers.isEmpty && entity.states.exists(_.handlers.nonEmpty) then
+      entity.states.filter(_.handlers.isEmpty).foreach { state =>
+        messages.addCompleteness(
+          state.errorLoc,
+          s"${state.identify} in ${entity.identify} has no handlers.",
           suggestion =
-            "Add a handler to the entity, or add a state containing a handler, so the entity can process messages.",
-          ruleId = Some(RuleId.EntityNoHandlersOrStates)
+            s"Add a handler to ${state.identify} (or to ${entity.identify}) to process messages in this state.",
+          ruleId = Some(RuleId.EntityStateNoHandlers)
         )
-      )
-    }
+      }
+    end if
     // 2.8.0 (Reid, 2026-11-17): `on init` is CREATION. It runs once, at `create`, it belongs to the
     // ENTITY rather than to any state, and it `morph`s into the state the entity starts in, chosen
     // from its arguments. There is no initial state, so declaration order means nothing. These

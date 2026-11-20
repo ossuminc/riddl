@@ -128,6 +128,18 @@ finding** -- reactive-bbq passes a QUOTED path (`"event.orderPayment.paymentAmou
 is red on it until they fix it. Writing the tests found [1.33]: `true` fills an `Integer`
 (`Bool extends IntegerTypeExpression`), for constructors too.
 
+**[2.20] and [2.21] closed (Reid's rulings, 2026-11-20).** An entity with no handlers anywhere
+is now reported ONCE, as Completeness 4f (`entity-no-handlers`); the Error
+`entity-no-handlers-or-states` is no longer emitted. `entity-state-no-handlers` survives only
+where 4f is silent -- some states have handlers and this one, with no entity-level handler, has
+none -- and is Completeness now. That partial case was my reading of the ruling, not part of it;
+Reid's ruling covered the double report only. The FSM no-transitions check carries the new
+`entity-fsm-no-transitions` and reads the STATES' handlers (canary: reverting that line reddens
+`EntityHandlerReportingTest`). **"Retire the code" could not mean `RuleId.retired` yet**:
+`RuleIdTest` forbids a live case there, and deleting the case is a MiMa break, so both old cases
+stay "NOT EMITTED" (the `StateNoInit` precedent) and their retirement is on [5.10]'s 3.0 list.
+Consumers keying on the codes need telling: synapify, riddl-vscode.
+
 ## 2026-11-19 (overnight, later) — opacity is one rule for both sides
 
 riddl-models (task `2026-11-19-handlerless-app-sends-but-cannot-receive`) measured that a

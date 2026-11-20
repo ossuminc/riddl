@@ -353,6 +353,9 @@ enum RuleId(
   // ---- entity --------------------------------------------------------------------------------
   case MultipleInitialStates extends RuleId("entity-multiple-initial-states")
   case EntityMultipleInitialHandlers extends RuleId("entity-multiple-initial-handlers")
+  // NOT EMITTED since 2.8.0 (BACKLOG [2.21]): it was attached to "an FSM's handlers contain no
+  // morph or become", which is `entity-fsm-no-transitions` now; "too few states" is
+  // `entity-fsm-too-few-states`. Kept as a case (public API); moves to `retired` at 3.0 ([5.10]).
   case FsmSingleState extends RuleId("entity-fsm-single-state")
   // NOT EMITTED since 2.8.0. Both asked for an `on init` in EVERY state, but only the initial state's
   // ever ran, so they demanded dead code. Kept as cases (a published code means the same thing
@@ -719,13 +722,19 @@ enum RuleId(
   // `field-should-be-lowercase`: same rule, another site.)
   case EntityEmptyHandlers extends RuleId("entity-empty-handlers")
   case EntityFsmTooFewStates extends RuleId("entity-fsm-too-few-states")
+  // Since 2.8.0 (BACKLOG [2.20]) a COMPLETENESS warning, emitted only when other states have
+  // handlers; an entity with none anywhere is `entity-no-handlers`, once.
   case EntityStateNoHandlers extends RuleId("entity-state-no-handlers")
+  // NOT EMITTED since 2.8.0 (BACKLOG [2.20]): it double-reported `entity-no-handlers`. Kept as a
+  // case (public API); moves to `retired` at 3.0 ([5.10]).
   case EntityNoHandlersOrStates extends RuleId("entity-no-handlers-or-states")
   case MethodShouldBeLowercase extends RuleId("field-method-should-be-lowercase")
   case MethodArgShouldBeLowercase extends RuleId("field-method-arg-should-be-lowercase")
   case PatternInvalidRegex extends RuleId("type-pattern-invalid-regex")
   case SagaStepUncompensated extends RuleId("saga-step-uncompensated")
   case SagaStepTooManyFailPoints extends RuleId("saga-step-too-many-fail-points")
+  // BACKLOG [2.21]: a finite-state-machine entity whose handlers (entity or state) never transition.
+  case EntityFsmNoTransitions extends RuleId("entity-fsm-no-transitions")
 end RuleId
 
 object RuleId:

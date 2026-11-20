@@ -95,10 +95,11 @@ class EntityValidatorTest extends AbstractValidatingTest {
       pc.withOptions(CommonOptions.default) { _ =>
         parseAndValidateInContext[Entity](input, shouldFailOnErrors = false) {
           case (_: Entity, _, msgs: Messages) =>
+            // [2.20]: reported once, as Completeness -- no longer also as a per-state Error.
             assertValidationMessage(
               msgs,
-              Error,
-              "State 'foo' in Entity 'Hamburger' has no handlers."
+              CompletenessWarning,
+              "Entity 'Hamburger' has no handlers to process messages"
             )
             assertValidationMessage(
               msgs,

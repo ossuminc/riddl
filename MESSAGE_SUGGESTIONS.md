@@ -175,9 +175,8 @@ artifact, so table rows exceed the usual 80-column limit.)
 | `${entity} must define at least one state` (Missing) | `Add a state to ${entity}, e.g. 'state ${id}State of ${id}Data is { ??? }'.` |
 | `${entity} has only empty handlers` (Missing) | Add on-clauses to the entity's handlers, e.g. 'on command DoThing { ??? }'. |
 | `${entity} is declared as an fsm, but doesn't have at least two states` | Define at least two states for the finite-state-machine entity (a state machine needs states to transition between). |
-| `${entity} is declared as a finite-state-machine but its handlers contain no morph or become statements` (Completeness) | Add 'morph' or 'become' statements so the FSM transitions between its states. |
-| `${state} in ${entity} has no handlers.` | `Add a handler to ${state} (or to ${entity}) to process messages in this state.` |
-| `${entity} has no handlers and no states with handlers. …` | Add a handler to the entity, or add a state containing a handler, so the entity can process messages. |
+| `${entity} is declared as a finite-state-machine but its handlers contain no morph or become statements` (Completeness; `entity-fsm-no-transitions`, reads state handlers too) | Add 'morph' or 'become' statements so the FSM transitions between its states. |
+| `${state} in ${entity} has no handlers.` (Completeness; only when other states have handlers) | `Add a handler to ${state} (or to ${entity}) to process messages in this state.` |
 | `${state} in ${entity} has no 'on init' clause …` (Completeness) | `Add an 'on init' clause to a handler of ${state} to initialize its fields.` |
 | `${state} … has an 'on init' clause but no 'set' statement …` (Completeness) | Add 'set' statements in the 'on init' clause to initialize the state's fields. |
 | `${entity} has no handlers to process messages` (Completeness) | Add a handler (on the entity or its state) to process incoming messages. |

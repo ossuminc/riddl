@@ -43,9 +43,6 @@ passes/input/check/saga/saga.riddl(16:5->16):
  Entity 'blah' must define at least one state:
      entity blah is {
 passes/input/check/saga/saga.riddl(16:5->16):
- Entity 'blah' has no handlers and no states with handlers. Add a handler to the entity or add a state with a handler.:
-     entity blah is {
-passes/input/check/saga/saga.riddl(16:5->16):
  Entity 'blah' has no handlers to process messages:
      entity blah is {
 passes/input/check/saga/saga.riddl(16:5->16):
