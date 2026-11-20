@@ -1,0 +1,46 @@
+// Corpus fixture for calendar schedules (BACKLOG [1.32], 2026-11-20). Checked by BOTH the
+// fastparse parser and the EBNF/TatSu grammar validator over **/input/**.
+//   - the operand of `every`, in `on every` and in a recurring `send ... every`, may be a
+//     calendar schedule: a cadence, an optional time of day (`at HH:MM[:SS]`, default midnight)
+//     and an optional time zone (`in "<zone>"`, default UTC)
+//   - or the cron escape hatch, `cron "<five fields>" [in "<zone>"]`
+//   - a Duration (`30 days`) or a path to one is still a value, exactly as before
+domain Billing is {
+  context Calendar is {
+    command Bill is { cycle: Integer }
+    constant Monthly: Duration = 30 days
+    inlet BillsIn is command Bill
+    outlet BillsOut is command Bill
+    connector 'Bill Clock' is from outlet Calendar.BillsOut to inlet Calendar.BillsIn
+
+    entity Account is {
+      outlet Bills is command Bill
+      handler Lifecycle is {
+        on init is {
+          send command Bill(cycle = 1) to outlet Account.Bills
+            every month on day 1 at 09:00 in "America/Toronto" starting at system.now
+          send command Bill(cycle = 2) to outlet Account.Bills every cron "0 9 1 * *" in "UTC"
+        }
+      }
+    }
+
+    handler CalendarBoundary is {
+      on every month on day 1 at 09:00 in "America/Toronto" is { do "open the books" }
+      on every month on last day is { do "close the books" }
+      on every month on the third wednesday at 10:00 is { do "review" }
+      on every month on the last friday is { do "pay day" }
+      on every 3 months on day 1 is { do "quarterly report" }
+      on every year on march 31 at 17:00 is { do "fiscal year end" }
+      on every year on the first monday of september is { do "labour day" }
+      on every 2 years on february 28 is { do "biennial audit" }
+      on every day at 06:00 is { do "daily digest" }
+      on every weekday at 08:30:15 is { do "stand-up" }
+      on every monday, wednesday and friday at 07:00 is { do "backups" }
+      on every saturday and sunday is { do "weekend sweep" }
+      on every cron "*/5 * * * *" is { do "poll" }
+      on every 30 days is { do "a Duration is still a value" }
+      on every Monthly is { do "so is a Duration constant" }
+      on closeMonth: command Bill is { do "bill" }
+    }
+  }
+}

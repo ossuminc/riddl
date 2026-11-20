@@ -295,6 +295,8 @@ object Finder:
     // a constant's VALUE (a `Constant` is a Leaf whose value sits in a field) were unreachable too.
     case ae: ArithmeticExpression => Seq(ae.left, ae.right)
     case dl: DurationLiteral      => Seq(dl.amount)
+    case cs: CalendarSchedule     => cs.zone.toSeq // [1.32]
+    case cr: CronSchedule         => cr.expression +: cr.zone.toSeq // [1.32]
     case lv: LookupValue          => lv.collection +: lv.indices
     case ev: EmptyValue           => ev.ascribedType.toSeq
     case c: Constant              => Seq(c.value)

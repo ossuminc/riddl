@@ -282,7 +282,31 @@ quiescence_window = literal_string | path_identifier ;
    recurring `send` in `on init`. Only `on every` is a keyword; `every` alone is not reserved. The
    period is any value; that it is a Duration (a literal such as `30 days`, a duration string, or a
    Duration constant or field) is enforced in validation. Several may share a handler. *)
-on_every_clause = "on" "every" value is pseudo_code_block [with_metadata] ;
+on_every_clause = "on" "every" every_operand is pseudo_code_block [with_metadata] ;
+(* BACKLOG [1.32] (2026-11-20): the operand of `every`, in `on every` and `send ... every`. A
+   CALENDAR schedule or the CRON escape hatch is tried FIRST; words that are not a WHOLE schedule
+   fall back to `value`, exactly as before [1.32]. So `every month` with a constant named `month`
+   is that constant (a month cadence needs its `on ...` anchor), while words that ARE a whole
+   schedule win: `every day` is daily, even beside a constant named `day`. None of the schedule
+   words is reserved. `at` is the time of day (absent: midnight); `in` the time zone (absent: UTC).
+   A day a month lacks (the 31st) skips that month; `on last day` is month-end. *)
+every_operand = calendar_schedule | cron_schedule | value ;
+calendar_schedule = schedule_cadence [ "at" time_of_day ] [ "in" literal_string ] ;
+schedule_cadence = [ schedule_count ] ("months" | "month") month_anchor
+                 | [ schedule_count ] ("years" | "year") year_anchor
+                 | "weekday"
+                 | "day"
+                 | weekday_name { ("," | "and") weekday_name } ;
+month_anchor = "on" ( "day" schedule_count | "last" "day" | "the" schedule_ordinal weekday_name ) ;
+year_anchor = "on" ( "the" schedule_ordinal weekday_name "of" month_name | month_name schedule_count ) ;
+schedule_count = /[0-9]+/ ;
+schedule_ordinal = "first" | "second" | "third" | "fourth" | "last" ;
+weekday_name = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday" ;
+month_name = "january" | "february" | "march" | "april" | "may" | "june" | "july" | "august"
+           | "september" | "october" | "november" | "december" ;
+time_of_day = /[0-2][0-9]:[0-5][0-9](:[0-5][0-9])?/ ;
+(* The standard five-field cron text, verbatim; for a schedule the prose cannot say. *)
+cron_schedule = "cron" literal_string [ "in" literal_string ] ;
 (* A55: an optional local name may be bound to the handled message with type ascription:
    `on foo: command Foo { ... }`. Within the body the name denotes the whole message. *)
 on_event_clause = "on" [identifier ":"] event_ref ["from" [identifier ":"] message_origins] is pseudo_code_block [with_metadata] ;
@@ -345,7 +369,7 @@ deliverable_message_value = message_value | path_identifier ;
    `at` and `every` are alternatives; neither `every` nor `starting` is reserved. *)
 send_statement = "send" deliverable_message_value "to" (outlet_ref | inlet_ref)
                  [ "at" value | send_recurrence ] ;
-send_recurrence = "every" value [ "starting" ["at"] value ] ;
+send_recurrence = "every" every_operand [ "starting" ["at"] value ] ;
 (* The addressee is EITHER a keyword-led processor_ref naming a processor statically, OR a value
    typed `Id(entity E)` naming WHICH INSTANCE to tell (`to self.id`, `to order.siteId`). They are
    told apart by the keyword leading the reference -- every processor_ref alternative is

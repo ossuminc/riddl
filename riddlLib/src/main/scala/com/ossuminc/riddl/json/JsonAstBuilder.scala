@@ -1595,6 +1595,38 @@ object JsonAstBuilder:
         )
   end buildStatement
 
+  /** BACKLOG [1.32]: rebuild a calendar schedule from its flat DTO. A key the cadence needs and
+    * the document omits is a reader error, not a silent default.
+    */
+  private def buildSchedule(cs: CalendarScheduleDto)(using ctx: Ctx): CalendarSchedule =
+    import CalendarSchedule.*
+    def need(key: String, v: Option[String]): String =
+      v.getOrElse { ctx.err(s"a '${cs.cadence}' calendar schedule needs '$key'"); "" }
+    val cadence: Cadence = cs.cadence match
+      case "day"      => Daily
+      case "weekday"  => Weekdays
+      case "weekdays" => OnWeekdays(cs.weekdays)
+      case "month" =>
+        val anchor: MonthAnchor = cs.anchor match
+          case Some("day")     => DayOfMonth(need("day", cs.day))
+          case Some("lastDay") => LastDayOfMonth
+          case Some("nth")     => NthWeekdayOfMonth(need("ordinal", cs.ordinal), need("weekday", cs.weekday))
+          case other =>
+            ctx.err(s"unknown month anchor '${other.getOrElse("")}'"); LastDayOfMonth
+        Monthly(cs.interval, cs.unit.getOrElse("month"), anchor)
+      case "year" =>
+        val anchor: YearAnchor = cs.anchor match
+          case Some("date") => OnDate(need("month", cs.month), need("day", cs.day))
+          case Some("nth") =>
+            NthWeekdayOf(need("ordinal", cs.ordinal), need("weekday", cs.weekday), need("month", cs.month))
+          case other =>
+            ctx.err(s"unknown year anchor '${other.getOrElse("")}'"); OnDate("january", "1")
+        Yearly(cs.interval, cs.unit.getOrElse("year"), anchor)
+      case other =>
+        ctx.err(s"unknown calendar cadence '$other'"); Daily
+    CalendarSchedule(curAt, cadence, cs.at, cs.zone.map(LiteralString(curAt, _)))
+  end buildSchedule
+
   // A54: ValueDto -> AST Value.
   private def buildValue(v: ValueDto)(using ctx: Ctx): Value =
     v match
@@ -1640,6 +1672,9 @@ object JsonAstBuilder:
         ArithmeticExpression(curAt, aop, buildValue(left), buildValue(right))
       case DurationLiteralDto(amount, unit) =>
         DurationLiteral(curAt, NumericLiteral(curAt, amount), unit)
+      case cs: CalendarScheduleDto => buildSchedule(cs) // BACKLOG [1.32]
+      case CronScheduleDto(expression, zone) =>
+        CronSchedule(curAt, LiteralString(curAt, expression), zone.map(LiteralString(curAt, _)))
       case CollectionPredicateDto(q, collection, element, predicate) => // B5
         val quant = CollectionQuantifier.values
           .find(_.keyword == q)

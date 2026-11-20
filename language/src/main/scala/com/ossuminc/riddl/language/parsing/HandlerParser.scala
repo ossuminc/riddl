@@ -145,12 +145,13 @@ private[parsing] trait HandlerParser
   }
 
   /** `on every <period> is { … }` (2026-11-19): a timer clause firing once per period. Placed
-    * exactly where `on quiescence` is, in both branches of [[onClause]]. The period is any value;
-    * whether it is a Duration is validation's question.
+    * exactly where `on quiescence` is, in both branches of [[onClause]]. The period is a calendar
+    * schedule, a cron schedule, or any value ([[everyOperand]], BACKLOG [1.32]); whether a value
+    * is a Duration is validation's question.
     */
   private def onEveryClause[u: P](set: StatementsSet): P[OnEveryClause] = {
     P(
-      Index ~ Keywords.onEvery ~/ value ~ is ~/ pseudoCodeBlock(set) ~ withMetaData ~/ Index
+      Index ~ Keywords.onEvery ~/ everyOperand ~ is ~/ pseudoCodeBlock(set) ~ withMetaData ~/ Index
     ).map { case (start, period, statements, descriptives, end) =>
       OnEveryClause(at(start, end), period, statements.toContents, descriptives.toContents)
     }

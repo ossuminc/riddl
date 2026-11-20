@@ -313,9 +313,81 @@ private[parsing] trait StatementParser {
     P(at ~ value).map(Left(_))
 
   private def sendEvery[u: P]: P[Either[Value, Recurrence]] =
-    P(Index ~ Keywords.every ~/ value ~ (Keywords.starting ~/ at.? ~ value).? ~~ Index).map {
+    P(Index ~ Keywords.every ~/ everyOperand ~ (Keywords.starting ~/ at.? ~ value).? ~~ Index).map {
       case (start, period, starting, end) => Right(Recurrence(at(start, end), period, starting))
     }
+
+  // ---- BACKLOG [1.32]: calendar schedules -------------------------------------------------------
+
+  /** The operand of `every`, in `on every` and `send … every`: a calendar schedule, the cron
+    * escape hatch, or -- exactly as before [1.32] -- any value (a Duration). The two schedule forms
+    * are tried FIRST and under `NoCut`, so words that are not a WHOLE schedule fall back to
+    * `value`: `every month` with a constant named `month` is still that constant, because a month
+    * cadence needs its `on …` anchor. Words that ARE a whole schedule win: `every day` is daily.
+    * None of the schedule words is reserved.
+    */
+  private[parsing] def everyOperand[u: P]: P[Value] =
+    P(NoCut(calendarSchedule).map(cs => cs: Value) | NoCut(cronSchedule).map(cs => cs: Value) | value)
+
+  private def schedWord[u: P](w: String): P[Unit] = Keywords.keywordNoCut(w)
+
+  private def schedWords[u: P](words: Seq[String]): P[String] =
+    P(StringIn(
+      "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+      "january", "february", "march", "april", "may", "june", "july", "august", "september",
+      "october", "november", "december", "first", "second", "third", "fourth", "last"
+    ).! ~~ &(Keywords.isNotKeywordChar)).filter(words.contains)
+
+  private def weekdayWord[u: P]: P[String] = schedWords(CalendarSchedule.weekdays)
+  private def monthWord[u: P]: P[String] = schedWords(CalendarSchedule.months)
+  private def ordinalWord[u: P]: P[String] = schedWords(CalendarSchedule.ordinals)
+  private def scheduleDigits[u: P]: P[String] = P(CharsWhileIn("0-9").! ~~ &(Keywords.isNotKeywordChar))
+
+  /** `HH:MM` or `HH:MM:SS`; ranges are validation's question. */
+  private def timeOfDay[u: P]: P[String] = P(
+    (CharIn("0-2") ~~ CharIn("0-9") ~~ ":" ~~ CharIn("0-5") ~~ CharIn("0-9") ~~
+      (":" ~~ CharIn("0-5") ~~ CharIn("0-9")).?).! ~~ &(Keywords.isNotKeywordChar)
+  )
+
+  private def monthAnchor[u: P]: P[CalendarSchedule.MonthAnchor] = P(
+    schedWord("on") ~ (
+      (schedWord("day") ~ scheduleDigits).map(CalendarSchedule.DayOfMonth(_)) |
+        (schedWord("last") ~ schedWord("day")).map(_ => CalendarSchedule.LastDayOfMonth) |
+        (schedWord("the") ~ ordinalWord ~ weekdayWord).map(CalendarSchedule.NthWeekdayOfMonth(_, _))
+    )
+  )
+
+  private def yearAnchor[u: P]: P[CalendarSchedule.YearAnchor] = P(
+    schedWord("on") ~ (
+      (schedWord("the") ~ ordinalWord ~ weekdayWord ~ schedWord("of") ~ monthWord)
+        .map(CalendarSchedule.NthWeekdayOf(_, _, _)) |
+        (monthWord ~ scheduleDigits).map(CalendarSchedule.OnDate(_, _))
+    )
+  )
+
+  private def cadence[u: P]: P[CalendarSchedule.Cadence] = P(
+    (scheduleDigits.? ~ (StringIn("months", "month").! ~~ &(Keywords.isNotKeywordChar)) ~ monthAnchor)
+      .map(CalendarSchedule.Monthly(_, _, _)) |
+      (scheduleDigits.? ~ (StringIn("years", "year").! ~~ &(Keywords.isNotKeywordChar)) ~ yearAnchor)
+        .map(CalendarSchedule.Yearly(_, _, _)) |
+      schedWord("weekday").map(_ => CalendarSchedule.Weekdays) |
+      schedWord("day").map(_ => CalendarSchedule.Daily) |
+      (weekdayWord ~ ((schedWord(",") | schedWord("and")) ~ weekdayWord).rep).map { case (h, t) =>
+        CalendarSchedule.OnWeekdays(h +: t)
+      }
+  )
+
+  private def scheduleZone[u: P]: P[LiteralString] = P(schedWord("in") ~ literalString)
+
+  /** `month on day 1 at 09:00 in "America/Toronto"` and its siblings; see [[everyOperand]]. */
+  private def calendarSchedule[u: P]: P[CalendarSchedule] = P(
+    Index ~ cadence ~ (schedWord("at") ~ timeOfDay).? ~ scheduleZone.? ~~ Index
+  ).map { case (start, c, time, zone, end) => CalendarSchedule(at(start, end), c, time, zone) }
+
+  /** `cron "0 9 1 * *" [in "<zone>"]`, the escape hatch. */
+  private def cronSchedule[u: P]: P[CronSchedule] = P(
+    Index ~ schedWord("cron") ~ literalString ~ scheduleZone.? ~~ Index
+  ).map { case (start, expr, zone, end) => CronSchedule(at(start, end), expr, zone) }
 
   /** `forward <operand> to <portlet|processor>` -- pass the handled message on and discharge the
     * response obligation.

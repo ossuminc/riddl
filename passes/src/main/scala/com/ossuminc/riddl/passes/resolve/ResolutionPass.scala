@@ -626,6 +626,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case ae: ArithmeticExpression =>
         resolveValue(ae.left, parents); resolveValue(ae.right, parents)
       case _: DurationLiteral => ()
+      case _: CalendarSchedule | _: CronSchedule => () // [1.32]: holds no references
       case cr: ConstantRef    => associateUsage(parents.head, resolveARef[Constant](cr, parents))
       case qv: QueryValue     => qv.where.foreach(w => resolveValue(w, parents)) // B2
       // B5 (2026-09-23): recurse into the collection and the predicate. The element BINDING is

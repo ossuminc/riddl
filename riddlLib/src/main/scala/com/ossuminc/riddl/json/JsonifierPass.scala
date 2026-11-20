@@ -1558,6 +1558,28 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
         args.map(a => ConstructorArgDto(a.name.map(_.value), serializeValue(a.value)))
       )
 
+  /** BACKLOG [1.32]: a calendar schedule, flattened per [[CalendarScheduleDto]]. */
+  private def serializeSchedule(cs: CalendarSchedule): CalendarScheduleDto =
+    import CalendarSchedule.*
+    val base = CalendarScheduleDto("day", at = cs.at, zone = cs.zone.map(_.s))
+    cs.cadence match
+      case Daily          => base
+      case Weekdays       => base.copy(cadence = "weekday")
+      case OnWeekdays(ds) => base.copy(cadence = "weekdays", weekdays = ds)
+      case Monthly(i, u, a) =>
+        val m = base.copy(cadence = "month", interval = i, unit = Some(u))
+        a match
+          case DayOfMonth(d)             => m.copy(anchor = Some("day"), day = Some(d))
+          case LastDayOfMonth            => m.copy(anchor = Some("lastDay"))
+          case NthWeekdayOfMonth(o, wd)  => m.copy(anchor = Some("nth"), ordinal = Some(o), weekday = Some(wd))
+      case Yearly(i, u, a) =>
+        val y = base.copy(cadence = "year", interval = i, unit = Some(u))
+        a match
+          case OnDate(mo, d) => y.copy(anchor = Some("date"), month = Some(mo), day = Some(d))
+          case NthWeekdayOf(o, wd, mo) =>
+            y.copy(anchor = Some("nth"), ordinal = Some(o), weekday = Some(wd), month = Some(mo))
+  end serializeSchedule
+
   // A54: AST Value -> ValueDto.
   private def serializeValue(v: Value): ValueDto = v match
     case ls: LiteralString => LiteralValueDto(ls.s)
@@ -1590,6 +1612,8 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case ae: ArithmeticExpression =>
       ArithmeticDto(ae.op.symbol, serializeValue(ae.left), serializeValue(ae.right))
     case dl: DurationLiteral => DurationLiteralDto(dl.amount.text, dl.unit)
+    case cs: CalendarSchedule => serializeSchedule(cs) // BACKLOG [1.32]
+    case cr: CronSchedule     => CronScheduleDto(cr.expression.s, cr.zone.map(_.s))
     case qv: QueryValue => QueryValueDto(qv.table.format, qv.one, qv.where.map(serializeValue)) // B2
     case cp: CollectionPredicate => // B5
       CollectionPredicateDto(

@@ -871,7 +871,8 @@ object AST:
     GetValue | PromptValue | BooleanExpression | Call | Ask | SelfValue | SystemValue | Create |
     NumericLiteral | LookupValue | EmptyValue | ArithmeticExpression | DurationLiteral |
     QueryValue | TableRef | CollectionPredicate | CollectionFilter | CountValue |
-    MembershipValue | DurationUnitsValue | SumValue | OneOfValue | OtherwiseValue | ConditionalValue | Requires | Returns | InvariantBlock | Recurrence
+    MembershipValue | DurationUnitsValue | SumValue | OneOfValue | OtherwiseValue | ConditionalValue | Requires | Returns | InvariantBlock | Recurrence |
+    CalendarSchedule | CronSchedule
 
   /** Type of definitions that occur in a [[Root]] without [[Include]]. [[Root]] deliberately stays
     * narrow: it is the file parse-root, not the reuse unit. [[Module]] is the reuse unit and is
@@ -3289,13 +3290,15 @@ object AST:
     * adds [[QueryValue]], the eighteenth; B5 the four collection kinds, making twenty-two.
     * BACKLOG [1.27] (2026-11-19) adds [[DurationUnitsValue]], the twenty-third, and
     * [[SumValue]], [[OneOfValue]], [[OtherwiseValue]] and [[ConditionalValue]], making twenty-seven.
+    * BACKLOG [1.32] (2026-11-20) adds [[CalendarSchedule]] and [[CronSchedule]], making
+    * twenty-nine -- values only so they can stand in a recurrence's `period`.
     */
   type Value =
     LiteralString | PromptValue | Constructor | ValueRef | GetValue | BooleanExpression | Call |
       Ask | SelfValue | SystemValue | Create | NumericLiteral | LookupValue | EmptyValue |
       ArithmeticExpression | DurationLiteral | ConstantRef | QueryValue | CollectionPredicate |
       CollectionFilter | CountValue | MembershipValue | DurationUnitsValue | SumValue | OneOfValue |
-      OtherwiseValue | ConditionalValue
+      OtherwiseValue | ConditionalValue | CalendarSchedule | CronSchedule
 
   /** A54: a single argument supplied to a [[Constructor]]. Positional when `name` is `None`; named
     * (`id = value`) when `name` is `Some`. Validation requires positional arguments to precede
@@ -4743,8 +4746,8 @@ object AST:
     * Duration constant or field, or B4 arithmetic -- and whether it IS a Duration is validation's
     * question, as for the quiescence window. `starting` is the first delivery's instant (typed like
     * `send ... at`); absent, the first delivery is one period after the `send` runs. The message is
-    * re-evaluated at every firing. Fixed spans only: a CALENDAR schedule ("the first of every month")
-    * is BACKLOG [1.32].
+    * re-evaluated at every firing. A CALENDAR schedule ("the first of every month") is a
+    * [[CalendarSchedule]] or a [[CronSchedule]] in the `period` position (BACKLOG [1.32]).
     */
   @JSExportTopLevel("Recurrence")
   case class Recurrence(loc: At, period: Value, starting: Option[Value] = None) extends RiddlValue {
@@ -4752,6 +4755,108 @@ object AST:
     override def format: String =
       s"every ${period.format}" + starting.map(v => s" starting at ${v.format}").getOrElse("")
   }
+
+  /** BACKLOG [1.32] (Reid, 2026-11-20): a CALENDAR schedule, the operand of `every` in `on every`
+    * and `send … every` -- `month on day 1 at 09:00 in "America/Toronto"`, `month on the third
+    * wednesday`, `year on march 31`, `weekday at 08:30`, `monday, wednesday and friday`.
+    *
+    * A [[Value]] only so it can stand where a recurrence's period stands; the parser builds one
+    * nowhere else. Every word is stored AS WRITTEN (the numeric-literal precedent), so `months`
+    * after an interval and `month` without one both round-trip. `at` is the time of day
+    * (`HH:MM[:SS]`), absent meaning midnight; `zone` is the time zone, absent meaning UTC. A day
+    * a month lacks (the 31st) SKIPS that month; `on last day` is the month-end spelling.
+    */
+  @JSExportTopLevel("CalendarSchedule")
+  case class CalendarSchedule(
+    loc: At,
+    cadence: CalendarSchedule.Cadence,
+    at: Option[String],
+    zone: Option[LiteralString]
+  ) extends RiddlValue:
+    override def kind: String = "Calendar Schedule"
+    def format: String =
+      cadence.format + at.map(t => s" at $t").getOrElse("") +
+        zone.map(z => s" in ${z.format}").getOrElse("")
+  end CalendarSchedule
+
+  object CalendarSchedule:
+    /** The day names, in the spelling the grammar accepts. */
+    val weekdays: Seq[String] =
+      Seq("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+    val months: Seq[String] = Seq(
+      "january", "february", "march", "april", "may", "june", "july", "august", "september",
+      "october", "november", "december"
+    )
+    val ordinals: Seq[String] = Seq("first", "second", "third", "fourth", "last")
+
+    /** What repeats. A sealed hierarchy rather than optional fields, so a cadence cannot carry an
+      * anchor that does not belong to it.
+      */
+    sealed trait Cadence:
+      def format: String
+
+    /** `day` -- every day. */
+    case object Daily extends Cadence:
+      def format: String = "day"
+
+    /** `weekday` -- Monday through Friday. */
+    case object Weekdays extends Cadence:
+      def format: String = "weekday"
+
+    /** `monday, wednesday and friday` -- the named days of each week, in the order written. */
+    case class OnWeekdays(days: Seq[String]) extends Cadence:
+      def format: String =
+        if days.sizeIs <= 1 then days.mkString
+        else days.init.mkString(", ") + " and " + days.last
+
+    /** `[n] month(s) on <anchor>`; `unit` is the word as written. */
+    case class Monthly(interval: Option[String], unit: String, anchor: MonthAnchor) extends Cadence:
+      def format: String = interval.map(i => s"$i ").getOrElse("") + s"$unit ${anchor.format}"
+
+    /** `[n] year(s) on <anchor>`; `unit` is the word as written. */
+    case class Yearly(interval: Option[String], unit: String, anchor: YearAnchor) extends Cadence:
+      def format: String = interval.map(i => s"$i ").getOrElse("") + s"$unit ${anchor.format}"
+
+    /** Where in a month a monthly cadence falls. */
+    sealed trait MonthAnchor:
+      def format: String
+
+    /** `on day 15` */
+    case class DayOfMonth(day: String) extends MonthAnchor:
+      def format: String = s"on day $day"
+
+    /** `on last day` -- month-end, whatever the month's length. */
+    case object LastDayOfMonth extends MonthAnchor:
+      def format: String = "on last day"
+
+    /** `on the third wednesday`, `on the last friday` */
+    case class NthWeekdayOfMonth(ordinal: String, weekday: String) extends MonthAnchor:
+      def format: String = s"on the $ordinal $weekday"
+
+    /** Where in a year a yearly cadence falls. */
+    sealed trait YearAnchor:
+      def format: String
+
+    /** `on march 31` */
+    case class OnDate(month: String, day: String) extends YearAnchor:
+      def format: String = s"on $month $day"
+
+    /** `on the first monday of september` */
+    case class NthWeekdayOf(ordinal: String, weekday: String, month: String) extends YearAnchor:
+      def format: String = s"on the $ordinal $weekday of $month"
+  end CalendarSchedule
+
+  /** BACKLOG [1.32]: the cron escape hatch, `cron "0 9 1 * *" [in "<zone>"]`, for a schedule the
+    * prose grammar cannot say. The expression is the standard five-field cron text, kept verbatim;
+    * `zone` as for [[CalendarSchedule]], absent meaning UTC. Equal in meaning to the prose form it
+    * could have been written as -- a generator may not treat it as second-class.
+    */
+  @JSExportTopLevel("CronSchedule")
+  case class CronSchedule(loc: At, expression: LiteralString, zone: Option[LiteralString])
+      extends RiddlValue:
+    override def kind: String = "Cron Schedule"
+    def format: String = s"cron ${expression.format}" + zone.map(z => s" in ${z.format}").getOrElse("")
+  end CronSchedule
 
   /** Pass the handled message onward and DISCHARGE the response obligation, because whatever
     * handles it downstream produces the declared `yields`/`replies`.

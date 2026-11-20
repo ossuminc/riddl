@@ -8321,6 +8321,7 @@ case class ValidationPass(
     // B2: a query READS the store and may fail, exactly as `get` does (1), plus its condition.
     case qv: QueryValue => 1 + qv.where.map(countValueFailPoints).getOrElse(0)
     case _: DurationLiteral       => 0 // B4: a literal, like a NumericLiteral
+    case _: CalendarSchedule | _: CronSchedule => 0 // [1.32]: a schedule is written, never computed
     // A17's ASK form contributes NOTHING of its own -- consulting an invariant is a test, not an
     // action that can fail -- but its `with` operand is a full Value and is counted, exactly as a
     // comparison contributes nothing while its operands count.
@@ -8445,6 +8446,7 @@ case class ValidationPass(
     case cv: ConditionalValue => stateReadsIn(cv.condition) ++ stateReadsIn(cv.thenValue) ++ stateReadsIn(cv.elseValue)
     case mv: MembershipValue      => stateReadsIn(mv.collection) ++ stateReadsIn(mv.element)
     case _: DurationLiteral       => Seq.empty // B4: a literal
+    case _: CalendarSchedule | _: CronSchedule => Seq.empty // [1.32]: holds no value
     // A17's ASK form: `when invariant Limit with <expr>`. The `with` operand is a full Value, so it
     // CAN hold a state read and this must recurse rather than stop. `ref` needs no arm -- an
     // InvariantRef is a Reference and the arm below covers it.
@@ -8513,6 +8515,7 @@ case class ValidationPass(
     case cv: ConditionalValue => initiatesIn(cv.condition) ++ initiatesIn(cv.thenValue) ++ initiatesIn(cv.elseValue)
     case mv: MembershipValue      => initiatesIn(mv.collection) ++ initiatesIn(mv.element)
     case _: DurationLiteral       => Seq.empty // B4: a literal
+    case _: CalendarSchedule | _: CronSchedule => Seq.empty // [1.32]: holds no value
     case ic: InvariantCondition   => ic.argument.toSeq.flatMap(initiatesIn)
     // A `get from state`/`get from input` holds only a StateRef/InputRef -- no nested value -- so
     // it cannot contain an `initiate`.
@@ -8589,7 +8592,7 @@ case class ValidationPass(
     case ic: InvariantCondition   => ic.argument.toSeq.flatMap(systemValuesIn)
     case ask: Ask                 => ask.args.toSeq.flatMap(a => systemValuesIn(a.value))
     case _: DurationLiteral | _: GetValue | _: EmptyValue | _: Reference[?] |
-        _: Identifier | _: SelfValue =>
+        _: Identifier | _: SelfValue | _: CalendarSchedule | _: CronSchedule =>
       Seq.empty
     case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral | _: NumericLiteral =>
       Seq.empty
@@ -8623,6 +8626,7 @@ case class ValidationPass(
     case cv: ConditionalValue => asksIn(cv.condition) ++ asksIn(cv.thenValue) ++ asksIn(cv.elseValue)
     case mv: MembershipValue      => asksIn(mv.collection) ++ asksIn(mv.element)
     case _: DurationLiteral       => Seq.empty // B4: a literal
+    case _: CalendarSchedule | _: CronSchedule => Seq.empty // [1.32]: holds no value
     // A17's ASK form. Same reasoning as `stateReadsIn`: the `with` operand is a full Value, so an
     // `ask` can hide inside one -- and a saga step is exactly where that must not go unnoticed.
     case ic: InvariantCondition => ic.argument.toSeq.flatMap(asksIn)
@@ -10924,6 +10928,7 @@ case class ValidationPass(
       // B4: an arithmetic result and a duration literal are predefined types, never a named one
       // (see `valueTypeExpr`); a `constant X` yields the Type its declaration names, if any.
       case _: ArithmeticExpression | _: DurationLiteral => None
+      case _: CalendarSchedule | _: CronSchedule => None // [1.32]: a schedule names no Type
       // B2: a query denotes the stored record's Type, cardinality aside (see `valueTypeExpr`).
       case qv: QueryValue => queryRecordType(qv, parents)
       // B5: a predicate/count/membership denotes a predefined type, a filter its collection's
@@ -11679,6 +11684,9 @@ case class ValidationPass(
       // declares; an arithmetic result is the lattice join computed in `arithmeticResultType`.
       case _: BooleanExpression => Some(Bool(v.loc))
       case _: DurationLiteral   => Some(Duration(v.loc))
+      // [1.32]: a schedule is not a typed value; it stands only in a recurrence's period, where
+      // `checkRecurrencePeriod` judges it.
+      case _: CalendarSchedule | _: CronSchedule => None
       case cr: ConstantRef => resolution.refMap.definitionOf[Constant](cr.pathId).map(_.typeEx)
       case ae: ArithmeticExpression => arithmeticResultType(ae, parents, lets, elements)
       // B2: `query one T` is `R?`, `query T` is `R*` -- the stored record with a cardinality.
@@ -11937,6 +11945,7 @@ case class ValidationPass(
         validateValue(ae.right, parents, lets, elements)
         checkArithmetic(ae, parents, lets, elements)
       case _: DurationLiteral => ()
+      case _: CalendarSchedule | _: CronSchedule => () // [1.32]: holds no references
       case cr: ConstantRef    => checkRef[Constant](cr, parents)
       case qv: QueryValue     => validateQueryValue(qv, parents, lets, elements) // B2
       // B5: the collection must be one, the element binds into the predicate's scope only, and

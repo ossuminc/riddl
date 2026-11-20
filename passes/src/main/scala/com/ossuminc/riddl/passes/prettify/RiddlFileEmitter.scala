@@ -462,6 +462,11 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         emitArithmeticOperand(ae, ae.left, isRight = false)
         add(s" ${ae.op.symbol} ")
         emitArithmeticOperand(ae, ae.right, isRight = true)
+      // BACKLOG [1.32]: a schedule is all words and literals, with no nested Value that could
+      // hold a typed hole, so its own `format` IS the canonical text. Named here, not left to the
+      // fallback, so the emitter's coverage is visible.
+      case cs: CalendarSchedule => add(cs.format)
+      case cr: CronSchedule     => add(cr.format)
       case other => add(other.format)
   end emitValue
 

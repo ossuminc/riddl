@@ -211,6 +211,8 @@ message operands of `send`/`tell`/`yield`/`morph`, and constructor args via
 | ComparisonExpression | ✅ A28 / B4 (2026-09-21) | `{ "value": "comparison", "op": "=="\|..., "left": <value>, "right": <value> }` — since B4 the operands are full values (serialized by `serializeValue`, built by `buildValue`); the comparand family serves match patterns only |
 | ArithmeticExpression | ✅ B4 (2026-09-21) | `{ "value": "arithmetic", "op": "+"\|"-"\|"*"\|"/", "left": <value>, "right": <value> }` |
 | DurationLiteral | ✅ B4 (2026-09-21) | `{ "value": "duration", "amount": "<text as written>", "unit": "days" }` — `amount` is a JSON string for the same reason `numeric`'s `text` is |
+| CalendarSchedule | ✅ [1.32] (2026-11-20) | `{ "value": "calendar", "cadence": "day"\|"weekday"\|"weekdays"\|"month"\|"year", ... }` — flat: `weekdays`; `interval`/`unit`/`anchor` ("day"\|"lastDay"\|"nth"\|"date") with `day`/`ordinal`/`weekday`/`month` as the anchor needs; `at`, `zone` optional; every word a string as written. Rebuilt values in `CalendarScheduleRoundTripTest` |
+| CronSchedule | ✅ [1.32] (2026-11-20) | `{ "value": "cron", "expression": "0 9 1 * *", "zone"?: "UTC" }` |
 | ConstantRef (value) | ✅ A28 / B4 | `{ "value": "constantRef", "path": ... }` — `buildValue` builds a `ConstantRef` since B4; it DEGRADED to a `ValueRef` before, which formatted the same and lost the node |
 | LookupValue | ✅ 2.0 | `{ "value": "lookup", "collection": "<path>", "indices": [<value>] }` (row added 2026-09-21; the code was there) |
 | SystemValue | ✅ 2.0 | `{ "value": "system", "field"?: "now"\|"random" }` (row added 2026-09-21) |

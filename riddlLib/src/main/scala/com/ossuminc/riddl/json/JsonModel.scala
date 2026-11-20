@@ -1108,6 +1108,30 @@ object JsonModel:
     */
   case class DurationLiteralDto(amount: String, unit: String) extends ValueDto
 
+  /** BACKLOG [1.32]: a calendar schedule, `{ "value": "calendar", "cadence":
+    * "day"|"weekday"|"weekdays"|"month"|"year", ... }`. Flat rather than nested: the cadence names
+    * which of the optional keys apply -- `weekdays` for "weekdays"; `interval`, `unit` and `anchor`
+    * ("day"|"lastDay"|"nth"|"date") for "month"/"year", with `day`, `ordinal`, `weekday` and
+    * `month` as the anchor needs. `at` (time of day) and `zone` are optional everywhere. Every
+    * word is a STRING as written, so `months` and `month` both survive.
+    */
+  case class CalendarScheduleDto(
+    cadence: String,
+    interval: Option[String] = None,
+    unit: Option[String] = None,
+    weekdays: Seq[String] = Nil,
+    anchor: Option[String] = None,
+    day: Option[String] = None,
+    ordinal: Option[String] = None,
+    weekday: Option[String] = None,
+    month: Option[String] = None,
+    at: Option[String] = None,
+    zone: Option[String] = None
+  ) extends ValueDto
+
+  /** BACKLOG [1.32]: `{ "value": "cron", "expression": "0 9 1 * *", "zone"?: "UTC" }` */
+  case class CronScheduleDto(expression: String, zone: Option[String] = None) extends ValueDto
+
   /** `{ "value": "logical", "op": "and"|"or", "left": <value>, "right": <value> }` (A28). */
   case class LogicalDto(op: String, left: ValueDto, right: ValueDto) extends ValueDto
 
@@ -2020,6 +2044,22 @@ object JsonModel:
           m.get("where").map(readValue)
         )
       case "duration"    => DurationLiteralDto(m("amount").str, m("unit").str)
+      case "calendar" => // BACKLOG [1.32]
+        def opt(k: String): Option[String] = m.get(k).map(_.str)
+        CalendarScheduleDto(
+          m("cadence").str,
+          opt("interval"),
+          opt("unit"),
+          m.get("weekdays").map(_.arr.map(_.str).toSeq).getOrElse(Nil),
+          opt("anchor"),
+          opt("day"),
+          opt("ordinal"),
+          opt("weekday"),
+          opt("month"),
+          opt("at"),
+          opt("zone")
+        )
+      case "cron" => CronScheduleDto(m("expression").str, m.get("zone").map(_.str)) // [1.32]
       case "logical"     => LogicalDto(m("op").str, readValue(m("left")), readValue(m("right")))
       case "not"         => NotDto(readValue(m("expr")))
       case "invariantCondition" =>
@@ -2189,6 +2229,23 @@ object JsonModel:
           "value" -> ujson.Str("duration"),
           "amount" -> ujson.Str(amount),
           "unit" -> ujson.Str(unit)
+        )
+      case cs: CalendarScheduleDto => // BACKLOG [1.32]
+        def opt(k: String, v: Option[String]): Seq[(String, ujson.Value)] =
+          v.map(x => k -> (ujson.Str(x): ujson.Value)).toSeq
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)]("value" -> ujson.Str("calendar"), "cadence" -> ujson.Str(cs.cadence)) ++
+            opt("interval", cs.interval) ++ opt("unit", cs.unit) ++
+            (if cs.weekdays.isEmpty then Nil
+             else Seq("weekdays" -> ujson.Arr.from(cs.weekdays.map(ujson.Str(_))))) ++
+            opt("anchor", cs.anchor) ++ opt("day", cs.day) ++ opt("ordinal", cs.ordinal) ++
+            opt("weekday", cs.weekday) ++ opt("month", cs.month) ++ opt("at", cs.at) ++
+            opt("zone", cs.zone)
+        )
+      case CronScheduleDto(expression, zone) => // BACKLOG [1.32]
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)]("value" -> ujson.Str("cron"), "expression" -> ujson.Str(expression)) ++
+            zone.map(z => "zone" -> (ujson.Str(z): ujson.Value)).toSeq
         )
       case LogicalDto(op, left, right) =>
         ujson.Obj(
@@ -3214,6 +3271,14 @@ object JsonModel:
     "onClauses",
     "op",
     "amount", // B4: DurationLiteralDto
+    "cadence", // BACKLOG [1.32]: CalendarScheduleDto and CronScheduleDto
+    "interval",
+    "weekdays",
+    "anchor",
+    "day",
+    "ordinal",
+    "weekday",
+    "month",
     "unit",
     "table", // B2: the storage statements and the query value
     "quantifier", // B5: the collection kinds
