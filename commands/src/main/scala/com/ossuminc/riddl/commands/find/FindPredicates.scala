@@ -63,7 +63,7 @@ object FindPredicates {
     "logical-expression", "not-expression", "invariant-condition",
     "handler", "inlet", "input", "invariant", "item", "let-statement", "linecomment", "list",
     "match-statement", "method", "methodargument", "module", "morph-statement", "on-event",
-    "on-init", "on-other", "on-quiescence", "on-term", "onmessageclause", "optional-interaction", "outlet",
+    "on-entry", "on-every", "on-init", "on-other", "on-quiescence", "on-term", "onmessageclause", "optional-interaction", "outlet",
     "output", "parallel-interaction", "projector", "put-statement", "query", "record",
     "reply-statement", "repository", "repositoryref", "require-statement", "requires",
     "result", "return-statement", "returns", "router", "saga", "sagastep", "schema",

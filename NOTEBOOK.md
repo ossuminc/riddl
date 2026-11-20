@@ -76,6 +76,22 @@ Empty; the three riddl-models tasks of 2026-11-19 are in `task/done/` with Resul
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-20 (night) — the 2.8.0 words reach `find` and the keyword table
+
+ossum.tech found two gaps while documenting 2.8.0.
+
+- `-type on-every` and `-type on-entry` were refused. `kindOf` already produced both kinds;
+  they were missing from `knownKinds`. This is the third time that list has fallen behind a
+  release ([1.27], [1.32] and now this). The corpus-driven `FindTypeVocabularyTest` cannot
+  catch a construct the corpus has not adopted yet, so it now also has an inline case.
+- `cron`, `entry`, `every` and `starting` joined `allKeywords`, plus the tokenizer table, the
+  EBNF `reserved_word` rule and the count (183). Like `sum` and `otherwise`, all four remain
+  legal identifiers. The one behavioural effect is that `empty`'s ascription stops at them;
+  there are 0 such uses in the corpus or the fixtures.
+
+Verified: TatSu passes every fixture, and the full tJVM/tJS/tNative run is green (19 suite
+summaries).
+
 ## 2026-11-20 (evening) — a stated empty guard silences `value-optional-for-required`
 
 riddl-models' task (`task/done/2026-11-19-empty-guard-does-not-narrow.md`): the [1.29](a)

@@ -310,8 +310,8 @@ object Keywords {
   /** `send ... every <period> [starting [at] <instant>]` (2026-11-19). Neither word is reserved:
     * each follows a complete portlet reference or value, which cannot run on across whitespace.
     */
-  def every[u: P]: P[Unit] = keyword("every")
-  def starting[u: P]: P[Unit] = keyword("starting")
+  def every[u: P]: P[Unit] = keyword(Keyword.every)
+  def starting[u: P]: P[Unit] = keyword(Keyword.starting)
 
   def onTerm[u: P]: P[Unit] = keyword("on term")
 
@@ -513,6 +513,7 @@ object Keywords {
           Keyword.copyright,
           Keyword.correlation,
           Keyword.create,
+          Keyword.cron,
           Keyword.described,
           Keyword.details,
           Keyword.direct,
@@ -523,9 +524,11 @@ object Keywords {
           Keyword.email,
           Keyword.end_,
           Keyword.entity,
+          Keyword.entry,
           Keyword.epic,
           Keyword.error,
           Keyword.event,
+          Keyword.every,
           Keyword.example,
           Keyword.execute,
           Keyword.explained,
@@ -623,6 +626,7 @@ object Keywords {
           Keyword.sink,
           Keyword.source,
           Keyword.split,
+          Keyword.starting,
           Keyword.state,
           Keyword.step,
           Keyword.stop,
@@ -700,6 +704,7 @@ object Keyword {
   final val copyright = "copyright"
   final val correlation = "correlation"
   final val create = "create"
+  final val cron = "cron" // BACKLOG [1.32]: `every cron "…"` (not reserved)
   final val default_ = "default"
   final val described = "described"
   final val description = "description"
@@ -712,9 +717,11 @@ object Keyword {
   final val email = "email"
   final val end_ = "end"
   final val entity = "entity"
+  final val entry = "entry" // 2.8.0: `on entry` (not reserved)
   final val epic = "epic"
   final val error = "error"
   final val event = "event"
+  final val every = "every" // 2.8.0: `on every`, `send … every` (not reserved)
   final val example = "example"
   final val execute = "execute"
   final val explained = "explained"
@@ -824,6 +831,7 @@ object Keyword {
   final val source = "source"
   final val split = "split"
   final val state = "state"
+  final val starting = "starting" // 2.8.0: `send … every … starting` (not reserved)
   final val step = "step"
   final val stop = "stop"
   final val story = "story"
@@ -888,6 +896,7 @@ object Keyword {
     context,
     copyright,
     create,
+    cron,
     default_,
     described,
     description,
@@ -900,9 +909,11 @@ object Keyword {
     email,
     end_,
     entity,
+    entry,
     epic,
     error,
     event,
+    every,
     example,
     execute,
     explanation,
@@ -1005,6 +1016,7 @@ object Keyword {
     sink,
     source,
     split,
+    starting,
     state,
     step,
     stop,

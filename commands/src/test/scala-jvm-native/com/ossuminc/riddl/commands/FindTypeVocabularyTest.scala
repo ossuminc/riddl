@@ -95,7 +95,39 @@ class FindTypeVocabularyTest extends AnyWordSpec with Matchers {
     }
     Await.result(future, 60.seconds)
 
+  /** Kinds projected from an inline source, for constructs the corpus may not use yet. */
+  private def kindsInSource(src: String): Set[String] =
+    Riddl.parseAndValidate(RiddlParserInput(src, "inline"), shouldFailOnError = false) match
+      case Left(msgs) => fail(msgs.map(_.format).mkString("\n"))
+      case Right(result) =>
+        val projection = Pass.runPass[ProjectionOutput](
+          PassInput(result.root),
+          PassesOutput(),
+          ProjectionPass(PassInput(result.root), result.outputs)
+        )
+        projection.records.flatMap(_.value.get("kind").map(_.str)).toSet
+
   "the -type vocabulary" should {
+
+    // ossum.tech, 2026-11-20: the 2.8.0 clauses were refused as "unknown -type" because nothing
+    // in the corpus used them, so the corpus case below could not see they were missing.
+    "accept the 2.8.0 `on every` and `on entry` clauses" in {
+      val kinds = kindsInSource(
+        """domain D is { context C is {
+          |  entity E is {
+          |    record S is { n: Integer }
+          |    state Only of record E.S is {
+          |      handler SH is { on entry is { do "arrived" } }
+          |    }
+          |    handler H is { on every 5 minutes is { do "tick" } }
+          |  }
+          |} }
+          |""".stripMargin
+      )
+      kinds must contain allOf ("on-every", "on-entry")
+      FindPredicates.typeVocabulary must contain allOf ("on-every", "on-entry")
+    }
+
 
     "contain every kind the corpus can produce" in {
       val models = corpora.flatMap(entryPoints)

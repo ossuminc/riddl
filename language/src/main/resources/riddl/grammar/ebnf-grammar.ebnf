@@ -450,9 +450,9 @@ reserved_word =
     "acquires" | "activate" | "adaptor" | "after" | "all" | "any" | "append" | "ask" |
     "attachment" | "author" | "become" | "benefit" | "body" | "brief" | "briefly" | "call" |
     "capability" | "case" | "command" | "commands" | "condition" | "connector" | "constant" |
-    "container" | "contains" | "context" | "copyright" | "correlation" | "count" | "create" |
+    "container" | "contains" | "context" | "copyright" | "correlation" | "count" | "create" | "cron" |
     "default" | "delete" | "described" | "description" | "details" | "direct" | "do" | "domain" |
-    "else" | "email" | "end" | "entity" | "epic" | "error" | "event" | "example" | "execute" |
+    "else" | "email" | "end" | "entity" | "entry" | "epic" | "error" | "event" | "every" | "example" | "execute" |
     "explained" | "explanation" | "field" | "figma" | "file" | "final value" | "flow" | "focus" |
     "for" | "foreach" | "form" | "forward" | "from" | "fully" | "function" | "get" | "graph" |
     "group" | "handler" | "history" | "if" | "import" | "include" | "index" | "init" | "initial" |
@@ -465,7 +465,7 @@ reserved_word =
     "remove" | "replica" | "replies" | "reply" | "repository" | "require" | "required" |
     "requires" | "result" | "results" | "return" | "returns" | "reverted" | "router" | "saga" |
     "schema" | "selects" | "self" | "send" | "sequence" | "set" | "show" | "shown" | "sink" |
-    "source" | "split" | "state" | "step" | "stop" | "store" | "story" | "streamlet" | "sum" | "system" |
+    "source" | "split" | "starting" | "state" | "step" | "stop" | "store" | "story" | "streamlet" | "sum" | "system" |
     "table" | "take" | "tell" | "term" | "terminate" | "then" | "times" | "title" | "type" |
     "update" | "updates" | "upsert" | "url" | "user" | "version" | "void" | "when" | "where" |
     "with" | "yield" | "yields" ;

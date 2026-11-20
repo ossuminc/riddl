@@ -48,7 +48,10 @@ class KeywordsTest extends AbstractTestingBasis {
       // a definitionKeyword, and both are reached only behind a `NoCut` keyword pair, so the 24
       // corpus fields named `count` and `none`'s role as `empty`'s synonym are unaffected.
       // (`contains` was already a keyword; membership reuses it.)
-      Keyword.allKeywords.size must be(179)
+      // 183 as of 2026-11-20: `cron`, `entry`, `every` and `starting`, the 2.8.0 recurrence and
+      // state-entry words (ossum.tech's task). Listed for tokenization like `sum` and
+      // `otherwise`; none is a definitionKeyword, so all four stay legal identifiers.
+      Keyword.allKeywords.size must be(183)
     }
   }
 
