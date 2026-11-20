@@ -2849,6 +2849,11 @@ class BASTReader(
         val time = readOption(readString())
         val zone = readOption { val zl = readLocation(); LiteralString(zl, readString()) }
         CalendarSchedule(loc, cadence, time, zone)
+      case 29 => // BACKLOG [1.32]: CalendarPeriodLiteral (revision 37)
+        val loc = readLocation()
+        val amountLoc = readLocation()
+        val amount = NumericLiteral(amountLoc, readString())
+        CalendarPeriodLiteral(loc, amount, readString())
       case 28 => // BACKLOG [1.32]: CronSchedule (revision 36)
         val loc = readLocation()
         val exprLoc = readLocation()

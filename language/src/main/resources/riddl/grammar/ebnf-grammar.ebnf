@@ -551,7 +551,7 @@ multiplicative_expression = arithmetic_atom { ("*" | "/") arithmetic_atom } ;
 (* BACKLOG [1.26]: `empty_value` is an atom so `x == empty` compares -- the opposite operand
    supplies its type. Before boolean_atom, whose bare path would read `empty` as a reference. *)
 arithmetic_atom = collection_predicate | count_value | duration_units_value | sum_value
-                | one_of_value | conditional_value | duration_literal
+                | one_of_value | conditional_value | duration_literal | calendar_period_literal
                 | literal_string | constant_ref | numeric_literal | empty_value | boolean_atom ;
 (* B5: `all of xs as e where p` and its `any`/`none` siblings -- a boolean; the element binding
    is explicit and scoped to the predicate. `count of xs` is a Whole. *)
@@ -583,6 +583,11 @@ duration_literal = numeric_literal duration_unit ;
 duration_unit = "nanoseconds" | "nanosecond" | "microseconds" | "microsecond" | "milliseconds"
               | "millisecond" | "seconds" | "second" | "minutes" | "minute" | "hours" | "hour"
               | "days" | "day" | "weeks" | "week" ;
+(* BACKLOG [1.32] (2026-11-20): `1 month`, `2 years` -- a CALENDAR period, not a Duration: a month's
+   length depends on where it starts. It is meaningful only added to or subtracted from a date or
+   time; month-end clamps (January 31 + 1 month is the last day of February). A number is
+   REQUIRED, so a bare `month` or `year` is still a reference; neither word is reserved. *)
+calendar_period_literal = numeric_literal ( "months" | "month" | "years" | "year" ) ;
 (* `comparand` now types ONLY the match-case comparison pattern. *)
 (* system_value precedes ref_or_lookup for the same reason it does in boolean_atom: ordered
    choice means a bare `system` would otherwise be consumed as an ordinary path. *)

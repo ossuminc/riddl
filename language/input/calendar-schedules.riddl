@@ -5,9 +5,12 @@
 //     and an optional time zone (`in "<zone>"`, default UTC)
 //   - or the cron escape hatch, `cron "<five fields>" [in "<zone>"]`
 //   - a Duration (`30 days`) or a path to one is still a value, exactly as before
+//   - `<date> + 1 month` / `- 2 years`: calendar-period arithmetic
 domain Billing is {
   context Calendar is {
     command Bill is { cycle: Integer }
+    command Renew is { from: Date }
+    inlet RenewsIn is command Renew
     constant Monthly: Duration = 30 days
     inlet BillsIn is command Bill
     outlet BillsOut is command Bill
@@ -41,6 +44,12 @@ domain Billing is {
       on every 30 days is { do "a Duration is still a value" }
       on every Monthly is { do "so is a Duration constant" }
       on closeMonth: command Bill is { do "bill" }
+      // a calendar period: a month or a year added to a date (month-end clamps)
+      on r: command Renew is {
+        let next = r.from + 1 month
+        let later = r.from + 2 years - 1 day
+        do "renew"
+      }
     }
   }
 }

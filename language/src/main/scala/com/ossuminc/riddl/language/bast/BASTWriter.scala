@@ -1759,6 +1759,13 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
                 writer.writeU8(1); writeString(o); writeString(wd); writeString(m)
         writeOption(cs.at)(writeString)
         writeOption(cs.zone) { z => writeLocation(z.loc); writeString(z.s) }
+      // BACKLOG [1.32] (revision 37): a calendar period, `1 month` -- value tag 29, shaped like 15.
+      case cp: CalendarPeriodLiteral =>
+        writer.writeU8(29)
+        writeLocation(cp.loc)
+        writeLocation(cp.amount.loc)
+        writeString(cp.amount.text)
+        writeString(cp.unit)
       // BACKLOG [1.32] (revision 36): the cron escape hatch -- value tag 28.
       case cr: CronSchedule =>
         writer.writeU8(28)

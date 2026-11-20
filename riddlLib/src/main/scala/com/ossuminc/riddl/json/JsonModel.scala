@@ -1108,6 +1108,11 @@ object JsonModel:
     */
   case class DurationLiteralDto(amount: String, unit: String) extends ValueDto
 
+  /** BACKLOG [1.32]: a calendar period, `{ "value": "calendarPeriod", "amount": "1", "unit":
+    * "month" }` -- shaped like [[DurationLiteralDto]], the amount a string as written.
+    */
+  case class CalendarPeriodDto(amount: String, unit: String) extends ValueDto
+
   /** BACKLOG [1.32]: a calendar schedule, `{ "value": "calendar", "cadence":
     * "day"|"weekday"|"weekdays"|"month"|"year", ... }`. Flat rather than nested: the cadence names
     * which of the optional keys apply -- `weekdays` for "weekdays"; `interval`, `unit` and `anchor`
@@ -2044,6 +2049,7 @@ object JsonModel:
           m.get("where").map(readValue)
         )
       case "duration"    => DurationLiteralDto(m("amount").str, m("unit").str)
+      case "calendarPeriod" => CalendarPeriodDto(m("amount").str, m("unit").str) // [1.32]
       case "calendar" => // BACKLOG [1.32]
         def opt(k: String): Option[String] = m.get(k).map(_.str)
         CalendarScheduleDto(
@@ -2227,6 +2233,12 @@ object JsonModel:
       case DurationLiteralDto(amount, unit) =>
         ujson.Obj(
           "value" -> ujson.Str("duration"),
+          "amount" -> ujson.Str(amount),
+          "unit" -> ujson.Str(unit)
+        )
+      case CalendarPeriodDto(amount, unit) => // BACKLOG [1.32]
+        ujson.Obj(
+          "value" -> ujson.Str("calendarPeriod"),
           "amount" -> ujson.Str(amount),
           "unit" -> ujson.Str(unit)
         )

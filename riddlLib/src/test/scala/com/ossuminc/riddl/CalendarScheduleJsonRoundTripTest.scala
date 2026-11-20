@@ -41,6 +41,7 @@ class CalendarScheduleJsonRoundTripTest extends AnyWordSpec with Matchers {
        |      handler H is {
        |        on init is {
        |          send command Tick(n = 1) to outlet E.O every month on last day starting at system.now
+          let next = system.now + 1 month - 2 years
        |        }
        |${periods.map(p => s"        on every $p is { do \"x\" }").mkString("\n")}
        |      }
@@ -68,6 +69,18 @@ class CalendarScheduleJsonRoundTripTest extends AnyWordSpec with Matchers {
           f.recursiveFindByType[OnEveryClause].map(_.period).take(9).foreach(_ mustBe a[CalendarSchedule])
           f.recursiveFindByType[SendStatement].flatMap(_.every).map(_.format) mustBe
             Seq("every month on last day starting at system.now")
+        case RiddlResult.Failure(errors) => fail(s"parseJson failed: $errors")
+    }
+    "rebuild a calendar period exactly" in {
+      RiddlLib.parseJson(RiddlLib.root2Json(root0)) match
+        case RiddlResult.Success(root1) =>
+          val lets = Finder(root1).recursiveFindByType[LetStatement]
+          lets.map(_.expression.format) mustBe Seq("system.now + 1 month - 2 years")
+          lets.head.expression match
+            case ArithmeticExpression(_, _, ArithmeticExpression(_, _, _, p1), p2) =>
+              p1 mustBe a[CalendarPeriodLiteral]
+              p2 mustBe a[CalendarPeriodLiteral]
+            case other => fail(s"unexpected shape: $other")
         case RiddlResult.Failure(errors) => fail(s"parseJson failed: $errors")
     }
   }

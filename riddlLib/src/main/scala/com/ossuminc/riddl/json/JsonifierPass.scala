@@ -1612,6 +1612,7 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case ae: ArithmeticExpression =>
       ArithmeticDto(ae.op.symbol, serializeValue(ae.left), serializeValue(ae.right))
     case dl: DurationLiteral => DurationLiteralDto(dl.amount.text, dl.unit)
+    case cp: CalendarPeriodLiteral => CalendarPeriodDto(cp.amount.text, cp.unit) // BACKLOG [1.32]
     case cs: CalendarSchedule => serializeSchedule(cs) // BACKLOG [1.32]
     case cr: CronSchedule     => CronScheduleDto(cr.expression.s, cr.zone.map(_.s))
     case qv: QueryValue => QueryValueDto(qv.table.format, qv.one, qv.where.map(serializeValue)) // B2

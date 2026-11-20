@@ -1672,6 +1672,8 @@ object JsonAstBuilder:
         ArithmeticExpression(curAt, aop, buildValue(left), buildValue(right))
       case DurationLiteralDto(amount, unit) =>
         DurationLiteral(curAt, NumericLiteral(curAt, amount), unit)
+      case CalendarPeriodDto(amount, unit) => // BACKLOG [1.32]
+        CalendarPeriodLiteral(curAt, NumericLiteral(curAt, amount), unit)
       case cs: CalendarScheduleDto => buildSchedule(cs) // BACKLOG [1.32]
       case CronScheduleDto(expression, zone) =>
         CronSchedule(curAt, LiteralString(curAt, expression), zone.map(LiteralString(curAt, _)))

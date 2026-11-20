@@ -65,7 +65,12 @@ class ValueFormsRoundTripTest extends AnyWordSpec with Matchers {
     "Data.days > 0 and (any of Data.lines as l where l.qty > 0)",
     "not (any of Data.lines as l where l.qty > 0) and Data.days > 0",
     "(Data.lines as l where l.qty > 0) == empty",
-    "count of (Data.lines as l where l.qty > 0) > 1"
+    "count of (Data.lines as l where l.qty > 0) > 1",
+    // BACKLOG [1.32]: calendar periods -- a month or a year added to a date or time.
+    "Data.t1 + 1 month",
+    "Data.t1 - 2 years + 3 days",
+    "1 year + Data.t1",
+    "Data.t2 + 12 months"
   )
 
   private val src: String =

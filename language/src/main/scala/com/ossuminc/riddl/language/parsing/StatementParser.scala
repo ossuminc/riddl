@@ -1054,6 +1054,7 @@ private[parsing] trait StatementParser {
         oneOfValue.map(ov => ov: Value) |
         conditionalValue.map(cv => cv: Value) |
         durationLiteral.map(dl => dl: Value) |
+        calendarPeriodLiteral.map(cp => cp: Value) | // BACKLOG [1.32]
         // `NoCut` is load-bearing: `literalString` cuts after its opening quote, and
         // `booleanExprOnly` FILTERS the ladder's result -- so `when "prose"` would parse the
         // string here, fail the filter behind the cut, and never reach the deprecated-string arm.
@@ -1080,6 +1081,16 @@ private[parsing] trait StatementParser {
         "seconds", "second", "minutes", "minute", "hours", "hour", "days", "day", "weeks", "week"
       ).! ~~ &(Keywords.isNotKeywordChar)) ~ Index
     ).map { case (start, amount, unit, end) => DurationLiteral(at(start, end), amount, unit) }
+  }
+
+  /** BACKLOG [1.32]: `1 month`, `2 years` -- a calendar period, shaped like [[durationLiteral]]
+    * and tried after it. A number is REQUIRED, so a bare `month` or `year` is still a reference.
+    */
+  private def calendarPeriodLiteral[u: P]: P[CalendarPeriodLiteral] = {
+    P(
+      Index ~ numericLiteral ~ (StringIn("months", "month", "years", "year").! ~~
+        &(Keywords.isNotKeywordChar)) ~ Index
+    ).map { case (start, amount, unit, end) => CalendarPeriodLiteral(at(start, end), amount, unit) }
   }
 
   /** B4: the additive ladder, exposed for `TypeParser.constantValue`. */

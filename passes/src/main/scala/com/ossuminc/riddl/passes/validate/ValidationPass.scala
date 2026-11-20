@@ -1612,6 +1612,14 @@ case class ValidationPass(
       // BACKLOG [1.32]: a calendar or cron schedule IS a period; only its own content is judged.
       case cs: CalendarSchedule => checkCalendarSchedule(cs, subject)
       case cr: CronSchedule     => checkCronSchedule(cr, subject)
+      case cp: CalendarPeriodLiteral =>
+        messages.addError(
+          cp.loc,
+          s"$subject is the calendar period '${cp.format}', which is not a Duration",
+          suggestion = s"For a calendar cadence write a schedule such as `${cp.unit.stripSuffix("s")} " +
+            "on day 1`; for a fixed span write a Duration such as `30 days`.",
+          ruleId = Some(rule)
+        )
       case other =>
         valueTypeExpr(other, parents, lets, elements).foreach { te =>
           if !isDurationTypeExpr(te) then
@@ -8483,6 +8491,7 @@ case class ValidationPass(
     case qv: QueryValue => 1 + qv.where.map(countValueFailPoints).getOrElse(0)
     case _: DurationLiteral       => 0 // B4: a literal, like a NumericLiteral
     case _: CalendarSchedule | _: CronSchedule => 0 // [1.32]: a schedule is written, never computed
+    case _: CalendarPeriodLiteral => 0 // [1.32]: a literal
     // A17's ASK form contributes NOTHING of its own -- consulting an invariant is a test, not an
     // action that can fail -- but its `with` operand is a full Value and is counted, exactly as a
     // comparison contributes nothing while its operands count.
@@ -8607,7 +8616,7 @@ case class ValidationPass(
     case cv: ConditionalValue => stateReadsIn(cv.condition) ++ stateReadsIn(cv.thenValue) ++ stateReadsIn(cv.elseValue)
     case mv: MembershipValue      => stateReadsIn(mv.collection) ++ stateReadsIn(mv.element)
     case _: DurationLiteral       => Seq.empty // B4: a literal
-    case _: CalendarSchedule | _: CronSchedule => Seq.empty // [1.32]: holds no value
+    case _: CalendarSchedule | _: CronSchedule | _: CalendarPeriodLiteral => Seq.empty // [1.32]: holds no value
     // A17's ASK form: `when invariant Limit with <expr>`. The `with` operand is a full Value, so it
     // CAN hold a state read and this must recurse rather than stop. `ref` needs no arm -- an
     // InvariantRef is a Reference and the arm below covers it.
@@ -8676,7 +8685,7 @@ case class ValidationPass(
     case cv: ConditionalValue => initiatesIn(cv.condition) ++ initiatesIn(cv.thenValue) ++ initiatesIn(cv.elseValue)
     case mv: MembershipValue      => initiatesIn(mv.collection) ++ initiatesIn(mv.element)
     case _: DurationLiteral       => Seq.empty // B4: a literal
-    case _: CalendarSchedule | _: CronSchedule => Seq.empty // [1.32]: holds no value
+    case _: CalendarSchedule | _: CronSchedule | _: CalendarPeriodLiteral => Seq.empty // [1.32]: holds no value
     case ic: InvariantCondition   => ic.argument.toSeq.flatMap(initiatesIn)
     // A `get from state`/`get from input` holds only a StateRef/InputRef -- no nested value -- so
     // it cannot contain an `initiate`.
@@ -8753,7 +8762,7 @@ case class ValidationPass(
     case ic: InvariantCondition   => ic.argument.toSeq.flatMap(systemValuesIn)
     case ask: Ask                 => ask.args.toSeq.flatMap(a => systemValuesIn(a.value))
     case _: DurationLiteral | _: GetValue | _: EmptyValue | _: Reference[?] |
-        _: Identifier | _: SelfValue | _: CalendarSchedule | _: CronSchedule =>
+        _: Identifier | _: SelfValue | _: CalendarSchedule | _: CronSchedule | _: CalendarPeriodLiteral =>
       Seq.empty
     case _: LiteralString | _: PromptValue | _: ValueRef | _: BooleanLiteral | _: NumericLiteral =>
       Seq.empty
@@ -8787,7 +8796,7 @@ case class ValidationPass(
     case cv: ConditionalValue => asksIn(cv.condition) ++ asksIn(cv.thenValue) ++ asksIn(cv.elseValue)
     case mv: MembershipValue      => asksIn(mv.collection) ++ asksIn(mv.element)
     case _: DurationLiteral       => Seq.empty // B4: a literal
-    case _: CalendarSchedule | _: CronSchedule => Seq.empty // [1.32]: holds no value
+    case _: CalendarSchedule | _: CronSchedule | _: CalendarPeriodLiteral => Seq.empty // [1.32]: holds no value
     // A17's ASK form. Same reasoning as `stateReadsIn`: the `with` operand is a full Value, so an
     // `ask` can hide inside one -- and a saga step is exactly where that must not go unnoticed.
     case ic: InvariantCondition => ic.argument.toSeq.flatMap(asksIn)
@@ -11089,7 +11098,7 @@ case class ValidationPass(
       // B4: an arithmetic result and a duration literal are predefined types, never a named one
       // (see `valueTypeExpr`); a `constant X` yields the Type its declaration names, if any.
       case _: ArithmeticExpression | _: DurationLiteral => None
-      case _: CalendarSchedule | _: CronSchedule => None // [1.32]: a schedule names no Type
+      case _: CalendarSchedule | _: CronSchedule | _: CalendarPeriodLiteral => None // [1.32]: names no Type
       // B2: a query denotes the stored record's Type, cardinality aside (see `valueTypeExpr`).
       case qv: QueryValue => queryRecordType(qv, parents)
       // B5: a predicate/count/membership denotes a predefined type, a filter its collection's
@@ -11213,11 +11222,47 @@ case class ValidationPass(
     lets: Seq[LetStatement],
     elements: Map[String, TypeExpression]
   ): Option[TypeExpression] =
-    for
-      l <- operandTypeExpr(ae.left, parents, lets, elements)
-      r <- operandTypeExpr(ae.right, parents, lets, elements)
-      t <- combineArithmetic(ae.op, underlyingTypeExpr(l), underlyingTypeExpr(r), ae.loc)
-    yield t
+    calendarArithmetic(ae, parents, lets, elements) match
+      case Some(judged) => judged.flatMap(_.toOption)
+      case None =>
+        for
+          l <- operandTypeExpr(ae.left, parents, lets, elements)
+          r <- operandTypeExpr(ae.right, parents, lets, elements)
+          t <- combineArithmetic(ae.op, underlyingTypeExpr(l), underlyingTypeExpr(r), ae.loc)
+        yield t
+
+  /** BACKLOG [1.32] (Reid, 2026-11-20): arithmetic with a [[CalendarPeriodLiteral]] operand, which
+    * has no type of its own and so cannot go through [[combineArithmetic]]. `<date> + p`,
+    * `<date> - p` and `p + <date>` give the date's type, for `Date`, `DateTime`, `ZonedDateTime` and
+    * `TimeStamp`; a `Time` has no calendar. Everything else -- `p - <date>`, `*`/`/`, two periods, a
+    * Duration or a number as the partner -- is a mismatch.
+    *
+    * `None`: not calendar arithmetic (use the general table). `Some(None)`: the partner cannot be
+    * typed, so stay silent. `Some(Some(Right(t)))`: legal, of type `t`. `Some(Some(Left(what)))`:
+    * illegal, `what` naming the partner for the message.
+    */
+  private def calendarArithmetic(
+    ae: ArithmeticExpression,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Option[Option[Either[String, TypeExpression]]] =
+    import ArithmeticOperator.*
+    def withDate(partner: Value): Option[Either[String, TypeExpression]] =
+      operandTypeExpr(partner, parents, lets, elements).map(t => underlyingTypeExpr(t)).map {
+        case t @ (_: Date | _: DateTime | _: ZonedDateTime | _: TimeStamp) => Right(t)
+        case other                                                        => Left(s"a '${other.format}' value")
+      }
+    (ae.left, ae.right) match
+      case (_: CalendarPeriodLiteral, _: CalendarPeriodLiteral) => Some(Some(Left("another calendar period")))
+      case (l, _: CalendarPeriodLiteral) =>
+        if ae.op == Add || ae.op == Subtract then Some(withDate(l))
+        else Some(Some(Left(s"'${ae.op.symbol}'")))
+      case (_: CalendarPeriodLiteral, r) =>
+        if ae.op == Add then Some(withDate(r))
+        else Some(Some(Left(s"'${ae.op.symbol}' with a calendar period on the left")))
+      case _ => None
+  end calendarArithmetic
 
   private def combineArithmetic(
     op: ArithmeticOperator,
@@ -11278,6 +11323,26 @@ case class ValidationPass(
     * `checkComparison`; an unresolved operand is reported by `validateValue`.
     */
   private def checkArithmetic(
+    ae: ArithmeticExpression,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Unit =
+    calendarArithmetic(ae, parents, lets, elements) match
+      case Some(Some(Left(what))) =>
+        messages.addError(
+          ae.loc,
+          s"Cannot combine a calendar period with $what in '${ae.format}'",
+          suggestion = "A calendar period (`1 month`, `2 years`) is added to or subtracted from a " +
+            "Date, DateTime, ZonedDateTime or TimeStamp, giving that type; month-end clamps. For " +
+            "a fixed span use a Duration such as `30 days`.",
+          ruleId = Some(RuleId.ArithmeticOperandMismatch)
+        )
+      case Some(_) => ()
+      case None    => checkGeneralArithmetic(ae, parents, lets, elements)
+  end checkArithmetic
+
+  private def checkGeneralArithmetic(
     ae: ArithmeticExpression,
     parents: Parents,
     lets: Seq[LetStatement],
@@ -11845,6 +11910,10 @@ case class ValidationPass(
       // declares; an arithmetic result is the lattice join computed in `arithmeticResultType`.
       case _: BooleanExpression => Some(Bool(v.loc))
       case _: DurationLiteral   => Some(Duration(v.loc))
+      // [1.32]: a calendar period has NO type of its own -- it is not a Duration and must never be
+      // assignable to one. As an operand it is judged by `calendarArithmetic`; anywhere else
+      // `validateValue` refuses it.
+      case _: CalendarPeriodLiteral => None
       // [1.32]: a schedule is not a typed value; it stands only in a recurrence's period, where
       // `checkRecurrencePeriod` judges it.
       case _: CalendarSchedule | _: CronSchedule => None
@@ -12102,10 +12171,23 @@ case class ValidationPass(
       // B4: arithmetic validates its operands, then whether the operator may combine them; a
       // duration literal names nothing; `constant X` must exist.
       case ae: ArithmeticExpression =>
-        validateValue(ae.left, parents, lets, elements)
-        validateValue(ae.right, parents, lets, elements)
+        // [1.32]: a calendar period is legal AS AN OPERAND (`checkArithmetic` judges its partner),
+        // so it is not validated as a bare value here.
+        Seq(ae.left, ae.right).foreach {
+          case _: CalendarPeriodLiteral => ()
+          case operand                  => validateValue(operand, parents, lets, elements)
+        }
         checkArithmetic(ae, parents, lets, elements)
       case _: DurationLiteral => ()
+      case cp: CalendarPeriodLiteral =>
+        messages.addError(
+          cp.loc,
+          s"The calendar period '${cp.format}' means something only added to or subtracted from a " +
+            "date or time; on its own it has no value",
+          suggestion = "Add it to a Date, DateTime, ZonedDateTime or TimeStamp (`order.placedOn + " +
+            s"${cp.format}`). For a fixed span write a Duration such as `30 days`.",
+          ruleId = Some(RuleId.ArithmeticOperandMismatch)
+        )
       case _: CalendarSchedule | _: CronSchedule => () // [1.32]: holds no references
       case cr: ConstantRef    => checkRef[Constant](cr, parents)
       case qv: QueryValue     => validateQueryValue(qv, parents, lets, elements) // B2
@@ -13781,7 +13863,9 @@ case class ValidationPass(
                     "'on every <period>' clause, which fires once per period with no message.",
                 ruleId = Some(RuleId.SendEveryNotInInit)
               )
-            validateValue(r.period, parents, lets, elements)
+            r.period match
+              case _: CalendarPeriodLiteral => () // [1.32]: `checkRecurrencePeriod` reports it once
+              case p                        => validateValue(p, parents, lets, elements)
             checkRecurrencePeriod(
               r.period,
               s"The period of 'send ${s.msg.format}'",

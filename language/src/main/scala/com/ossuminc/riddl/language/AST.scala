@@ -872,7 +872,7 @@ object AST:
     NumericLiteral | LookupValue | EmptyValue | ArithmeticExpression | DurationLiteral |
     QueryValue | TableRef | CollectionPredicate | CollectionFilter | CountValue |
     MembershipValue | DurationUnitsValue | SumValue | OneOfValue | OtherwiseValue | ConditionalValue | Requires | Returns | InvariantBlock | Recurrence |
-    CalendarSchedule | CronSchedule
+    CalendarSchedule | CronSchedule | CalendarPeriodLiteral
 
   /** Type of definitions that occur in a [[Root]] without [[Include]]. [[Root]] deliberately stays
     * narrow: it is the file parse-root, not the reuse unit. [[Module]] is the reuse unit and is
@@ -3291,14 +3291,15 @@ object AST:
     * BACKLOG [1.27] (2026-11-19) adds [[DurationUnitsValue]], the twenty-third, and
     * [[SumValue]], [[OneOfValue]], [[OtherwiseValue]] and [[ConditionalValue]], making twenty-seven.
     * BACKLOG [1.32] (2026-11-20) adds [[CalendarSchedule]] and [[CronSchedule]], making
-    * twenty-nine -- values only so they can stand in a recurrence's `period`.
+    * twenty-nine -- values only so they can stand in a recurrence's `period` -- and
+    * [[CalendarPeriodLiteral]], the thirtieth, a value only so it can be an arithmetic operand.
     */
   type Value =
     LiteralString | PromptValue | Constructor | ValueRef | GetValue | BooleanExpression | Call |
       Ask | SelfValue | SystemValue | Create | NumericLiteral | LookupValue | EmptyValue |
       ArithmeticExpression | DurationLiteral | ConstantRef | QueryValue | CollectionPredicate |
       CollectionFilter | CountValue | MembershipValue | DurationUnitsValue | SumValue | OneOfValue |
-      OtherwiseValue | ConditionalValue | CalendarSchedule | CronSchedule
+      OtherwiseValue | ConditionalValue | CalendarSchedule | CronSchedule | CalendarPeriodLiteral
 
   /** A54: a single argument supplied to a [[Constructor]]. Positional when `name` is `None`; named
     * (`id = value`) when `name` is `Some`. Validation requires positional arguments to precede
@@ -4177,6 +4178,27 @@ object AST:
       "seconds", "second", "minutes", "minute", "hours", "hour", "days", "day", "weeks", "week"
     )
   end DurationLiteral
+
+  /** BACKLOG [1.32] (Reid, 2026-11-20): a CALENDAR period -- `1 month`, `2 years` -- written as a
+    * number and a unit word, the text kept as written (the [[DurationLiteral]] precedent).
+    *
+    * NOT a Duration: a month's length depends on where it starts, so a calendar period means
+    * something only added to or subtracted from a date or time (`Date`, `DateTime`,
+    * `ZonedDateTime`, `TimeStamp`), giving that type. Anywhere else -- with a `Time`, a Duration,
+    * another period, or on its own -- it is a type error. Month-end CLAMPS: January 31 plus one
+    * month is the last day of February. A value only so it can be an arithmetic operand; it has no
+    * type of its own and constants do not admit it.
+    */
+  @JSExportTopLevel("CalendarPeriodLiteral")
+  case class CalendarPeriodLiteral(loc: At, amount: NumericLiteral, unit: String) extends RiddlValue:
+    override def kind: String = "Calendar Period Literal"
+    def format: String = s"${amount.format} $unit"
+  end CalendarPeriodLiteral
+
+  object CalendarPeriodLiteral:
+    /** The unit words the parser accepts. */
+    val units: Seq[String] = Seq("months", "month", "years", "year")
+  end CalendarPeriodLiteral
 
   /** A54: accessors for a widened message/record operand (a bare ref, or a [[Constructor]] whose
     * ref names the constructed message/record). Used by send/tell/yield (message) and morph

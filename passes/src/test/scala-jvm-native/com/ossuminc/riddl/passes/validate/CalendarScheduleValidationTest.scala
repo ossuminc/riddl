@@ -132,6 +132,17 @@ class CalendarScheduleValidationTest extends AbstractValidatingTest {
     }
   }
 
+  "a calendar period where a schedule belongs" should {
+    "be refused once per recurrence, naming the schedule spelling" in { (td: TestData) =>
+      val msgs = messages(model("1 month", "1 month"), td)
+      withClue(clue(msgs)) {
+        errors(msgs).size mustBe 2
+        of(msgs, RuleId.EveryPeriodNotDuration).size mustBe 1
+        of(msgs, RuleId.SendEveryNotDuration).size mustBe 1
+      }
+    }
+  }
+
   "a cron expression" should {
     "refuse the wrong number of fields" in { (td: TestData) =>
       mustRefuseBoth("cron \"0 9 1 *\"", RuleId.CronMalformed, td)

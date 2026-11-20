@@ -190,7 +190,10 @@ package object bast {
     // 36 (2026-11-20) adds BACKLOG [1.32]'s schedules, value tags 27 (a calendar schedule: cadence
     // byte and payload, optional time of day, optional zone) and 28 (a cron schedule); a
     // revision-35 reader throws on them.
-    36 // calendar and cron schedules
+    // 37 (2026-11-20) adds value tag 29, a calendar period (`1 month`: amount text and unit word,
+    // shaped like tag 15's duration literal); a revision-36 reader throws on it.
+    37 // calendar periods
+    // 36 was calendar and cron schedules
     // 35 was recurrence: `on every`, `send ... every`
     // 34 was [1.27] value forms
     // 33 was `ask query Q(args) of P`
