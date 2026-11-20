@@ -416,19 +416,6 @@ task files, so they were NOT physically reshuffled; this index carries the order
   (`ossum.tech/task/riddl-every-value-typed-by-name.md`) and riddl-generator's fixture
   migration (`riddl-generator/task/riddl-2.4.0-value-typed-by-name.md`).
 
-- **[1.33]** **A `Boolean` is accepted where an `Integer` is declared.** `n = true` for an
-  `n: Integer` constructor, call, `create` or `terminate` argument validates clean, because `Bool
-  extends IntegerTypeExpression` and `checkAssignable` asks `isAssignmentCompatible`, which is
-  loose for numerics by design (`NumericLiteralConformanceTest` pins that looseness for
-  REFERENCES). Found 2026-11-20 writing [1.30]'s tests (`CallCreateArgumentTypesTest` avoids the
-  case on purpose). The other direction is refused for a LITERAL (`ok = 3` for a `Boolean`).
-  **Ruled 2026-11-20 (Reid): a Boolean is NEVER accepted where an Integer is declared.**
-  Proposed fix, not yet built: override `isAssignmentCompatible` so `Bool` and the other
-  `NumericType`s refuse each other in BOTH directions (a REFERENCE `ok = g.n` into a `Boolean`
-  is very likely accepted today too -- verify first). Do NOT drop `IntegerTypeExpression` from
-  `Bool`'s parents: that is a MiMa break within 2.x (note it for [5.10] instead). Then corpus
-  census and un-avoid the case in `CallCreateArgumentTypesTest`.
-
 - **[1.23]** **`ask` is checked for a PATH but never for a TYPE, and riddl-models asked for
   the type check.** Their 2026-09-09 task asked for two things; only one landed on
   2026-09-10. `msg-ask-target-unreachable` / `msg-ask-reply-unreachable` ask whether a

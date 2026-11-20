@@ -629,7 +629,9 @@ fact from that file that you had no reason to look for, it belongs back here.
   loose and `NumericLiteralConformanceTest` pins that, so a later "tidy-up"
   reddens instead of silently changing behaviour far beyond literals. **`Bool
   extends IntegerTypeExpression`**, so put an explicit `Bool` arm first or a
-  Boolean constant is told it "requires a whole number". **Never call `asLong` in
+  Boolean constant is told it "requires a whole number". **A Boolean filling an
+  `Integer` is INTENDED** (`true` == 1, `false` == 0; Reid, 2026-11-20, closing
+  [1.33]) — do not "fix" that assignability. **Never call `asLong` in
   a match guard** — the parser accepts unbounded digit runs, so a 20-digit
   literal throws `NumberFormatException` *inside the guard* and surfaces as
   `[severe] Exception Thrown` with no line number.

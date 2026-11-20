@@ -46,10 +46,9 @@ fixed it in their `35a581e9e`, and the cold run below is green with it, so **not
 the push** -- Reid's call. MiMa against 2.7.0 is clean again (`a32abc4cc` had broken it;
 fixed in the pushed `Restore binary compatibility…` commit). **Owed at 3.0: BACKLOG [5.10]**,
 which now also lists the recurrence shims/filters and the two not-emitted entity RuleIds.
-BACKLOG [5.9] stays DEFERRED by Reid. **[1.33] needs a ruling** (Boolean accepted for Integer).
+BACKLOG [5.9] stays DEFERRED by Reid. [1.33] closed: a Boolean filling an `Integer` is intended.
 
-**riddl-examples is RETIRED** (Reid, 2026-11-19). **The GitHub repo is NOT yet archived**:
-`gh repo archive` was refused by the permission classifier, so Reid runs it.
+**riddl-examples is RETIRED** (Reid, 2026-11-19); the GitHub repo was archived 2026-11-20.
 
 ### Traps a fresh session would hit
 
@@ -153,7 +152,8 @@ an `Id(...)` in a parameter resolves where it was declared. **Census, 191 models
 finding** -- reactive-bbq passes a QUOTED path (`"event.orderPayment.paymentAmount"`) to a
 `Decimal(10,2)` input. True positive; task filed in riddl-models, and `RiddlModelsRoundTripTest`
 is red on it until they fix it. Writing the tests found [1.33]: `true` fills an `Integer`
-(`Bool extends IntegerTypeExpression`), for constructors too.
+(`Bool extends IntegerTypeExpression`), for constructors too. **Closed the same day as
+INTENDED** (Reid: `true` == 1, `false` == 0, as originally designed); no code change.
 
 **[2.20] and [2.21] closed (Reid's rulings, 2026-11-20).** An entity with no handlers anywhere
 is now reported ONCE, as Completeness 4f (`entity-no-handlers`); the Error
