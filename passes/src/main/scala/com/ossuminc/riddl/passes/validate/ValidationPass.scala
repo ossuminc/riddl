@@ -10265,7 +10265,7 @@ case class ValidationPass(
           val asFields: Seq[Field] = declared.map { a =>
             Field(a.loc, Identifier(a.loc, a.name), a.typeEx)
           }
-          checkArgumentTypes(args, asFields, "parameter", p.identify, parents, lets, elements)
+          checkArgumentTypes(args, asFields, "parameter", p.identify, Some(p), parents, lets, elements)
         end if
       end if
     }
@@ -12636,6 +12636,9 @@ case class ValidationPass(
     fields: Seq[Field],
     fieldNoun: String,
     owner: String,
+    // The definition whose declaration supplies `fields` -- the type, function or processor. Ids in
+    // a field's type resolve in ITS scope, not the call site's (see `checkAssignable`).
+    declaredIn: Option[Definition],
     parents: Parents,
     lets: Seq[LetStatement],
     elements: Map[String, TypeExpression]
@@ -12677,7 +12680,27 @@ case class ValidationPass(
                   ruleId = Some(RuleId.ArgumentTypeMismatch)
                 )
               case _ => ()
-          case _ => () // primitive/other field type — literals accepted, no check
+          case _ => ()
+        // Every argument is type-checked against the field it supplies, WHATEVER the field's type
+        // (riddl-generator, 2026-08-24, for constructors; BACKLOG [1.30], 2026-11-20, for calls,
+        // `create` and `terminate`, whose predefined-type parameters took any value until then).
+        // A `PromptValue` is skipped: `validateValue` checks its ascription context-free, and
+        // reporting both would double up on one mistake. So is an undeterminable value type --
+        // `valueTypeExpr` returning None means this check has nothing to say.
+        val what = s"${fieldNoun.capitalize} '${field.id.value}' of $owner"
+        arg.value match
+          case _: EmptyValue | _: PromptValue => ()
+          // [1.28]: a written number has no `valueTypeExpr`; its own judge holds it to the field.
+          case nl: NumericLiteral => checkNumericLiteralConformance(nl, field.typeEx)
+          case other =>
+            // [1.29](b): a written time string must be ISO-8601 (beside, not instead of, the
+            // assignability check, which still refuses a string for an Integer).
+            checkLiteralConformance(other, field.typeEx)
+            valueTypeExpr(other, parents, lets, elements).foreach { actual =>
+              checkAssignable(field.typeEx, actual, declaredIn, parents, other.loc, what)
+              checkOptionalIntoRequired(field.typeEx, actual, other, other.loc, what)
+            }
+        end match
       }
     }
   end checkArgumentTypes
@@ -12750,51 +12773,10 @@ case class ValidationPass(
               )
           }
         }
-        // A bare `empty` argument is checked against its FIELD's cardinality in
-        // `checkArgumentTypes`, which constructors share with calls, `initiate` and `terminate`
-        // (riddl-models 2026-08-24 found the constructor case; [1.26] generalized it). The field
-        // carries the type even when it names none -- `TimeStamp`, `OrderLine+` -- which is why
-        // an earlier claim that constructor arguments carry no expected type was too pessimistic.
-        def fieldForArg(arg: ConstructorArg, idx: Int): Option[Field] = arg.name match
-          case Some(id) => fields.find(_.id.value == id.value)
-          case None     => fields.lift(idx) // positional; arity is reported separately
-        c.args.zipWithIndex.foreach { case (arg, idx) =>
-          arg.value match
-            case _: EmptyValue => ()
-            // Every OTHER argument is type-checked against the field it supplies (riddl-generator,
-            // 2026-08-24). Until now a constructor argument was checked for arity, duplication,
-            // ordering, name validity and `empty` cardinality -- but never for TYPE, so
-            // `deliveryOrderId: UUID` accepted an `Id(DeliveryOrder)` and the defect surfaced only
-            // when a generator emitted Java that would not compile. A generator finding a model
-            // defect a validator did not is the wrong division of labour.
-            //
-            // A `PromptValue` is skipped: `validateValue` checks its ascription context-free, and
-            // reporting both would double up on one mistake. So is an undeterminable value type --
-            // `valueTypeExpr` returning None means this check has nothing to say.
-            case pv: PromptValue => ()
-            // [1.28]: a written number has no `valueTypeExpr`, so it reached no check here at all;
-            // its own judge also holds it to a numeric field's range, which it never was here.
-            case nl: NumericLiteral =>
-              fieldForArg(arg, idx).foreach(f => checkNumericLiteralConformance(nl, f.typeEx))
-            case other =>
-              fieldForArg(arg, idx).foreach { f =>
-                // [1.29](b): a written time string must be ISO-8601 (beside, not instead of, the
-                // assignability check, which still refuses a string for an Integer).
-                checkLiteralConformance(other, f.typeEx)
-                valueTypeExpr(other, parents, lets, elements).foreach { actual =>
-                  checkAssignable(
-                    f.typeEx,
-                    actual,
-                    Some(typ),
-                    parents,
-                    other.loc,
-                    s"Field '${f.id.value}' of ${typ.identify}"
-                  )
-                  checkOptionalIntoRequired(f.typeEx, actual, other, other.loc,
-                    s"Field '${f.id.value}' of ${typ.identify}")
-                }
-              }
-        }
+        // Every argument's TYPE -- `empty` cardinality, literal conformance, assignability and
+        // optional-into-required -- is checked in `checkArgumentTypes`, which constructors share
+        // with calls, `create` and `terminate` (BACKLOG [1.30] moved the last three checks there;
+        // until then they ran for constructors alone, and a call's `Integer` input took anything).
         // Arity.
         def count(n: Int, word: String): String = s"$n $word${if n == 1 then "" else "s"}"
         if c.args.sizeIs > fields.size then
@@ -12853,7 +12835,7 @@ case class ValidationPass(
               "'<field> = empty'.",
             ruleId = Some(RuleId.ConstructorMissingFields)
           )
-        checkArgumentTypes(c.args, fields, "field", typ.identify, parents, lets, elements)
+        checkArgumentTypes(c.args, fields, "field", typ.identify, Some(typ), parents, lets, elements)
         // Recurse into argument values (nested constructors, value refs), CARRYING the foreach
         // elements: `send event Shipped(sku = line.sku)` is the shape the whole feature exists
         // for, and dropping them here left the element unresolvable exactly where it is used.
@@ -12939,7 +12921,7 @@ case class ValidationPass(
               s"Supply exactly ${count(fields.size, "positional argument")}, or use named arguments for a subset.",
             ruleId = Some(RuleId.CallTooManyPositional)
           )
-        checkArgumentTypes(call.args, fields, "input", fn.identify, parents, lets, elements)
+        checkArgumentTypes(call.args, fields, "input", fn.identify, Some(fn), parents, lets, elements)
         // Recurse into argument values (nested constructors, calls, value refs).
         call.args.foreach(arg => validateValue(arg.value, parents, lets, elements))
       case None => () // unresolved function ref reported by ResolutionPass

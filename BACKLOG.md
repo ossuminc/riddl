@@ -428,18 +428,14 @@ task files, so they were NOT physically reshuffled; this index carries the order
   `stmt-send-every-not-duration`/`handler-every-not-duration`, whose suggestion names that
   workaround.
 
-- **[1.30]** **`call`/`create`/`terminate` arguments are type-checked only
-  against ALIASED parameter types.** `checkArgumentTypes`
-  (`ValidationPass.scala`) ends in a catch-all commented "primitive/other
-  field type -- literals accepted, no check", so a parameter declared
-  `DateTime`, `Integer` or `Boolean` takes any value of any kind, literal or
-  reference. Found while
-  doing [1.28]/[1.29] (2026-11-18), which covered constructors, `let`, `set`,
-  `constant`, `put`, `return` and `require … with` but deliberately not this:
-  widening it changes what every call/create argument in the corpus is held to,
-  so it needs its own corpus census. Use `checkAssignable`,
-  `checkLiteralConformance` and `checkOptionalIntoRequired`, which the
-  constructor site already calls.
+- **[1.33]** **A `Boolean` is accepted where an `Integer` is declared.** `n = true` for an
+  `n: Integer` constructor, call, `create` or `terminate` argument validates clean, because `Bool
+  extends IntegerTypeExpression` and `checkAssignable` asks `isAssignmentCompatible`, which is
+  loose for numerics by design (`NumericLiteralConformanceTest` pins that looseness for
+  REFERENCES). Found 2026-11-20 writing [1.30]'s tests (`CallCreateArgumentTypesTest` avoids the
+  case on purpose). The other direction is refused (`ok = 3` for a `Boolean`). Needs a ruling:
+  is a Boolean ever an Integer in RIDDL? If not, the likely fix is a `Bool` arm ahead of the
+  numeric one, as `checkNumericLiteralConformance` already has, plus a corpus census.
 
 - **[1.23]** **`ask` is checked for a PATH but never for a TYPE, and riddl-models asked for
   the type check.** Their 2026-09-09 task asked for two things; only one landed on

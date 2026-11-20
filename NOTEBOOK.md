@@ -118,6 +118,16 @@ the same predicate, so one edit covered both copies. Pinned by six new cases in
 `ValueFormsRoundTripTest`, red before the change (control and prettify), green after. Prettify
 now writes `not (any of …)` with parentheses, as it already did for `one of`.
 
+**[1.30] closed.** `checkArgumentTypes` now runs the constructor's value checks -- numeric and
+literal conformance, `checkAssignable`, optional-into-required -- for EVERY argument, so calls,
+`create` and `terminate` get exactly what constructors get; the constructor's private copy is
+deleted rather than left to drift. `declaredIn` (the type, function or processor) is threaded so
+an `Id(...)` in a parameter resolves where it was declared. **Census, 191 models: exactly one new
+finding** -- reactive-bbq passes a QUOTED path (`"event.orderPayment.paymentAmount"`) to a
+`Decimal(10,2)` input. True positive; task filed in riddl-models, and `RiddlModelsRoundTripTest`
+is red on it until they fix it. Writing the tests found [1.33]: `true` fills an `Integer`
+(`Bool extends IntegerTypeExpression`), for constructors too.
+
 ## 2026-11-19 (overnight, later) — opacity is one rule for both sides
 
 riddl-models (task `2026-11-19-handlerless-app-sends-but-cannot-receive`) measured that a
