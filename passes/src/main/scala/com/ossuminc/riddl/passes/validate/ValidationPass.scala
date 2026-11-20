@@ -13679,6 +13679,23 @@ case class ValidationPass(
       case _                       => Seq.empty
   end assignedPaths
 
+  /** Names whose value no statement can change: `let`s, `foreach` elements, and the nearest
+    * enclosing clause's message binding or parameters.
+    */
+  private def immutableLocalNames(
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): scala.collection.immutable.Set[String] =
+    val clauseNames: Seq[String] = parents.collectFirst {
+      case oc: OnInitializationClause => oc.parameters.map(_.name)
+      case oc: OnTerminationClause    => oc.parameters.map(_.name)
+      case oc: OnMessageClause        => oc.binding.map(_.value).toSeq
+      case oc: OnOtherClause          => oc.binding.map(_.value).toSeq
+    }.getOrElse(Seq.empty)
+    (lets.map(_.identifier.value) ++ elements.keys ++ clauseNames).toSet
+  end immutableLocalNames
+
   /** A statement list that cannot fall through: it holds an `error` or a `terminate` at its own
     * level (both are terminal, so either is necessarily the last statement that runs).
     */
@@ -14142,8 +14159,14 @@ case class ValidationPass(
         case ls: LetStatement => // a `let` SHADOWS a narrowed path that begins with its name
           narrowedNonEmpty = narrowedNonEmpty.filterNot(_.headOption.contains(ls.identifier.value))
         case _ => ()
-      // ... and FORGET what this statement may have made empty again. A morph replaces the state.
-      if containsMorph(stmt) then narrowedNonEmpty = noNarrowing
+      // ... and FORGET what this statement may have made empty again. A morph replaces the STATE,
+      // so it forgets every path that is not headed by an immutable local -- a `let`, a `foreach`
+      // element, or the enclosing clause's message binding or parameters, none of which a morph
+      // can change (riddl-models' subscription-management: an `on init` parameter guarded, then
+      // a morph, then the parameter used).
+      if containsMorph(stmt) then
+        val locals = immutableLocalNames(parents, lets, elements)
+        narrowedNonEmpty = narrowedNonEmpty.filter(_.headOption.exists(locals.contains))
       else
         assignedPaths(stmt).foreach { p =>
           narrowedNonEmpty = narrowedNonEmpty.filterNot(_.startsWith(p))

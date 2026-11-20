@@ -131,6 +131,14 @@ class EmptyGuardNarrowingTest extends AbstractValidatingTest {
         td
       ) mustBe Seq("E.Only.held")
     }
+    // riddl-models' subscription-management: a morph replaces the STATE, so it may make a state
+    // path empty again, but a message field or parameter cannot change.
+    "keep a message-field narrowing across a morph, and drop a state one" in { (td: TestData) =>
+      val morph = "morph entity E to state E.Only with record E.EData(eId = go.eId, held = go.other)"
+      flagged(s"when go.maybe != empty then $morph ${went("go.maybe")} end", td) mustBe empty
+      flagged(s"when E.Only.held != empty then $morph ${went("E.Only.held")} end", td) mustBe
+        Seq("E.Only.held")
+    }
     "narrow a zero-or-more collection given to a one-or-more field" in { (td: TestData) =>
       flagged("yield event Bunch(eId = go.eId, all = go.many)", td) mustBe Seq("go.many")
       flagged("when go.many != empty then yield event Bunch(eId = go.eId, all = go.many) end", td) mustBe

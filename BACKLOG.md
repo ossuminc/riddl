@@ -416,6 +416,19 @@ task files, so they were NOT physically reshuffled; this index carries the order
   (`ossum.tech/task/riddl-every-value-typed-by-name.md`) and riddl-generator's fixture
   migration (`riddl-generator/task/riddl-2.4.0-value-typed-by-name.md`).
 
+- **[1.34]** **An empty guard on `x` does not narrow a path THROUGH `x`.** In
+  shopping-cart's `Cart.riddl:892`, `let line = one of … where …` is followed by
+  `when line == empty then error … else … oldQuantity = line.quantity …`, and
+  `value-optional-for-required` still fires on `line.quantity`. Narrowing (2026-11-20,
+  `narrowedNonEmpty` in `ValidationPass`) matches the WHOLE path, so the guard on `line`
+  covers `line` and not `line.quantity`. Matching by prefix alone would be WRONG: `line`
+  being present says nothing about `quantity` when `quantity` is itself `T?`. The correct
+  rule is that `line.quantity` is optional only if a segment AFTER the narrowed prefix is
+  optional. That needs the path's type re-derived with the prefix treated as present, and
+  `valueTypeExpr` cannot do that today. Found by the 2.8.0 census, where this was the one
+  remaining site. It was not in riddl-models' task list. Wanted for the same reason as the
+  rest of the narrowing: the advisory's own suggested guard should silence it.
+
 - **[1.23]** **`ask` is checked for a PATH but never for a TYPE, and riddl-models asked for
   the type check.** Their 2026-09-09 task asked for two things; only one landed on
   2026-09-10. `msg-ask-target-unreachable` / `msg-ask-reply-unreachable` ask whether a

@@ -103,11 +103,15 @@ corpus positions. Narrowing is now tracked by `checkStatementScopes` in a dynami
 `narrowedNonEmpty` that `checkOptionalIntoRequired` consults. It covers the then/else of
 `!=`/`==` empty tests, `and`, the `else` of `or`, and `not`. Per Reid it also covers everything
 after `require x != empty` and after an early-exit `when x == empty then error`. A `set`/
-`append`/`remove` of the path, a `morph`, or a shadowing `let`/`foreach` name forgets it.
+`append`/`remove` of the path, or a shadowing `let`/`foreach` name, forgets it. A `morph`
+forgets only paths NOT headed by an immutable local (let, foreach element, clause binding or
+parameter). The census caught a first, blunter version that forgot everything, at
+subscription-management:636. Census on 191 models: 15 sites to 1, and the one left
+is [1.34] (a path THROUGH a guarded `x`). Also fixed: `find -type` rejected the three
+[1.32] value kinds, which FindTypeVocabularyTest caught only once the corpus used them.
 Matching is by spelling, on purpose: `a.maybe` and `b.maybe` resolve to one Field but are two
 values. A field, not a parameter, because the check is 59 `validateValue` sites deep.
-`EmptyGuardNarrowingTest` has 18 cases: 11 failed before the change, and 7 are controls that
-must keep firing. Also closed: riddl-models' calendar-schedules and call-argument tasks
+`EmptyGuardNarrowingTest` has 19 cases. Also closed: riddl-models' calendar-schedules and call-argument tasks
 (already met), and [1.33] (Bool into Integer is INTENDED; `0`/`1` now fill a Boolean).
 
 ## 2026-11-20 (later) — [1.32]: calendar schedules, cron, and `date + 1 month`
