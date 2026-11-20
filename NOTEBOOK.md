@@ -11,42 +11,30 @@ durable facts are in `CLAUDE.md` plus its two companions, `docs/claude/language-
 and `docs/claude/build-and-api.md` (split 2026-09-11; reference moved, traps stayed; equally
 authoritative). Ask `git` for branch, tree and unpushed span — never trust a written answer.
 
-### Build state — verified 2026-11-16 by running
+### Build state — verified 2026-11-20 by running
 
-- **2.7.0 is the latest release** (tag on `5238bf2cd`): `create` replaces `initiate`
-  (deprecated, consumed); streamlet refs take `flow`/`router`/`streamlet`/`processor`;
-  `find`/`dump` project values; the BAST ContainedGroup tag and group-position fix
-  (**FORMAT_REVISION 31**, so 2.6.0 `.bast` files must be regenerated). Published to GitHub
-  Packages and npm. The Homebrew formula is at 2.7.0 with `depends_on "openssl@3"`.
-- **MiMa baseline is 2.7.0** (`99e05a30c`). The 2.7.0 gate ran clean against 2.6.0 on all
-  six modules, and that gate is known to bite: it caught renaming the `AST.Initiate` class.
-- **`../bin/riddlc` and ivy are exactly `2.7.0`**, restaged 2026-11-16 from a checkout of
-  the tag via `scripts/publish-and-stage.sh`. The LOCAL binary links `openssl@4` (this Mac's
-  linked keg), unlike the released one, which links `@3`; that is fine on this machine.
-- **riddl 2.7.0 upgrade tasks are filed** in synapify, riddl-generator, riddl-models and
-  ossum.tech. riddl-idea-plugin, riddl-vscode and ossum.ai still had their 2.6.0 task
-  pending, so it got a "target 2.7.0 instead" addendum rather than a new file. riddlsim and
-  riddl-mcp-server have no checkout here.
-- **The corpus is GREEN**: census 0/191, identical to 2.6.0.
+- **2.8.0 is the latest release** (tag `2.8.0`; notes on GitHub). It adds recurrence, calendar
+  and cron schedules, `date + 1 month`, `on init` as creation, `on entry`, the [1.27] value
+  forms, `ask` with arguments, literal typing, empty-guard narrowing, and **FORMAT_REVISION
+  37**. Published to GitHub Packages; npm and the native/Homebrew artifacts come from the
+  release workflows, which `gh run list` will show.
+- **MiMa baseline is 2.8.0.** The 2.8.0 gate ran clean against 2.7.0 on all six modules.
+- **`../bin/riddlc` and ivy are exactly `2.8.0`**, staged from the tag via
+  `scripts/publish-and-stage.sh`. The local binary links `openssl@4`; that is fine here.
+- **riddl 2.8.0 upgrade tasks are filed** (`upgrade-riddl-2.8.0.md`) in synapify,
+  riddl-generator, riddl-models and ossum.tech. riddl-idea-plugin, riddl-vscode and ossum.ai
+  still had their 2.6.0 task pending, so it got a "target 2.8.0 instead" addendum.
+  riddlsim and riddl-mcp-server have no checkout here.
+- **The corpus is GREEN**: census of 191 entry points on `2.8.0` shows 0 errors. One
+  `value-optional-for-required` advisory remains, at shopping-cart `Cart.riddl:892`
+  (BACKLOG [1.34]).
 - **Toolchain**: sbt 2.0.12, sbt-ossuminc 3.2.0, Scala 3.9.0.
 
 ### In flight
 
-**`main` is heading for 2.8.0** (Reid): undeliverable-clause rules, schema-link typing,
-`on init` as creation, `on entry`, `ask query Q(args) of P`, literals held to their type,
-the optional-for-required Advisory, let-path walking, [1.27]'s value forms, recurrence,
-[1.30]/[1.31]/[2.20]/[2.21], and **[1.32] calendar schedules, cron and `date + 1 month`**
-(`5fbd547eb`..`d4e70141b`, CM top-level `3fa9fca`), **FORMAT_REVISION 37**.
-`../bin/riddlc` and ivy are still `2.7.0-48-a32abc4c` -- they do NOT have anything from
-2026-11-20; restage (`scripts/publish-and-stage.sh`) only when Reid asks.
-
-**UNPUSHED on `main`** (git says how many): the 2026-11-20 commits from `047ada3ac` on. They
-were held because [1.30] made `RiddlModelsRoundTripTest` red on reactive-bbq; riddl-models
-fixed it in their `35a581e9e`, and the cold run below is green with it, so **nothing now blocks
-the push** -- Reid's call. MiMa against 2.7.0 is clean again (`a32abc4cc` had broken it;
-fixed in the pushed `Restore binary compatibility…` commit). **Owed at 3.0: BACKLOG [5.10]**,
-which now also lists the recurrence shims/filters and the two not-emitted entity RuleIds.
-BACKLOG [5.9] stays DEFERRED by Reid. [1.33] closed: a Boolean filling an `Integer` is intended.
+Nothing. **Owed at 3.0: BACKLOG [5.10]**, which also lists the recurrence shims and filters
+and the two not-emitted entity RuleIds. BACKLOG [5.9] stays DEFERRED by Reid.
+[1.23]/[1.24] are blocked on riddl-models. [1.34] is new, from the 2.8.0 census.
 
 **riddl-examples is RETIRED** (Reid, 2026-11-19); the GitHub repo was archived 2026-11-20.
 
@@ -70,28 +58,21 @@ BACKLOG [5.9] stays DEFERRED by Reid. [1.33] closed: a Boolean filling an `Integ
 
 ### Certainty
 
-Verified 2026-11-20 for `d4e70141b` (docs commits after it change no code), from an EMPTY sbt
-cache (0 -> 420M): tJVM 7, tJS 5, tNative 7 module summaries, all green, including
-`RiddlModelsRoundTripTest` against riddl-models at `5a514242a`; `riddlcNative/nativeLink`
-links. MiMa clean on all six modules against 2.7.0. TatSu 136/165 with 24 include fragments
-skipped and 5 expected failures, i.e. **0 unexpected** (the "131/154 (23 failures)" recorded
-2026-11-19 was the same shape misread: those were skips and expected failures).
-riddl-models census (191 entry points, JSON, `validate` on the `.riddl`): the only movement
-since `543014082` is reactive-bbq's [1.30] error going away with their fix. **The census sees
-only `error` and `info` severities** -- Completeness warnings are invisible to it.
+Verified 2026-11-20 for 2.8.0, on the tag:
+- `clean; tJVM; tJS; tNative; publish` produced 19 suite summaries, all green.
+- MiMa was clean on all six modules against 2.7.0.
+- The riddl-models census (191 entry points, `validate --json` on each `.riddl`) showed
+  0 errors.
 
-Verified 2026-11-16 for 2.7.0: tJVM, tJS and tNative with nativeLink green after `clean`
-(19 suite summaries); the same suites green from an empty sbt cache before tagging; MiMa clean;
-riddl-models census identical to 2.6.0, with the census script calibrated on a known-bad model.
+Earlier the same day, `d4e70141b` was certified from an EMPTY sbt cache (0 -> 420M). TatSu
+showed 0 unexpected failures (136/165, with 24 include fragments skipped and 5 expected
+failures). **The census sees only `error` and `info` severities**; advisories show as
+`info`, and Completeness warnings are invisible to it.
 
 ### task/
 
-Empty. Sent out 2026-11-20 (in the receivers' `task/`): riddl-models
-`2026-11-20-riddl-call-argument-types.md` (done on their side, `35a581e9e`) and
-`2026-11-20-riddl-calendar-schedules.md`; riddl-generator and ossum.tech
-`2026-11-20-riddl-calendar-schedules.md`; synapify and riddl-vscode
-`2026-11-20-riddl-entity-rule-ids.md` (FYI). `probe-2026-09-06-adaptor/` is a leftover
-scratch directory, not a task.
+Empty; the three riddl-models tasks of 2026-11-19 are in `task/done/` with Results.
+`probe-2026-09-06-adaptor/` is a leftover scratch directory, not a task.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
