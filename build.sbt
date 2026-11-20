@@ -234,6 +234,12 @@ lazy val language_cp = CrossModule("language", "riddl-language", V.scala)(JVM, J
   .jvmConfigure(With.coverage(65))
   .jvmConfigure(With.MiMa(V.previous))
   .jvmSettings(
+    // Recurrence (2026-11-19) added a trailing field to `AST.SendStatement`. Its 2.7.0 `apply` and
+    // `copy` are shimmed in AST.scala; the four-argument CONSTRUCTOR cannot be, because Scala.js
+    // cannot disambiguate it from the primary on an `@JSExportTopLevel` class. Remove at 3.0.
+    mimaBinaryIssueFilters += ProblemFilters.exclude[com.typesafe.tools.mima.core.DirectMissingMethodProblem](
+      "com.ossuminc.riddl.language.AST#SendStatement.this"
+    ),
     coverageExcludedPackages := "<empty>;$anon",
     libraryDependencies ++= Dep.testing ++ Seq(
       Dep.fastparse,
@@ -291,6 +297,12 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes", V.scala)(JVM, JS, Nat
     mimaBinaryIssueFilters ++= Seq(
       ProblemFilters.exclude[ReversedMissingMethodProblem](
         "com.ossuminc.riddl.passes.PassVisitor.doRelationship"
+      ),
+      // `ValidationPass.MessageCarriage` is a `private case class`: unreachable from Scala, but
+      // Scala `private` is public in bytecode, so MiMa reports the field recurrence added
+      // (`loopEdges`, 2026-11-19). Not API; filtered rather than shimmed.
+      ProblemFilters.exclude[com.typesafe.tools.mima.core.Problem](
+        "com.ossuminc.riddl.passes.validate.ValidationPass#MessageCarriage*"
       )
     )
   )

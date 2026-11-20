@@ -4703,12 +4703,36 @@ object AST:
     // the same reason as `at`.
     every: Option[Recurrence] = None
   ) extends Statement {
+    // The pre-2.8.0 four-field shape, kept for binary compatibility within 2.x (MiMa against
+    // 2.7.0): a consumer compiled against `SendStatement(loc, msg, portlet, at)` / `copy(...)` still
+    // links. Remove at 3.0 (BACKLOG [5.10]). There is deliberately NO four-field secondary
+    // CONSTRUCTOR, unlike `Ask`: `@JSExportTopLevel` exports every constructor (qualified-private
+    // included) and Scala.js cannot tell one from the primary, whose `every` is defaulted. Only a
+    // raw `new SendStatement(…)` with four arguments is uncovered; `build.sbt` filters exactly that.
+    def copy(
+      loc: At,
+      msg: MessageRef | Constructor | ValueRef,
+      portlet: PortletRef[Portlet],
+      at: Option[Value]
+    ): SendStatement = SendStatement(loc, msg, portlet, at, every)
     override def kind: String = "Send Statement"
     override def canFail: Boolean = true // A12: sending to a portlet may fail
     def format: String =
       s"send ${msg.format} to ${portlet.format}" + at.map(v => s" at ${v.format}").getOrElse("") +
         every.map(r => s" ${r.format}").getOrElse("")
   }
+
+  /** Companion: keeps the pre-2.8.0 four-argument `SendStatement(loc, msg, portlet, at)` for
+    * binary and source compatibility within 2.x. Remove at 3.0 (BACKLOG [5.10]).
+    */
+  object SendStatement:
+    def apply(
+      loc: At,
+      msg: MessageRef | Constructor | ValueRef,
+      portlet: PortletRef[Portlet],
+      at: Option[Value]
+    ): SendStatement = new SendStatement(loc, msg, portlet, at, None)
+  end SendStatement
 
   /** The schedule of a recurring `send` (Reid, 2026-11-19): `every <period> [starting at <instant>]`.
     *

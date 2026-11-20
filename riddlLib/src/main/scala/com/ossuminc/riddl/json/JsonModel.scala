@@ -599,7 +599,53 @@ object JsonModel:
     window: Option[ValueDto] = None,
     // 2026-11-19: the `on every` period (`kind: "every"` only), any Duration-typed value.
     period: Option[ValueDto] = None
-  )
+  ):
+    // The pre-2.8.0 shape, for binary compatibility within 2.x (MiMa against 2.7.0). Remove at 3.0.
+    def this(
+      kind: String,
+      message: Option[MessageRefDto],
+      statements: Seq[StatementDto],
+      binding: Option[String],
+      envelope: Option[String],
+      from: Option[OnFromDto],
+      metadata: Option[MetaDto],
+      brief: Option[String],
+      parameters: Seq[MethodArgDto],
+      window: Option[ValueDto]
+    ) = this(kind, message, statements, binding, envelope, from, metadata, brief, parameters, window, None)
+    def copy(
+      kind: String,
+      message: Option[MessageRefDto],
+      statements: Seq[StatementDto],
+      binding: Option[String],
+      envelope: Option[String],
+      from: Option[OnFromDto],
+      metadata: Option[MetaDto],
+      brief: Option[String],
+      parameters: Seq[MethodArgDto],
+      window: Option[ValueDto]
+    ): OnClauseDto =
+      OnClauseDto(kind, message, statements, binding, envelope, from, metadata, brief, parameters,
+        window, period)
+  end OnClauseDto
+
+  /** Companion: keeps the pre-2.8.0 ten-argument `OnClauseDto(...)`. Remove at 3.0. */
+  object OnClauseDto:
+    def apply(
+      kind: String,
+      message: Option[MessageRefDto],
+      statements: Seq[StatementDto],
+      binding: Option[String],
+      envelope: Option[String],
+      from: Option[OnFromDto],
+      metadata: Option[MetaDto],
+      brief: Option[String],
+      parameters: Seq[MethodArgDto],
+      window: Option[ValueDto]
+    ): OnClauseDto =
+      new OnClauseDto(kind, message, statements, binding, envelope, from, metadata, brief,
+        parameters, window, None)
+  end OnClauseDto
 
   case class MessageRefDto(ref: String, kind: String)
 
@@ -798,7 +844,19 @@ object JsonModel:
     // `"starting"`; `starting` without `every` is a malformed document.
     every: Option[ValueDto] = None,
     starting: Option[ValueDto] = None
-  ) extends StatementDto
+  ) extends StatementDto:
+    // The pre-2.8.0 shape, for binary compatibility within 2.x (MiMa against 2.7.0). Remove at 3.0.
+    def this(message: MsgOperandDto, to: String, portlet: String, at: Option[ValueDto]) =
+      this(message, to, portlet, at, None, None)
+    def copy(message: MsgOperandDto, to: String, portlet: String, at: Option[ValueDto]): SendStmtDto =
+      SendStmtDto(message, to, portlet, at, every, starting)
+  end SendStmtDto
+
+  /** Companion: keeps the pre-2.8.0 four-argument `SendStmtDto(...)`. Remove at 3.0. */
+  object SendStmtDto:
+    def apply(message: MsgOperandDto, to: String, portlet: String, at: Option[ValueDto]): SendStmtDto =
+      new SendStmtDto(message, to, portlet, at, None, None)
+  end SendStmtDto
 
   /** `{ "kind": "forward", "message": <msgRef|constructor>, "to": "<path>", "target":
     * "inlet"|"outlet"|"entity"|"context"|"projector"|"repository"|"adaptor" }`
