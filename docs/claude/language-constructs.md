@@ -855,6 +855,74 @@ decision.
   to 109/132. Corpus A/B showed **zero movement**: riddl-models + riddl-examples
   have no `!` uses, 597 `not` uses, and no `!=` uses either.
 
+## Calendar schedules and calendar periods ([1.32], 2026-11-20)
+
+Reid's rulings: two spellings (prose canonical, `cron "…"` escape hatch), zone optional with
+**UTC** default, a day a month lacks is **skipped** (with an Advisory pointing at `on last day`),
+and calendar arithmetic in the same pass. CM §18.1, §20.7, §40.1 record the semantics.
+
+**Syntax.** The operand of `every`, in `on every` and in `send … every`, is
+`every_operand = calendar_schedule | cron_schedule | value` (EBNF):
+
+```
+on every month on day 1 at 09:00 in "America/Toronto" is { … }
+on every month on last day | on the third wednesday | on the last friday
+on every 3 months on day 1                      // interval
+on every year on march 31 at 17:00 | on the first monday of september
+on every day | weekday | monday, wednesday and friday | saturday and sunday
+on every cron "*/5 * * * *" in "UTC"
+let next = r.from + 1 month                     // calendar period
+```
+
+`at HH:MM[:SS]` defaults to midnight; `the` is REQUIRED in the ordinal forms (the plan's sketch
+omitted it in the yearly form). Ordinals are `first`..`fourth` and `last`.
+
+**Precedence — the part to remember.** A WHOLE schedule wins over a same-named value: `every
+day` is daily even beside a constant named `day`. Words that are not a whole schedule fall back to
+`value` exactly as before, so `every month` with a constant `month` is that constant (a month
+cadence needs its `on …` anchor), and `cron` alone likewise. In arithmetic a NUMBER is required,
+so a bare `month`/`year` is still a reference. None of the words is reserved. Tests pin all three.
+
+**AST** (`AST.scala`, all three in the `Value` union, which is now 30 members):
+`CalendarSchedule(loc, cadence, at: Option[String], zone: Option[LiteralString])` with
+`CalendarSchedule.Cadence` = `Daily | Weekdays | OnWeekdays(days) | Monthly(interval, unit,
+MonthAnchor) | Yearly(interval, unit, YearAnchor)`; `MonthAnchor` = `DayOfMonth | LastDayOfMonth |
+NthWeekdayOfMonth`; `YearAnchor` = `OnDate(month, day) | NthWeekdayOf(ordinal, weekday, month)`. Words and numbers
+are stored AS WRITTEN (strings). `CronSchedule(loc, expression: LiteralString, zone)`.
+`CalendarPeriodLiteral(loc, amount: NumericLiteral, unit)`, shaped like `DurationLiteral`.
+`Recurrence.period` and `OnEveryClause.period` stayed `Value`, so no field changed and MiMa needed
+no shim.
+
+**BAST.** Value tags 27 (calendar schedule: cadence byte + payload, optional time, optional zone),
+28 (cron), 29 (calendar period, shaped like tag 15). `FORMAT_REVISION` 36 added 27/28, 37 added 29.
+Each bump made the committed `language/input/import/NotImplemented.bast` unreadable; it was
+regenerated (only the revision byte changed). **The value writer has no catch-all and `language`
+compiles `--no-warnings`**, so a missing arm is a runtime `MatchError`, never a compile error.
+
+**JSON** (`JSON_COVERAGE.md`): `{"value":"calendar","cadence":…}` flat, with
+`weekdays`/`interval`/`unit`/`anchor`/`day`/`ordinal`/`weekday`/`month`/`at`/`zone` as needed;
+`{"value":"cron","expression":…,"zone"?:…}`; `{"value":"calendarPeriod","amount":…,"unit":…}`.
+JSON landed with the parser (step 1), not with BAST: riddlLib's fixture sweep carries every
+`**/input/**` fixture through JSON, so the new fixture was red without it.
+
+**Validation** (`checkRecurrencePeriod` accepts both schedules). Errors:
+`value-schedule-day-out-of-range`, `value-schedule-date-never-exists` (`february 30`, `april 31`),
+`value-schedule-interval-not-positive`, `value-schedule-duplicate-weekday`,
+`value-schedule-time-out-of-range` (the lexer admits hours 24–29, so this is validation's),
+`value-cron-malformed` (five fields; `*`, numbers, ranges, steps, lists, `L`, `n#k`, range-checked;
+not a full cron parser), `value-time-zone-malformed`. Advisory: `value-schedule-day-skips-months`
+(`on day 29..31`, `february 29`); its suggestion only shows with `provideTips`. **The zone is
+checked by SHAPE** (`UTC`, `GMT`, `Z`, `±HH:MM`, `Area/Location[/Sub]`), not against tzdb:
+`scala-java-time` ships no tz data on JS/Native, so a lookup would make the platforms disagree.
+
+**Calendar arithmetic** (`combineArithmetic`): `Date|DateTime|ZonedDateTime|TimeStamp ± period`
+and `period + date` keep the date's type; everything else is `value-arithmetic-operand-mismatch`.
+The literal has NO type of its own (`valueTypeExpr` gives none), so it can never fill a Duration;
+`every 1 month` draws the recurrence's not-a-Duration error once. Month-end clamps (CM §40.1).
+Constants were not widened. Tests: `CalendarScheduleRoundTripTest`,
+`CalendarScheduleJsonRoundTripTest`, `CalendarScheduleValidationTest`,
+`CalendarPeriodArithmeticTest`; fixture `language/input/calendar-schedules.riddl`.
+
 ## Collection statements — `append` / `remove` (2026-09-14)
 
 **Syntax.** `append <value> to field F` · `remove <value> from field F` ·

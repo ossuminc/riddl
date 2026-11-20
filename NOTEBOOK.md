@@ -34,24 +34,22 @@ authoritative). Ask `git` for branch, tree and unpushed span — never trust a w
 
 **`main` is heading for 2.8.0** (Reid): undeliverable-clause rules, schema-link typing,
 `on init` as creation, `on entry`, `ask query Q(args) of P`, literals held to their type,
-the optional-for-required Advisory, let-path walking, [1.27]'s value forms, recurrence
-(`send … every`, `on every`; `1c69a1979`), **FORMAT_REVISION 35**.
-`../bin/riddlc` and ivy are `2.7.0-48-a32abc4c` (restaged 2026-11-19 overnight, at Reid's
-request, via `scripts/publish-and-stage.sh`): includes [1.27], the record-with-method fix,
-recurrence (all three forms) and the one-rule opacity of handler-less processors. `morph S -> S` stays a Warning (Reid). **Owed at 3.0: BACKLOG
-[5.10]** (rename the `AST.Initiate` class to `Create`, drop the alias val). BACKLOG [5.9]
-stays DEFERRED by Reid.
+the optional-for-required Advisory, let-path walking, [1.27]'s value forms, recurrence,
+[1.30]/[1.31]/[2.20]/[2.21], and **[1.32] calendar schedules, cron and `date + 1 month`**
+(`5fbd547eb`..`d4e70141b`, CM top-level `3fa9fca`), **FORMAT_REVISION 37**.
+`../bin/riddlc` and ivy are still `2.7.0-48-a32abc4c` -- they do NOT have anything from
+2026-11-20; restage (`scripts/publish-and-stage.sh`) only when Reid asks.
 
-**[1.27] is DONE** (2026-11-19): optional chaining and all five value forms, one commit
-each (`0231d7a77` .. `cebc97f73`, then `1af9d704b` for the conditional value), CM recorded
-(top-level `7558d94`, `47ff9f8`), **FORMAT_REVISION 34**, BAST value tags 22-26. Restaged
-at `2.7.0-41-67efe607`, so riddl-models can now write the forms. Follow-up filed: BACKLOG [1.31] (B5's predicate parentheses).
+**UNPUSHED on `main`** (git says how many): the 2026-11-20 commits from `047ada3ac` on. They
+were held because [1.30] made `RiddlModelsRoundTripTest` red on reactive-bbq; riddl-models
+fixed it in their `35a581e9e`, and the cold run below is green with it, so **nothing now blocks
+the push** -- Reid's call. MiMa against 2.7.0 is clean again (`a32abc4cc` had broken it;
+fixed in the pushed `Restore binary compatibility…` commit). **Owed at 3.0: BACKLOG [5.10]**,
+which now also lists the recurrence shims/filters and the two not-emitted entity RuleIds.
+BACKLOG [5.9] stays DEFERRED by Reid. **[1.33] needs a ruling** (Boolean accepted for Integer).
 
-**riddl-examples is RETIRED** (Reid, 2026-11-19; riddl `06bc49add`, top-level `234ed69`). Its
-FooBar models are `language/input/foobar/`, pinned by `FooBarFixturesTest`. **The GitHub repo
-is NOT yet archived**: `gh repo archive` was refused by the permission classifier, so Reid runs
-it. Its former shopify-cart failure was bisected to `8baddef3c` and is the MODEL's error, not
-a regression -- see the 2026-11-19 (evening) entry.
+**riddl-examples is RETIRED** (Reid, 2026-11-19). **The GitHub repo is NOT yet archived**:
+`gh repo archive` was refused by the permission classifier, so Reid runs it.
 
 ### Traps a fresh session would hit
 
@@ -73,29 +71,58 @@ a regression -- see the 2026-11-19 (evening) entry.
 
 ### Certainty
 
-Verified 2026-11-19 for `d6320be9f`, from an EMPTY sbt cache (grew to 244M): tJVM, tJS and
-tNative all green, 19 suite summaries, `riddlcNative/nativeLink` links. Covers [1.27] step 6,
-the riddl-examples retirement and the record-with-method fix. Not run: MiMa, TatSu, a
-riddl-models census.
-
-Verified 2026-11-19 for `cebc97f73`, from an EMPTY sbt cache (grew to 240M): tJS all 5
-modules green; tJVM and tNative every module green except the shopify-cart test above
-(19 suite summaries, as expected); `riddlcNative/nativeLink` run separately, links. TatSu
-131/154 (the 23 failures 2.7.0 had). Not run: MiMa, a riddl-models census.
+Verified 2026-11-20 for `d4e70141b` (docs commits after it change no code), from an EMPTY sbt
+cache (0 -> 420M): tJVM 7, tJS 5, tNative 7 module summaries, all green, including
+`RiddlModelsRoundTripTest` against riddl-models at `5a514242a`; `riddlcNative/nativeLink`
+links. MiMa clean on all six modules against 2.7.0. TatSu 136/165 with 24 include fragments
+skipped and 5 expected failures, i.e. **0 unexpected** (the "131/154 (23 failures)" recorded
+2026-11-19 was the same shape misread: those were skips and expected failures).
+riddl-models census (191 entry points, JSON, `validate` on the `.riddl`): the only movement
+since `543014082` is reactive-bbq's [1.30] error going away with their fix. **The census sees
+only `error` and `info` severities** -- Completeness warnings are invisible to it.
 
 Verified 2026-11-16 for 2.7.0: tJVM, tJS and tNative with nativeLink green after `clean`
 (19 suite summaries); the same suites green from an empty sbt cache before tagging; MiMa clean;
-TatSu 128/151; riddl-models census identical to 2.6.0, with the census script calibrated on a
-known-bad model.
+riddl-models census identical to 2.6.0, with the census script calibrated on a known-bad model.
 
 ### task/
 
-Empty. The [1.27] value-forms request and the record-with-method crash
-(`db09b7b86`, `d6320be9f`) are both in `task/done/`. riddl-models has its own task
-`2026-11-19-riddl-value-checks-corpus-findings.md` (the 8 Natural fields are already fixed in
-their `2f2291b63`). `probe-2026-09-06-adaptor/` is a leftover scratch directory, not a task.
+Empty. Sent out 2026-11-20 (in the receivers' `task/`): riddl-models
+`2026-11-20-riddl-call-argument-types.md` (done on their side, `35a581e9e`) and
+`2026-11-20-riddl-calendar-schedules.md`; riddl-generator and ossum.tech
+`2026-11-20-riddl-calendar-schedules.md`; synapify and riddl-vscode
+`2026-11-20-riddl-entity-rule-ids.md` (FYI). `probe-2026-09-06-adaptor/` is a leftover
+scratch directory, not a task.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
+
+## 2026-11-20 (later) — [1.32]: calendar schedules, cron, and `date + 1 month`
+
+Reid's rulings: both spellings (prose canonical, `cron "…"` escape hatch); zone optional,
+**UTC** default; a day a month lacks is **skipped**, with an Advisory recommending `on last
+day`; calendar arithmetic in the same pass. Planned in plan mode
+(`~/.claude/plans/fluffy-wiggling-lovelace.md`), built in four commits: parse + prettify + JSON
+(`5fbd547eb`), BAST tags 27/28 at revision 36 (`290e9d5c6`), validation with seven Errors and
+the Advisory (`737c3458d`), `CalendarPeriodLiteral` with clamping, tag 29 at revision 37
+(`d4e70141b`). CM `3fa9fca`; reference in `docs/claude/language-constructs.md`.
+
+What it taught:
+
+- **JSON belongs with the PARSER, not with BAST.** riddlLib's fixture sweep carries every
+  `**/input/**` fixture through JSON, so a new fixture is red until JSON can carry it.
+- **Each revision bump makes the committed `NotImplemented.bast` unreadable**; it was
+  regenerated twice, and `cmp` showed only the revision byte change each time.
+- **Time zones are checked by SHAPE, not tzdb**: `scala-java-time` has no tz data on JS/Native,
+  and a JVM-only lookup would have the platforms disagree about one model.
+- **Precedence, decided by structure**: a whole schedule beats a same-named value (`every day`),
+  a fragment falls back (`every month` with no anchor); arithmetic needs a number before
+  `month`. Pinned by tests in both directions.
+- `the` became required in ordinal forms (`on the third wednesday`); the plan's yearly sketch
+  had omitted it. The lexer admits hours 24-29, so the time range is a validation Error.
+- The CM sections for recurrence and opacity written on 2026-11-19 had never been committed in
+  the top-level repo; committed as written (`64a2fde`) before the [1.32] record.
+
+Census: zero movement from [1.32] across 191 models.
 
 ## 2026-11-20 — 2.7.0 binary compatibility restored; [1.31] closed
 

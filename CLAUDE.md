@@ -775,8 +775,11 @@ fact from that file that you had no reason to look for, it belongs back here.
   `SendStatement`. Neither `every` nor `starting` is reserved (the `on entry` precedent).
   **`OnEveryClause`s all carry the id `every`** — it is what prettify prints after `on` — so
   `checkUniqueContent` EXCLUDES them; several per handler are legal. Periods must be POSITIVE
-  Durations (`checkRecurrencePeriod`, shared by both). Fixed spans only: calendar schedules are
-  BACKLOG [1.32]. Separately, an `on X` clause re-sending X `at <instant> + <duration>` is a
+  Durations (`checkRecurrencePeriod`, shared by both) -- or, since [1.32] (2026-11-20), a CALENDAR
+  schedule (`every month on day 1 at 09:00 in "Europe/Paris"`) or `cron "…"`: zone defaults to UTC,
+  a day a month lacks is SKIPPED (Advisory), and `date + 1 month` CLAMPS. **A whole schedule wins
+  over a same-named value** (`every day` beside a constant `day`); a fragment falls back to `value`.
+  Details, rule ids and BAST/JSON shapes: `docs/claude/language-constructs.md` § Calendar schedules. Separately, an `on X` clause re-sending X `at <instant> + <duration>` is a
   recurrence and exempt from `stream-graph-cycle` (`isAdvancingInstant`, `loopEdges`).
 
 - **A message delivered where nothing can receive it — two CompletenessWarnings**
