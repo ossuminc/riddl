@@ -153,7 +153,11 @@ finding** -- reactive-bbq passes a QUOTED path (`"event.orderPayment.paymentAmou
 `Decimal(10,2)` input. True positive; task filed in riddl-models, and `RiddlModelsRoundTripTest`
 is red on it until they fix it. Writing the tests found [1.33]: `true` fills an `Integer`
 (`Bool extends IntegerTypeExpression`), for constructors too. **Closed the same day as
-INTENDED** (Reid: `true` == 1, `false` == 0, as originally designed); no code change.
+INTENDED** (Reid: `true` == 1, `false` == 0, as originally designed); no code change. The
+converse followed: the integer literals `0` and `1` now fill a `Boolean` (any other number,
+`1.0` included, is still refused), pinned in `ValueLiteralAndCardinalityTest`; CM §"every value
+is typed" records the mapping as a must-preserve. Purely a relaxation, so the corpus can only
+lose errors.
 
 **[2.20] and [2.21] closed (Reid's rulings, 2026-11-20).** An entity with no handlers anywhere
 is now reported ONCE, as Completeness 4f (`entity-no-handlers`); the Error

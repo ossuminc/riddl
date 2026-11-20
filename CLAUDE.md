@@ -631,7 +631,8 @@ fact from that file that you had no reason to look for, it belongs back here.
   extends IntegerTypeExpression`**, so put an explicit `Bool` arm first or a
   Boolean constant is told it "requires a whole number". **A Boolean filling an
   `Integer` is INTENDED** (`true` == 1, `false` == 0; Reid, 2026-11-20, closing
-  [1.33]) — do not "fix" that assignability. **Never call `asLong` in
+  [1.33]) — do not "fix" that assignability. The converse holds for LITERALS:
+  `0` and `1` fill a `Boolean`; any other number there is refused. **Never call `asLong` in
   a match guard** — the parser accepts unbounded digit runs, so a 20-digit
   literal throws `NumberFormatException` *inside the guard* and surfaces as
   `[severe] Exception Thrown` with no line number.

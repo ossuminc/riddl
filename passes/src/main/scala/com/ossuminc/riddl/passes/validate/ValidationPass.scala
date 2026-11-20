@@ -4317,8 +4317,8 @@ case class ValidationPass(
     * useless — the fraction is the more specific defect. Range arms are guarded on `isInteger` so a
     * real-form literal is never range-checked as an integer. `Bool` is excluded explicitly even
     * though it extends [[IntegerTypeExpression]]: a Boolean-typed constant is not "a whole number
-    * with a fractional part", it is a different kind entirely, and telling it so would be a
-    * nonsense message.
+    * with a fractional part", and telling it so would be a nonsense message. It accepts exactly the
+    * integer literals 0 and 1 (`false` and `true`, Reid 2026-11-20) and refuses any other number.
     *
     * The range arms compare via `asBigDecimal`, never `asLong`: the parser accepts unbounded digit
     * runs (`99999999999999999999` is a legal `Natural` literal syntactically), and `asLong` is
@@ -4335,8 +4335,18 @@ case class ValidationPass(
     // `5` filled a DateTime, a Boolean, a String or a record field without a word.
     underlyingTypeExpr(expected) match
       // `Bool` extends IntegerTypeExpression, so NumericType's assignability would accept any
-      // number for it; a Boolean is a different kind entirely, so it is refused by name here.
-      case b: Bool => refuseNumberFor(nl, b)
+      // number for it. Reid, 2026-11-20: `true` == 1 and `false` == 0, so the integer literals 0
+      // and 1 ARE Booleans and are accepted; any other number is refused by name here.
+      case b: Bool =>
+        val isBit = nl.isInteger && (nl.asBigDecimal == BigDecimal(0) || nl.asBigDecimal == BigDecimal(1))
+        if !isBit then
+          messages.addError(
+            nl.loc,
+            s"'${b.format}' is expected, but ${nl.text} is a number other than 0 or 1",
+            suggestion = "Write true or false (or 1 or 0), or declare the field as a numeric type.",
+            ruleId = Some(RuleId.ValueTypeMismatch)
+          )
+        end if
       // Not a number at all. Asked through `checkAssignable`, so the policy is the one references
       // get; `Anything` accepts. Deliberately limited to shapes that are UNAMBIGUOUSLY not numeric:
       // an unresolved alias, an alternation or an enumeration stays silent rather than guessed at.

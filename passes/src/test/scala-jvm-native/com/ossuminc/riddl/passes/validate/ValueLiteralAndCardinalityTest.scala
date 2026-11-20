@@ -98,6 +98,18 @@ class ValueLiteralAndCardinalityTest extends AbstractValidatingTest {
         withClue(s"field type $ft: ") { mustBeClean(ft, "5", td) }
       }
     }
+    // Reid, 2026-11-20: a Boolean is an integer with `true` == 1 and `false` == 0, so the two
+    // literals that ARE Booleans are accepted; every other number stays refused.
+    "be accepted for a Boolean field when it is 0 or 1" in { (td: TestData) =>
+      Seq("0", "1").foreach { v =>
+        withClue(s"value $v: ") { mustBeClean("Boolean", v, td) }
+      }
+    }
+    "be refused for a Boolean field when it is any other number" in { (td: TestData) =>
+      Seq("2", "-1", "1.0", "0.5").foreach { v =>
+        withClue(s"value $v: ") { mustRefuse("Boolean", v, RuleId.ValueTypeMismatch, td) }
+      }
+    }
     "be held to the numeric field's range, which it never was at this position" in {
       (td: TestData) =>
         mustRefuse("Natural", "-3", RuleId.NotNatural, td)
