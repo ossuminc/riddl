@@ -428,18 +428,6 @@ task files, so they were NOT physically reshuffled; this index carries the order
   `stmt-send-every-not-duration`/`handler-every-not-duration`, whose suggestion names that
   workaround.
 
-- **[1.31]** **B5's `all/any/none of … where p` is open on its right and is never
-  parenthesized as an operand.** Its predicate is a full boolean expression, so a tree such
-  as `And(all of xs as e where p, q)` -- which BAST and JSON can carry, and which the parser
-  builds from `(all of xs as e where p) and q` -- prettifies to text that re-parses with `q`
-  INSIDE the predicate: same text, a different program. Found 2026-11-19 while building
-  [1.27]'s `one of`, which has the same right edge and got the rule:
-  `AST.CollectionValues.alwaysParenthesized` (consulted by the comparison, logical, `not` and
-  arithmetic `format`s) and its emitter copy `RiddlFileEmitter.emitOperand`. The fix is
-  likely adding `CollectionPredicate` (and `CollectionFilter`, same edge) to that predicate,
-  plus tree-comparing round-trip cases like `ValueFormsRoundTripTest`'s. Not verified by a
-  failing test yet -- write that first.
-
 - **[1.30]** **`call`/`create`/`terminate` arguments are type-checked only
   against ALIASED parameter types.** `checkArgumentTypes`
   (`ValidationPass.scala`) ends in a catch-all commented "primitive/other

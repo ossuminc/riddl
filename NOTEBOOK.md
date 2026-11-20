@@ -97,6 +97,27 @@ their `2f2291b63`). `probe-2026-09-06-adaptor/` is a leftover scratch directory,
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-20 — 2.7.0 binary compatibility restored; [1.31] closed
+
+**MiMa against 2.7.0 was RED at HEAD, and nothing had run it since 2.7.0.** Recurrence added
+trailing fields to `AST.SendStatement`, `JsonModel.SendStmtDto` and `JsonModel.OnClauseDto`,
+which removes the old `<init>`/`apply`/`copy` shapes -- a binary break within 2.x. Shimmed the
+`Ask`/`AskValueDto` way. **One shape cannot be shimmed**: a four-field secondary constructor on
+`SendStatement` is refused by Scala.js ("Cannot disambiguate overloads for exported method"),
+because `@JSExportTopLevel` exports every constructor and the primary's `every` is defaulted --
+and `private[language]` does NOT exempt it. So `build.sbt` filters exactly
+`SendStatement.this`; only a raw `new SendStatement(4 args)` is uncovered. The private
+`ValidationPass.MessageCarriage` is filtered too (Scala-private, bytecode-public). All of it is
+on [5.10]'s 3.0 removal list. **Lesson: the next trailing field on an exported AST class meets
+the same wall; the apply/copy shim plus a ctor filter is the recipe.**
+
+**[1.31] closed.** `CollectionPredicate` and `CollectionFilter` joined
+`CollectionValues.alwaysParenthesized`, so `(all of xs as l where p) and q` no longer prettifies
+into `all of … where p and q` (the predicate swallowing `q`). The emitter's `emitOperand` reads
+the same predicate, so one edit covered both copies. Pinned by six new cases in
+`ValueFormsRoundTripTest`, red before the change (control and prettify), green after. Prettify
+now writes `not (any of …)` with parentheses, as it already did for `one of`.
+
 ## 2026-11-19 (overnight, later) — opacity is one rule for both sides
 
 riddl-models (task `2026-11-19-handlerless-app-sends-but-cannot-receive`) measured that a

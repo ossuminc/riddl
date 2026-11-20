@@ -58,7 +58,14 @@ class ValueFormsRoundTripTest extends AnyWordSpec with Matchers {
     "when Data.hours > 8 then 2 else when Data.hours > 4 then 1 else 0 end end",
     "when Data.hours > 8 then 2 else 1 end * Data.days",
     "when Data.hours > 0 then Data.maybe else empty end otherwise 0",
-    "when (Data.hours otherwise 0) > 1 then 1 else 0 end"
+    "when (Data.hours otherwise 0) > 1 then 1 else 0 end",
+    // BACKLOG [1.31]: B5's quantifiers and filter are open on their right, like `one of`.
+    "(all of Data.lines as l where l.qty > 0) and Data.days > 0",
+    "(none of Data.lines as l where l.qty > 0) or Data.hours > 1",
+    "Data.days > 0 and (any of Data.lines as l where l.qty > 0)",
+    "not (any of Data.lines as l where l.qty > 0) and Data.days > 0",
+    "(Data.lines as l where l.qty > 0) == empty",
+    "count of (Data.lines as l where l.qty > 0) > 1"
   )
 
   private val src: String =

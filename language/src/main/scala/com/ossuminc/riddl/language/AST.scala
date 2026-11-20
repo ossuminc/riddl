@@ -4538,7 +4538,10 @@ object AST:
       */
     def alwaysParenthesized(v: Value): Boolean = v match
       case _: OneOfValue | _: OtherwiseValue => true
-      case _                                 => false
+      // [1.31]: B5's quantifiers and filter end in the same open `where <pred>` as `one of`, so a
+      // following `and q` would join the predicate -- same text, a different program.
+      case _: CollectionPredicate | _: CollectionFilter => true
+      case _                                            => false
     def operand(v: Value): String = if alwaysParenthesized(v) then s"(${v.format})" else v.format
   end CollectionValues
 
