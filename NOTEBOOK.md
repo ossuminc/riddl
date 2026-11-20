@@ -95,6 +95,21 @@ scratch directory, not a task.
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-20 (evening) — a stated empty guard silences `value-optional-for-required`
+
+riddl-models' task (`task/done/2026-11-19-empty-guard-does-not-narrow.md`): the [1.29](a)
+advisory recommended `when x != empty then` and then fired inside it, on 14 correctly guarded
+corpus positions. Narrowing is now tracked by `checkStatementScopes` in a dynamically scoped
+`narrowedNonEmpty` that `checkOptionalIntoRequired` consults. It covers the then/else of
+`!=`/`==` empty tests, `and`, the `else` of `or`, and `not`. Per Reid it also covers everything
+after `require x != empty` and after an early-exit `when x == empty then error`. A `set`/
+`append`/`remove` of the path, a `morph`, or a shadowing `let`/`foreach` name forgets it.
+Matching is by spelling, on purpose: `a.maybe` and `b.maybe` resolve to one Field but are two
+values. A field, not a parameter, because the check is 59 `validateValue` sites deep.
+`EmptyGuardNarrowingTest` has 18 cases: 11 failed before the change, and 7 are controls that
+must keep firing. Also closed: riddl-models' calendar-schedules and call-argument tasks
+(already met), and [1.33] (Bool into Integer is INTENDED; `0`/`1` now fill a Boolean).
+
 ## 2026-11-20 (later) — [1.32]: calendar schedules, cron, and `date + 1 month`
 
 Reid's rulings: both spellings (prose canonical, `cron "…"` escape hatch); zone optional,

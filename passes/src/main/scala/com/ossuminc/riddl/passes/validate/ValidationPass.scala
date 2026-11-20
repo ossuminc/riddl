@@ -10735,7 +10735,12 @@ case class ValidationPass(
     loc: At,
     what: String
   ): Unit =
-    if admitsEmpty(actual) && !admitsEmpty(expected) then
+    // A value an enclosing guard has already proven non-empty is not "may be empty" here
+    // (riddl-models, 2026-11-19): see `narrowedNonEmpty`.
+    val guarded = value match
+      case vr: ValueRef => narrowedNonEmpty.contains(vr.path.value)
+      case _            => false
+    if !guarded && admitsEmpty(actual) && !admitsEmpty(expected) then
       // An ADVISORY (Reid, 2026-11-18), not a Warning: CM §0.3 ruling 5 makes every warning but
       // Style a hard stop for generation, and the ruling is that the generator proceeds and
       // chooses how the empty case fails -- e.g. by generating the guard itself.
@@ -10744,7 +10749,8 @@ case class ValidationPass(
         s"$what is required, but '${value.format}' may be empty",
         suggestion = s"Say what happens when it is empty: supply a default with " +
           s"'${value.format} otherwise <default>', or guard it with 'when ${value.format} != " +
-          "empty then ... end'. Without either, the generator must choose.",
+          s"empty then ... end' or 'require ${value.format} != empty'. Without either, the " +
+          "generator must choose.",
         ruleId = Some(RuleId.OptionalForRequired)
       )
   end checkOptionalIntoRequired
@@ -13602,6 +13608,86 @@ case class ValidationPass(
   private def queryRecordType(qv: QueryValue, parents: Parents): Option[Type] =
     tableRecordType(qv.table, parents).map(_._2)
 
+  private type NarrowedPaths = scala.collection.immutable.Set[Seq[String]]
+  private val noNarrowing: NarrowedPaths = scala.collection.immutable.Set.empty
+
+  /** Value paths an enclosing GUARD has proven non-empty at the statement being checked, consulted
+    * by `checkOptionalIntoRequired` (riddl-models, 2026-11-19: the advisory told authors to write
+    * `when x != empty then`, then fired inside it). Set by `checkStatementScopes` as it walks, and
+    * DYNAMICALLY scoped: saved on entry to every statement list and restored on exit, so a
+    * narrowing never outlives the list that established it. A field rather than a parameter
+    * because the check sits under `validateValue` -> constructor/call/ask -> `checkArgumentTypes`,
+    * 59 call sites deep, and the walk is synchronous.
+    *
+    * Keys are path SEGMENTS as written. Matching by spelling, not resolved identity, is the point:
+    * `a.maybe` and `b.maybe` resolve to the same `Field` and are different values. The cost,
+    * accepted: `E.Only.held` and `Only.held` are different keys.
+    */
+  private var narrowedNonEmpty: NarrowedPaths = noNarrowing
+
+  /** What a condition proves non-empty when it holds (`_1`) and when it fails (`_2`). Only
+    * `x != empty` / `x == empty` (either operand order), `and`, `or` and `not` contribute; an `and`
+    * proves both conjuncts' truths, an `or` both disjuncts' falsehoods, `not` swaps. Anything else
+    * proves nothing.
+    */
+  private def emptyNarrowing(cond: Value): (NarrowedPaths, NarrowedPaths) = cond match
+    case ComparisonExpression(_, op, left, right) =>
+      val path = (left, right) match
+        case (vr: ValueRef, _: EmptyValue) => Some(vr.path.value)
+        case (_: EmptyValue, vr: ValueRef) => Some(vr.path.value)
+        case _                             => None
+      path match
+        case Some(p) if op == ComparisonOperator.NE => (noNarrowing + p, noNarrowing)
+        case Some(p) if op == ComparisonOperator.EQ => (noNarrowing, noNarrowing + p)
+        case _                                      => (noNarrowing, noNarrowing)
+    case LogicalExpression(_, LogicalOperator.And, left, right) =>
+      (emptyNarrowing(left)._1 ++ emptyNarrowing(right)._1, noNarrowing)
+    case LogicalExpression(_, LogicalOperator.Or, left, right) =>
+      (noNarrowing, emptyNarrowing(left)._2 ++ emptyNarrowing(right)._2)
+    case NotExpression(_, expr) =>
+      val (t, f) = emptyNarrowing(expr)
+      (f, t)
+    case _ => (noNarrowing, noNarrowing)
+  end emptyNarrowing
+
+  private def conditionNarrowing(cond: RiddlValue): (NarrowedPaths, NarrowedPaths) = cond match
+    case be: BooleanExpression => emptyNarrowing(be)
+    case _                     => (noNarrowing, noNarrowing)
+
+  private def withNarrowed(extra: NarrowedPaths)(body: => Unit): Unit =
+    val saved = narrowedNonEmpty
+    narrowedNonEmpty = saved ++ extra
+    body
+    narrowedNonEmpty = saved
+  end withNarrowed
+
+  /** The field and state paths a statement assigns, at any nesting depth: what a narrowing must
+    * forget once the statement has run, since the value may now be empty again.
+    */
+  private def assignedPaths(stmt: Statement): Seq[Seq[String]] =
+    def inner[CV <: RiddlValue](c: Contents[CV]): Seq[Seq[String]] =
+      c.toSeq.collect { case st: Statement => st }.flatMap(assignedPaths)
+    stmt match
+      case ss: SetStatement =>
+        ss.field match
+          case fr: FieldRef => Seq(fr.pathId.value)
+          case sr: StateRef => Seq(sr.pathId.value)
+      case cs: CollectionStatement => Seq(cs.field.pathId.value)
+      case ws: WhenStatement       => inner(ws.thenStatements) ++ inner(ws.elseStatements)
+      case ms: MatchStatement      => ms.cases.flatMap(mc => inner(mc.statements)) ++ inner(ms.default)
+      case fs: ForeachStatement    => inner(fs.doStatements)
+      case _                       => Seq.empty
+  end assignedPaths
+
+  /** A statement list that cannot fall through: it holds an `error` or a `terminate` at its own
+    * level (both are terminal, so either is necessarily the last statement that runs).
+    */
+  private def endsBlock[CV <: RiddlValue](c: Contents[CV]): Boolean =
+    c.toSeq.exists {
+      case _: ErrorStatement | _: TerminateStatement => true
+      case _                                         => false
+    }
+
   private def checkStatementScopes(
     stmts: Seq[Statement],
     inScopeLets: Seq[LetStatement],
@@ -13614,6 +13700,8 @@ case class ValidationPass(
     stmts.headOption.foreach { first =>
       emissionLists.getOrElseUpdate(ByIdentity[Statement](first), (stmts, parents))
     }
+    // Restored at the end: a narrowing established in this list never leaks out of it.
+    val savedNarrowing = narrowedNonEmpty
     var lets = inScopeLets
     // Whether a `morph` has already run in THIS statement list. `checkNoSetAfterMorph` reports the
     // `set` itself; this flag exists so `checkSetStateIsCurrent` STAYS QUIET there, because after a
@@ -13951,12 +14039,17 @@ case class ValidationPass(
           // header's error is already reported and piling "unknown value reference" on top of it
           // would blame the body for a defect above it.
           val collType = foreachCollectionType(fs, lets, elements, parents)
+          val bindings = foreachBindings(fs, collType)
+          // A loop element SHADOWS a narrowed path that begins with its name.
+          val outerNarrowing = narrowedNonEmpty
+          narrowedNonEmpty = narrowedNonEmpty.filterNot(_.headOption.exists(bindings.contains))
           checkStatementScopes(
             fs.doStatements.toSeq.collect { case s: Statement => s },
             lets,
             parents,
-            elements ++ foreachBindings(fs, collType)
+            elements ++ bindings
           )
+          narrowedNonEmpty = outerNarrowing
         case ws: WhenStatement =>
           // A28: type-check a structured BooleanExpression condition (with in-scope `let` locals);
           // the LiteralString/Identifier forms have no expression to check here. A17: a bare boolean
@@ -13975,18 +14068,24 @@ case class ValidationPass(
               checkAscriptionIsName(pv)
               checkPromptAscription(pv, Some(Bool(At.empty)))
             case _               => ()
-          checkStatementScopes(
-            ws.thenStatements.toSeq.collect { case s: Statement => s },
-            lets,
-            parents,
-            elements
-          )
-          checkStatementScopes(
-            ws.elseStatements.toSeq.collect { case s: Statement => s },
-            lets,
-            parents,
-            elements
-          )
+          // The condition narrows each branch: what it proves when it holds, and when it fails.
+          val (whenTrue, whenFalse) = conditionNarrowing(ws.condition)
+          withNarrowed(whenTrue) {
+            checkStatementScopes(
+              ws.thenStatements.toSeq.collect { case s: Statement => s },
+              lets,
+              parents,
+              elements
+            )
+          }
+          withNarrowed(whenFalse) {
+            checkStatementScopes(
+              ws.elseStatements.toSeq.collect { case s: Statement => s },
+              lets,
+              parents,
+              elements
+            )
+          }
         case rs: RequireStatement =>
           // A28: type-check a structured BooleanExpression condition (with in-scope `let` locals);
           // the LiteralString/InvariantRef forms are checked in validateStatement.
@@ -14034,7 +14133,23 @@ case class ValidationPass(
       // including inside a `when`/`match` arm that may have run -- makes the enclosing state no
       // longer reliably current, so `checkSetStateIsCurrent` must stay quiet from here on.
       if containsMorph(stmt) then morphed = true
+      // Empty-guard narrowing for the REST of this list (Reid, 2026-11-20): a `require` that
+      // holds, and a `when` whose branch cannot fall through, both prove what follows them.
+      stmt match
+        case rs: RequireStatement => narrowedNonEmpty ++= conditionNarrowing(rs.condition)._1
+        case ws: WhenStatement if ws.elseStatements.isEmpty && endsBlock(ws.thenStatements) =>
+          narrowedNonEmpty ++= conditionNarrowing(ws.condition)._2
+        case ls: LetStatement => // a `let` SHADOWS a narrowed path that begins with its name
+          narrowedNonEmpty = narrowedNonEmpty.filterNot(_.headOption.contains(ls.identifier.value))
+        case _ => ()
+      // ... and FORGET what this statement may have made empty again. A morph replaces the state.
+      if containsMorph(stmt) then narrowedNonEmpty = noNarrowing
+      else
+        assignedPaths(stmt).foreach { p =>
+          narrowedNonEmpty = narrowedNonEmpty.filterNot(_.startsWith(p))
+        }
     }
+    narrowedNonEmpty = savedNarrowing
   end checkStatementScopes
 
   /** Classify all collected handlers by behavioral completeness. A handler is:
