@@ -481,7 +481,10 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
           _: LogicalExpression | _: ArithmeticExpression =>
         add("(").emitValue(v).add(")")
       case sv if SumValue.isOpenRight(sv) => add("(").emitValue(v).add(")") // [1.27]
-      case _                              => emitValue(v)
+      // `AST.CollectionValues.needsParens` consults `alwaysParenthesized` too; this copy did not,
+      // so a `query`/`prompt`/`call`/… collection lost the parentheses it needs to re-parse.
+      case _ if CollectionValues.alwaysParenthesized(v) => add("(").emitValue(v).add(")")
+      case _                                            => emitValue(v)
 
   /** B4: an arithmetic operand is parenthesized when it is an arithmetic expression of LOWER
     * precedence, or of the same precedence on the RIGHT of `-`/`/` (`a - (b - c)`), or a logical

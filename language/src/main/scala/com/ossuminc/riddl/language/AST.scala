@@ -4566,7 +4566,12 @@ object AST:
       // [1.31]: B5's quantifiers and filter end in the same open `where <pred>` as `one of`, so a
       // following `and q` would join the predicate -- same text, a different program.
       case _: CollectionPredicate | _: CollectionFilter => true
-      case _                                            => false
+      // riddl-models, 2026-11-21: the keyword-led VALUE OPERANDS are not atoms of the expression
+      // ladder (`value_operand`, not `arithmetic_atom`), so as the operand of any operator they
+      // reach it only through `"(" value ")"`. Dropping the parentheses made
+      // `any of (query T) as x where p` prettify into text that does not parse.
+      case _: QueryValue | _: PromptValue | _: Call | _: Ask | _: Create | _: Constructor => true
+      case _                                                                              => false
     def operand(v: Value): String = if alwaysParenthesized(v) then s"(${v.format})" else v.format
   end CollectionValues
 
