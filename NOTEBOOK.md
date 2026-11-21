@@ -76,6 +76,18 @@ Empty; the three riddl-models tasks of 2026-11-19 are in `task/done/` with Resul
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-20 (later still) — a schedule's zone must be a real zone
+
+- **riddl-models' task said the `in "<zone>"` was never checked; it was, by SHAPE.** So
+  `"Mars/Olympus"` and `"America/Chicgo"` passed, and a generator would have read them as UTC.
+- **Option 1 of three (Reid): bundle the ~600 zone NAMES** (`IanaZoneIds`, ~9KB, from
+  `ZoneId.getAvailableZoneIds`, tzdb 2025b), the same on JVM/JS/Native. Pulling in
+  `scala-java-time-tzdb` was rejected for its weight in the JS bundle.
+- Case-sensitive, like `ZoneId.of`; a case-only miss names the right spelling.
+- **`IanaZoneIdsDriftTest` (JVM only)** fails when the JDK knows a zone the table lacks.
+  Regenerate from the JDK; never edit the table by hand.
+- The CM no longer says an unknown zone is "the generator's to reject".
+
 ## 2026-11-20 (late) — 2.8.1 shipped; zero is not a magic number
 
 - **2.8.1** shipped, with the two synapify fixes and the ossum.tech `find`/keyword fixes.

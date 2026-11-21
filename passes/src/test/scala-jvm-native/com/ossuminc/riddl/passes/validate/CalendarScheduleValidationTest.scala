@@ -162,6 +162,37 @@ class CalendarScheduleValidationTest extends AbstractValidatingTest {
     "refuse a malformed zone on a cron schedule" in { (td: TestData) =>
       mustRefuseBoth("cron \"0 9 * * *\" in \"+25:00\"", RuleId.TimeZoneMalformed, td)
     }
+    "refuse a well-shaped name that is not an IANA zone (riddl-models, 2026-11-20)" in {
+      (td: TestData) =>
+        mustRefuseBoth("day at 04:00 in \"Mars/Olympus\"", RuleId.TimeZoneMalformed, td)
+    }
+    "refuse a misspelt zone on a cron schedule" in { (td: TestData) =>
+      mustRefuseBoth("cron \"0 4 * * *\" in \"America/Chicgo\"", RuleId.TimeZoneMalformed, td)
+    }
+    "report the zone at the string, not the clause" in { (td: TestData) =>
+      val src = model("day at 04:00 in \"Mars/Olympus\"")
+      val found = of(messages(src, td), RuleId.TimeZoneMalformed)
+      withClue(clue(found)) {
+        found.size mustBe 1
+        found.head.loc.offset mustBe src.indexOf("\"Mars/Olympus\"")
+      }
+    }
+    "name the right spelling when only the letter case is wrong" in { (td: TestData) =>
+      val found = of(messages(model("day in \"america/chicago\""), td, tips = true), RuleId.TimeZoneMalformed)
+      withClue(clue(found)) {
+        found.size mustBe 1
+        found.head.suggestion must include("\"America/Chicago\"")
+      }
+    }
+    "accept IANA ids, links, Etc zones, Z and offsets" in { (td: TestData) =>
+      Seq("America/Chicago", "UTC", "Europe/London", "GMT", "US/Central", "Etc/GMT+5", "Z", "+05:30")
+        .foreach { z =>
+          withClue(z) {
+            mustBeClean(s"day at 04:00 in \"$z\"", td)
+            mustBeClean(s"cron \"0 4 * * *\" in \"$z\"", td)
+          }
+        }
+    }
   }
 
   "a day some months lack" should {

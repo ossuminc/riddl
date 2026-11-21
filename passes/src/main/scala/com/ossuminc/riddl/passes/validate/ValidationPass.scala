@@ -1777,29 +1777,28 @@ case class ValidationPass(
     cr.zone.foreach(checkTimeZone(_, subject))
   end checkCronSchedule
 
-  /** BACKLOG [1.32]: a schedule's `in "<zone>"`, judged by SHAPE, not against a zone database:
-    * `scala-java-time` ships without its tzdb data on JS and Native, and a JVM-only check would
-    * make the platforms disagree. `UTC`/`GMT`/`Z`, an offset `±HH:MM`, or an IANA-shaped
-    * `Area/Location[/Sub]`.
+  /** BACKLOG [1.32]: a schedule's `in "<zone>"` must be an IANA zone id from the bundled
+    * [[IanaZoneIds]] table, `Z`, or an offset `±HH:MM`. The table is bundled, not looked up, because
+    * `scala-java-time` ships without its tzdb data on JS and Native, and a JVM-only lookup would make
+    * the platforms disagree. (Until 2026-11-20 this was a SHAPE check, so `"Mars/Olympus"` passed.)
     */
   private def checkTimeZone(zone: LiteralString, subject: String): Unit =
     val z = zone.s
-    def part(p: String): Boolean =
-      p.nonEmpty && p.head.isLetter && p.forall(c => c.isLetterOrDigit || c == '_' || c == '-' || c == '+')
     val offset: Boolean =
       (z.length == 6) && (z.head == '+' || z.head == '-') && z(3) == ':' &&
         z.slice(1, 3).forall(_.isDigit) && z.slice(4, 6).forall(_.isDigit) &&
         z.slice(1, 3).toInt <= 14 && z.slice(4, 6).toInt <= 59
-    val ok = z == "UTC" || z == "GMT" || z == "Z" || offset ||
-      (z.split("/", -1).toSeq match
-        case parts if parts.sizeIs >= 2 && parts.sizeIs <= 3 => parts.forall(part)
-        case _                                               => false)
+    val ok = z == "Z" || offset || IanaZoneIds.ids.contains(z)
     if !ok then
+      val advice = IanaZoneIds.caseInsensitiveMatch(z) match
+        case Some(id) => s"Zone ids are case-sensitive: write \"$id\"."
+        case None =>
+          "Write an IANA zone id such as \"America/Toronto\" or \"UTC\", or an offset such as " +
+            "\"+05:30\". Omit `in` to mean UTC."
       messages.addError(
         zone.loc,
-        s"$subject is in the time zone ${zone.format}, which is not a zone name or offset",
-        suggestion = "Write an IANA zone such as \"America/Toronto\", \"UTC\", or an offset such " +
-          "as \"+05:30\". Omit `in` to mean UTC.",
+        s"$subject is in the time zone ${zone.format}, which is not an IANA time zone or an offset",
+        suggestion = advice,
         ruleId = Some(RuleId.TimeZoneMalformed)
       )
   end checkTimeZone

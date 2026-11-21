@@ -912,8 +912,12 @@ JSON landed with the parser (step 1), not with BAST: riddlLib's fixture sweep ca
 `value-cron-malformed` (five fields; `*`, numbers, ranges, steps, lists, `L`, `n#k`, range-checked;
 not a full cron parser), `value-time-zone-malformed`. Advisory: `value-schedule-day-skips-months`
 (`on day 29..31`, `february 29`); its suggestion only shows with `provideTips`. **The zone is
-checked by SHAPE** (`UTC`, `GMT`, `Z`, `±HH:MM`, `Area/Location[/Sub]`), not against tzdb:
-`scala-java-time` ships no tz data on JS/Native, so a lookup would make the platforms disagree.
+checked against a BUNDLED table of IANA ids** (`IanaZoneIds`, ~600 names, no rules), plus `Z` and
+`±HH:MM`; case-sensitive like `ZoneId.of`, with the right spelling suggested on a case-only miss.
+Not a tzdb lookup: `scala-java-time` ships no tz data on JS/Native, so a lookup would make the
+platforms disagree. It was a SHAPE check until 2026-11-20, which let `"Mars/Olympus"` and
+`"America/Chicgo"` through (riddl-models). `IanaZoneIdsDriftTest` (JVM) fails when the JDK knows a
+zone the table lacks -- regenerate from `ZoneId.getAvailableZoneIds`, never by hand.
 
 **Calendar arithmetic** (`combineArithmetic`): `Date|DateTime|ZonedDateTime|TimeStamp ± period`
 and `period + date` keep the date's type; everything else is `value-arithmetic-operand-mismatch`.
