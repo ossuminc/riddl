@@ -514,6 +514,9 @@ enum RuleId(
   case AskNotAQuery extends RuleId("msg-ask-not-a-query")
   case AskTargetUnreachable extends RuleId("msg-ask-target-unreachable")
   case AskReplyUnreachable extends RuleId("msg-ask-reply-unreachable")
+  // synapify, 2026-11-21: a `send`/`tell` of a command that `yields` (or a query that `replies`)
+  // whose answer no route carries back to the sender (CM §20.4: the return is the wired path).
+  case AnswerUnreachable extends RuleId("msg-answer-unreachable")
   case AddressAmbiguous extends RuleId("msg-address-ambiguous")
   case TargetCrossesBoundary extends RuleId("msg-target-crosses-boundary")
   case CodeNotPortable extends RuleId("stmt-code-not-portable")
@@ -548,6 +551,9 @@ enum RuleId(
   // Reid, 2026-10-16 (riddl-generator's "incognito duplicate"): one clause puts the same value
   // onto the same outlet twice. Non-blocking: the generator delivers both, as the model says.
   case DuplicateSendSameOutlet extends RuleId("stmt-duplicate-send-same-outlet")
+  // riddl-models, 2026-11-21 (CM §20.4): a `yield`/`reply` already publishes on every own outlet
+  // admitting its type, so a `send` of the same value to one of those outlets beside it is redundant.
+  case SendDuplicatesYield extends RuleId("stmt-send-duplicates-yield")
   case SendAtNotInstant extends RuleId("stmt-send-at-not-instant")
   // Reid, 2026-11-19 (riddl-models' usage-metering): recurrence. A recurring `send` registers a
   // timer each time it runs, so it is legal only where it runs once per instance, in `on init`.

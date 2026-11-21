@@ -170,6 +170,7 @@ case class ValidationPass(
       checkTellReachability()
       checkDuplicateEmissions()
       checkAskReachability()
+      checkAnswerReachability()
       checkTellDeliverability()
       checkInletsAreReceived(root)
       val delivered = deliveries(root)
@@ -711,25 +712,7 @@ case class ValidationPass(
     // tells look ambiguous under the type-blind graph, reactive-bbq's included.
     val carriage = messageCarriage
     def reachesFrom(outlet: Outlet, target: Processor[?], told: Type): Boolean =
-      typeMembers(told).exists { x =>
-        val goal = ByIdentity[Processor[?]](target)
-        val passesOn = carriage.edges.getOrElse(ByIdentity(x), Map.empty)
-        val seen = mutable.Set.empty[ByIdentity[Processor[?]]]
-        val queue = mutable.Queue.empty[ByIdentity[Processor[?]]]
-        carriage.leadsTo.getOrElse(ByIdentity(outlet), Seq.empty).foreach { case (q, gate) =>
-          if gate(x) then queue.enqueue(ByIdentity[Processor[?]](q))
-        }
-        var found = false
-        while queue.nonEmpty && !found do
-          val cur = queue.dequeue()
-          if cur == goal then found = true
-          else if seen.add(cur) then
-            passesOn.getOrElse(cur, Seq.empty).foreach(e => queue.enqueue(ByIdentity[Processor[?]](e._1)))
-          end if
-        end while
-        found
-      }
-    end reachesFrom
+      carriesTo(outlet, target, told)
     val connectedOutlets: Seq[Outlet] = carriage.leadsTo.keys.toSeq.map(_.value)
 
     // `msg-tell-no-route-for-type` (Reid, 2026-10-21): connectors join the pair, so A6 is
@@ -846,8 +829,54 @@ case class ValidationPass(
           end match
         }
       }
+      checkSendDuplicatesResponse(stmts, parents, operandKey)
     }
   }
+
+  /** A `yield` (or `reply`) is PUBLISHED on every outlet of its processor whose type admits it (CM
+    * §20.4, riddl-models 2026-11-21) -- the `deliveries` walk has always counted it that way. So a
+    * `send` of the SAME value to one of those outlets in the same statement list puts a second copy
+    * on that outlet. Matched by operand TEXT, as [[checkDuplicateEmissions]] matches: a `send` of a
+    * different value of the same type is a second message, not a restatement, and is left alone.
+    */
+  private def checkSendDuplicatesResponse(
+    stmts: Seq[Statement],
+    parents: Parents,
+    operandKey: (MessageRef | Constructor | ValueRef) => String
+  ): Unit =
+    val responses = stmts.collect {
+      case y: YieldStatement => (y, "yield", y.msg)
+      case r: ReplyStatement => (r, "reply", r.msg)
+    }
+    if responses.nonEmpty then
+      val clause = parents.collectFirst { case c: OnClause => c }
+      val proc = parents.collectFirst { case p: Processor[?] => p }
+      for p <- proc; c <- clause do
+        def outletType(o: Outlet): Option[Type] =
+          resolution.refMap.definitionOf[Type](o.type_.pathId)
+        responses.foreach { case (resp, keyword, msg) =>
+          val t = clauseOperandType(msg, c)
+          val publishedOn = p.outlets.filter(o => outletType(o).forall(ot => mayCarry(t, ot)))
+          val key = operandKey(msg)
+          stmts.foreach {
+            case s: SendStatement if operandKey(s.msg) == key =>
+              emissionOutlets.get(ByIdentity[Statement](s)).foreach { o =>
+                if publishedOn.exists(_ eq o) then
+                  messages.addStyle(
+                    s.loc,
+                    s"this 'send' is redundant: the '$keyword' at ${resp.loc.format} already " +
+                      s"publishes the same value on ${o.identify}, because a '$keyword' is " +
+                      "published on every outlet of its processor that admits its type; the " +
+                      "receiver gets it twice",
+                    suggestion = s"Remove the 'send'. The '$keyword' alone delivers the message " +
+                      s"on ${o.identify} (CM §20.4).",
+                    ruleId = Some(RuleId.SendDuplicatesYield)
+                  )
+              }
+            case _ => ()
+          }
+        }
+  end checkSendDuplicatesResponse
 
   private def checkTellReachability(): Unit = {
     if collectedTells.isEmpty then return
@@ -976,6 +1005,134 @@ case class ValidationPass(
           end match
         end if
       }
+    }
+  }
+
+  /** Does a message of type `told`, placed on `outlet`, ARRIVE at `target`? Type-aware: it lands
+    * only on an inlet admitting it and continues only through a processor whose `on X` clause
+    * transmits X again ([[messageCarriage]]). Shared by the tell-route checks and
+    * [[checkAnswerReachability]].
+    */
+  private def carriesTo(outlet: Outlet, target: Processor[?], told: Type): Boolean =
+    val carriage = messageCarriage
+    typeMembers(told).exists { x =>
+      val goal = ByIdentity[Processor[?]](target)
+      val passesOn = carriage.edges.getOrElse(ByIdentity(x), Map.empty)
+      val seen = mutable.Set.empty[ByIdentity[Processor[?]]]
+      val queue = mutable.Queue.empty[ByIdentity[Processor[?]]]
+      carriage.leadsTo.getOrElse(ByIdentity(outlet), Seq.empty).foreach { case (q, gate) =>
+        if gate(x) then queue.enqueue(ByIdentity[Processor[?]](q))
+      }
+      var found = false
+      while queue.nonEmpty && !found do
+        val cur = queue.dequeue()
+        if cur == goal then found = true
+        else if seen.add(cur) then
+          passesOn.getOrElse(cur, Seq.empty).foreach(e => queue.enqueue(ByIdentity[Processor[?]](e._1)))
+        end if
+      end while
+      found
+    }
+  end carriesTo
+
+  /** A `send` or `tell` of a command that declares `yields E` -- or a query that declares
+    * `replies R` -- expects an answer, and that answer travels the model's connectors back to the
+    * sender: a `yield`/`reply` is PUBLISHED on its processor's outlets admitting its type, and there
+    * is no unwired return channel (CM §20.4, riddl-models and synapify 2026-11-21). So when no
+    * route CARRIES the answer from the receiver back to an inlet of the sender admitting it, the
+    * answer is lost: Completeness, since the model is generable and simply drops it.
+    *
+    * `msg-ask-reply-unreachable` asks the same question of an `ask`, type-blind and as an Error;
+    * an `ask` is excluded here. This one is TYPE-AWARE ([[carriesTo]]), because the case that
+    * prompted it -- reactive-bbq's `ReservationEventSplit` sending `CreateOrder` -- has inlets and
+    * connector paths, just none that can carry `OrderCreated`.
+    *
+    * The ANSWERER is the receiver or any processor nested in it with a clause handling the
+    * message: a context routes a command inward, and its entity yields. Abstains, as the other
+    * route rules do, on an opaque processor at either end, on a sender answering itself, on a
+    * receiver whose handling is unknown, and on answerers with no outlet at all (reported as
+    * incomplete by `checkProcessorPorts`).
+    */
+  private def checkAnswerReachability(): Unit = {
+    def outletType(o: Outlet): Option[Type] = resolution.refMap.definitionOf[Type](o.type_.pathId)
+    def answerOf(msg: Type): Option[Type] = msg.typEx match
+      case auc: AggregateUseCaseTypeExpression =>
+        auc.yields.flatMap(r => resolution.refMap.definitionOf[Type](r.pathId))
+      case _ => None
+    def handles(q: Processor[?], msg: Type): Boolean =
+      handlerClausesOf(q).exists {
+        case omc: OnMessageLikeClause if omc.msg.nonEmpty =>
+          resolution.refMap.definitionOf[Type](omc.msg.pathId).exists(h => typeAdmits(h, msg))
+        case _ => false
+      }
+    def answerers(receiver: Processor[?], msg: Type): Seq[Processor[?]] =
+      (receiver +: processors.toSeq.filter(q => symbols.parentsOf(q).exists(_ eq receiver)))
+        .filter(handles(_, msg))
+    def admits(p: Processor[?], answer: Type): Boolean =
+      p.inlets.exists(i =>
+        resolution.refMap.definitionOf[Type](i.type_.pathId).exists(t => typeAdmits(t, answer))
+      )
+
+    def check(st: Statement, sender: Processor[?], msg: Type, receivers: Seq[Processor[?]]): Unit =
+      answerOf(msg).foreach { answer =>
+        if !isOpaqueProcessor(sender) && sender.nonEmpty then
+          val lost = receivers.distinctBy(ByIdentity[Processor[?]](_)).filter { r =>
+            val as = answerers(r, msg)
+            val decidable = !isOpaqueProcessor(r) && r.nonEmpty && !(r eq sender) && as.nonEmpty &&
+              !as.exists(_ eq sender) && !as.forall(a => a.outlets.isEmpty)
+            decidable && !as.exists { a =>
+              a.outlets.exists(o =>
+                outletType(o).forall(ot => mayCarry(Some(answer), ot)) && carriesTo(o, sender, answer)
+              )
+            }
+          }
+          if lost.nonEmpty then
+            val names = lost.map(_.identify).mkString(", ")
+            val keyword = msg.typEx match
+              case auc: AggregateUseCaseTypeExpression if auc.usecase == AggregateUseCase.QueryCase =>
+                "reply"
+              case _ => "yield"
+            val why =
+              if !admits(sender, answer) then s"${sender.identify} declares no inlet admitting it"
+              else s"no connector route carries it from $names back to ${sender.identify}"
+            messages.addCompleteness(
+              st.loc,
+              s"${sender.identify} sends ${msg.identify}, which is answered with " +
+                s"${answer.identify}, but the answer cannot reach ${sender.identify}: $why, so it " +
+                "is lost",
+              suggestion = s"Give ${sender.identify} an inlet admitting ${answer.identify} and " +
+                s"connect it from an outlet of $names that carries it. A '$keyword' is " +
+                "published on its processor's outlets; there is no unwired return channel " +
+                "(CM §20.4).",
+              ruleId = Some(RuleId.AnswerUnreachable)
+            )
+          end if
+        end if
+      }
+    end check
+
+    processors.foreach { p =>
+      handlerClausesOf(p).foreach { clause =>
+        walkStatements(clause.contents) {
+          case s: SendStatement =>
+            for
+              msg <- clauseOperandType(s.msg, clause)
+              o <- resolution.refMap
+                .definitionOf[Portlet](s.portlet.pathId, clause)
+                .orElse(resolution.refMap.definitionOf[Portlet](s.portlet.pathId))
+                .collect { case o: Outlet => o }
+            do
+              val receivers = messageCarriage.leadsTo
+                .getOrElse(ByIdentity(o), Seq.empty)
+                .collect { case (q, gate) if typeMembers(msg).exists(gate) => q }
+              check(s, p, msg, receivers)
+          case _ => ()
+        }
+      }
+    }
+    collectedTells.foreach { case (ts, target, sender) =>
+      for snd <- sender; msg <- tellOperandTypes.get(ByIdentity[Statement](ts)) do
+        check(ts, snd, msg, Seq(target))
     }
   }
 

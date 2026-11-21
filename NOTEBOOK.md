@@ -76,6 +76,33 @@ Empty; the three riddl-models tasks of 2026-11-19 are in `task/done/` with Resul
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-21 (later) — a yield travels the wiring; prettify keeps a query's parentheses
+
+Three riddl-models/synapify tasks, one theme: CM §20.4 said only that `yield` delivers "to the
+envelope's sender", so two readers concluded it reaches the sender by some channel of its own.
+- **CM §20.4 and the A22 paragraph now say what riddlc already did** (`deliveries`): a `yield` is
+  folded by the yielder AND published on every outlet of it admitting the type, and reaches the
+  sender only along the connectors back. Same for `reply`. No unwired return channel.
+- **`stmt-send-duplicates-yield`** (Style): a `send` of the same value (same operand TEXT, as
+  `stmt-duplicate-send-same-outlet` matches) to an outlet the sibling `yield`/`reply` already
+  publishes on. Corpus: 134 in 9 models, 98 in reactive-bbq — exactly the textual pairs counted
+  by hand within three lines of a yield.
+- **`msg-answer-unreachable`** (Completeness): a `send`/`tell` of a command that `yields` (or a
+  query that `replies`) whose answer no route CARRIES back to an admitting inlet of the sender.
+  TYPE-AWARE via the lifted `carriesTo`, deliberately unlike the type-blind ask reply leg: the
+  reported `ReservationEventSplit` has inlets and paths, just none carrying `OrderCreated`. The
+  answerer may be nested in the receiver (a context routes the command in, its entity yields).
+  Corpus: 137 in 23 models, 54 in reactive-bbq; nearly all are routers, intakes and adaptors that
+  `send` a yields-command onward and have no inlet for the answer. Under the ruling those are
+  true positives; a pure pass-through wants `forward`, which hands the obligation on.
+- **prettify dropped parentheses a keyword-led operand needs.** `query`, `prompt`, `call`, `ask`,
+  `create` and a constructor are `value_operand`s, not ladder atoms, so as an operator's operand
+  they parse only inside `( … )`. `CollectionValues.alwaysParenthesized` now names them, and
+  `emitCollectionOperand` consults it — that copy had never matched `needsParens`, the AST-side
+  rule it claims to mirror. No canonical form moves: such an operand could not parse bare before.
+- Census method: validate each entry point's `.riddl` DIRECTLY (the `.conf`s hide style
+  warnings), and BSD `sed` has no `\s` — the first census found zero models for that reason.
+
 ## 2026-11-21 — 2.8.2 shipped
 
 - Tagged `2.8.2` on `685c9e980`. MiMa was clean on 6 modules; the full gate gave 19 suite

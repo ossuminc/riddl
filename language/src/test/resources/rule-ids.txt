@@ -463,3 +463,5 @@ value-schedule-time-out-of-range
 value-schedule-day-skips-months
 value-cron-malformed
 value-time-zone-malformed
+stmt-send-duplicates-yield
+msg-answer-unreachable
