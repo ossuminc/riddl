@@ -76,6 +76,15 @@ Empty; the three riddl-models tasks of 2026-11-19 are in `task/done/` with Resul
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-21 — 2.8.2 shipped
+
+- Tagged `2.8.2` on `685c9e980`. MiMa was clean on 6 modules; the full gate gave 19 suite
+  summaries with 0 failures, and everything was published. The MiMa baseline moved to 2.8.2.
+- Consumers: new task files in riddl-models (High: re-apply the 15 zero guards) and
+  synapify (Low). Addenda went to ossum.tech's pending 2.8.1 task and to the 2.6.0 tasks in
+  riddl-idea-plugin, riddl-vscode and ossum.ai. riddl-generator got a note on its
+  calendar-schedules task that zones are now guaranteed valid.
+
 ## 2026-11-20 (later still) — a schedule's zone must be a real zone
 
 - **riddl-models' task said the `in "<zone>"` was never checked; it was, by SHAPE.** So
