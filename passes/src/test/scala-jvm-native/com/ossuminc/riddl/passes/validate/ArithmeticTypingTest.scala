@@ -162,6 +162,27 @@ class ArithmeticTypingTest extends AbstractValidatingTest {
       of(diagnostics(model("when g.i > 3 then { do \"x\" } end"), td.name),
         RuleId.LiteralComparisonStyle).size mustBe 1
     }
+
+    // riddl-models, 2026-11-20 (Reid's ruling Z1): zero is not a magic number. `count > 0` is
+    // "there are some", and no named constant says it better. Exempt by VALUE, so a Decimal
+    // field compared with `0.0` is exempt too.
+    "NOT draw the literal style warning for zero" in { (td: TestData) =>
+      Seq(
+        "when g.i > 0 then { do \"x\" } end",
+        "when g.n == 0 then { do \"x\" } end",
+        "when g.dec > 0.0 then { do \"x\" } end",
+        "when 0 < g.w then { do \"x\" } end"
+      ).foreach { body =>
+        withClue(body) {
+          of(diagnostics(model(body), td.name), RuleId.LiteralComparisonStyle) mustBe empty
+        }
+      }
+    }
+
+    "still draw it for a non-zero literal beside a zero one" in { (td: TestData) =>
+      of(diagnostics(model("when g.i > 0 and g.n < 10 then { do \"x\" } end"), td.name),
+        RuleId.LiteralComparisonStyle).size mustBe 1
+    }
   }
 
   "constant value expressions" should {

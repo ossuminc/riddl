@@ -76,6 +76,20 @@ Empty; the three riddl-models tasks of 2026-11-19 are in `task/done/` with Resul
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-20 (late) — 2.8.1 shipped; zero is not a magic number
+
+- **2.8.1** shipped, with the two synapify fixes and the ossum.tech `find`/keyword fixes.
+  - MiMa was clean and the full gate was green (19 summaries).
+  - The MiMa baseline moved to 2.8.1.
+  - New task files went to synapify, ossum.tech and riddl-models, and addenda to the pending
+    2.6.0 tasks in riddl-idea-plugin, riddl-vscode and ossum.ai.
+  - riddl-generator was skipped, since nothing in 2.8.1 affects generation.
+- **`value-literal-comparison-style` exempts zero** (riddl-models, Reid's ruling Z1). The
+  exemption is by value, so `0.0` is exempt too. This is for 2.8.2.
+- **A census of a clean corpus cannot confirm a change that REMOVES findings.** riddl-models
+  had reverted the 15 guards to prose while waiting, so the census was identical, and correctly
+  so. The fix was confirmed instead by running the old and new binaries on a small model.
+
 ## 2026-11-20 (night, later) — two 2.8.0 gaps from synapify
 
 - **`entity-event-sourced-unread-history` had become unreachable.** Its `morphs == 0` condition

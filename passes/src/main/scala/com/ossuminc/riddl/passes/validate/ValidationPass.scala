@@ -12508,6 +12508,11 @@ case class ValidationPass(
                 "'requires' input; or declare and reference a 'constant'.",
             ruleId = Some(RuleId.ComparandUnresolved)
           )
+      // Zero is not a magic number (riddl-models, 2026-11-20, Reid's ruling Z1): `count > 0` is
+      // "there are some" and `n == 0` "there are none", and no named constant says either better.
+      // Exempt by VALUE, so `0.0` against a Decimal is exempt too. `BigDecimal` parses any digit
+      // run, so this cannot throw the way `asLong` would on a long literal.
+      case nl: NumericLiteral if nl.asBigDecimal.signum == 0 => ()
       case nl: NumericLiteral =>
         // A28's original rule made this unconstructible; Reid reversed that 2026-08-14 and the
         // intent survives as advice. The population starts at ZERO -- `count > 5` is a parse
