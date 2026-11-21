@@ -76,6 +76,20 @@ Empty; the three riddl-models tasks of 2026-11-19 are in `task/done/` with Resul
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-20 (night, later) — two 2.8.0 gaps from synapify
+
+- **`entity-event-sourced-unread-history` had become unreachable.** Its `morphs == 0` condition
+  counted the creation `morph`, and since 2.8.0 `on init` must contain one. So the rule could
+  fire only alongside a deprecation. Rules 1 and 1' now skip `morph`s in `on init`. When a
+  language change gives an old statement a new obligatory use, any rule that COUNTS that
+  statement has to be re-read.
+- **`on every <period>` was silent on `5` and on an unresolved name.** There were two holes:
+  - The `on every` period was never validated as a value, while `send … every`'s is.
+  - `checkRecurrencePeriod` typed the period with `valueTypeExpr`, which has no arm for a bare
+    number. It now uses `operandTypeExpr`, the documented remedy.
+
+Census: 191 models, identical counts in every model. Full suites: 19 summaries, all green.
+
 ## 2026-11-20 (night) — the 2.8.0 words reach `find` and the keyword table
 
 ossum.tech found two gaps while documenting 2.8.0.

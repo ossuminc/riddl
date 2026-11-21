@@ -111,6 +111,13 @@ class RecurrenceValidationTest extends AbstractValidatingTest {
         errorsOf(msgs, RuleId.SendEveryNotDuration).size mustBe 1
       }
     }
+    // synapify, 2026-11-20: `valueTypeExpr` has no arm for a bare number, so `every 5` typed as
+    // nothing and the period check said nothing.
+    "reject a bare number as the period" in { (td: TestData) =>
+      val errs = errorsOf(diagnostics(model(s"$send every 5"), "bare-number"), RuleId.SendEveryNotDuration)
+      errs.size mustBe 1
+      errs.head.message must include("not Duration")
+    }
     "reject a zero, negative or vague period" in { (td: TestData) =>
       errorsOf(diagnostics(model(s"$send every 0 days"), "zero"), RuleId.NonPositiveDuration).size mustBe 1
       errorsOf(diagnostics(model(s"$send every -1 days"), "negative"), RuleId.NonPositiveDuration)
@@ -136,6 +143,24 @@ class RecurrenceValidationTest extends AbstractValidatingTest {
     "reject a period that is not a Duration" in { (td: TestData) =>
       val msgs = diagnostics(model("", """          on every First is { do "x" }"""), "clause-not-duration")
       errorsOf(msgs, RuleId.EveryPeriodNotDuration).size mustBe 1
+    }
+    // synapify, 2026-11-20: both validated with no message at all.
+    "reject a bare number as the period" in { (td: TestData) =>
+      val msgs = diagnostics(model("", """          on every 5 is { do "x" }"""), "clause-bare-number")
+      errorsOf(msgs, RuleId.EveryPeriodNotDuration).size mustBe 1
+    }
+    "report a period naming nothing" in { (td: TestData) =>
+      val msgs = diagnostics(model("", """          on every fortnightly is { do "x" }"""), "clause-unresolved")
+      withClue(msgs.map(_.format).mkString("\n")) {
+        msgs.justErrors.exists(_.message.contains("fortnightly")) mustBe true
+      }
+    }
+    "accept a calendar or cron schedule" in { (td: TestData) =>
+      val clauses =
+        """          on every month on day 1 at 09:00 is { do "bill" }
+          |          on every weekday at 08:30 is { do "open" }
+          |          on every cron "0 9 1 * *" is { do "report" }""".stripMargin
+      clean(diagnostics(model("", clauses), "clause-schedules"))
     }
     "reject a zero period" in { (td: TestData) =>
       val msgs = diagnostics(model("", """          on every 0 minutes is { do "x" }"""), "clause-zero")

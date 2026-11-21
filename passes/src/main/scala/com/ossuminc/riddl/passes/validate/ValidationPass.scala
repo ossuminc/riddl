@@ -455,8 +455,12 @@ case class ValidationPass(
         var morphs = 0
         val yielded = mutable.ArrayBuffer.empty[Type]
         clauses.foreach { clause =>
+          // A `morph` in `on init` CHOOSES the first state (2.8.0: it is required there); it is not
+          // a transition between states, which is what Rules 1 and 1' count. Counting it made
+          // Rule 1 unreachable on any model free of `entity-init-no-morph` (synapify, 2026-11-20).
+          val creation = clause.isInstanceOf[OnInitializationClause]
           walkStatements(clause.contents) {
-            case _: MorphStatement => morphs += 1
+            case _: MorphStatement => if !creation then morphs += 1
             case y: YieldStatement =>
               deliverableTypes.get(y).orElse(operandType(y.msg)).foreach { t =>
                 if !yielded.exists(_ eq t) then yielded += t
@@ -1452,7 +1456,12 @@ case class ValidationPass(
         checkDefinition(parentsAsSeq, oec)
         validateOnClause(oec)
         // The period is a header value, recorded under the CLAUSE by ResolutionPass, so look it up
-        // there (`oec +: parents`), as the quiescence window is.
+        // there (`oec +: parents`), as the quiescence window is. It is validated as a value first,
+        // as `send … every`'s is, or a name resolving to nothing went unreported (synapify,
+        // 2026-11-20: `on every fortnightly` drew no message at all).
+        oec.period match
+          case _: CalendarPeriodLiteral => () // [1.32]: `checkRecurrencePeriod` reports it once
+          case p                        => validateValue(p, oec +: parentsAsSeq, Seq.empty, Map.empty)
         checkRecurrencePeriod(
           oec.period,
           s"The period of ${oec.identify}",
@@ -1621,7 +1630,9 @@ case class ValidationPass(
           ruleId = Some(rule)
         )
       case other =>
-        valueTypeExpr(other, parents, lets, elements).foreach { te =>
+        // `operandTypeExpr`, not `valueTypeExpr`: the latter has no arm for a bare number, so
+        // `every 5` typed as nothing and passed in silence (synapify, 2026-11-20).
+        operandTypeExpr(other, parents, lets, elements).foreach { te =>
           if !isDurationTypeExpr(te) then
             messages.addError(
               other.loc,

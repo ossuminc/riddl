@@ -83,6 +83,21 @@ class EventSourcingAdvisoriesTest extends AbstractValidatingTest {
         found.head.message must include("1 events") // the count it took, N = 1
     }
 
+    // synapify, 2026-11-20: since 2.8.0 `on init` must `morph` into the starting state, and that
+    // creation morph was counted as a transition -- so the rule could fire only on a model that
+    // also drew `entity-init-no-morph`. Choosing the first state is not a transition.
+    "fire with the 2.8.0 creation morph in `on init`" in { (td: TestData) =>
+      val src = single("event-sourced", snapshotFold).replace(
+        """on init is { yield event Opened(id = "x", balance = 0) }""",
+        """on init is { morph entity Acct to state Acct.Main with record Acct.Fields(id = "x", balance = 0) }"""
+      )
+      val msgs = diagnostics(src, td.name)
+      withClue(msgs.map(_.format).mkString("\n")) {
+        of(msgs, RuleId.InitNoMorph) mustBe empty
+        of(msgs, RuleId.EntityEventSourcedUnreadHistory).size mustBe 1
+      }
+    }
+
     "NOT fire when a projector handles its events (the task's own negative control)" in {
       (td: TestData) =>
         of(diagnostics(single("event-sourced", snapshotFold, projectorReader), td.name),
@@ -187,6 +202,24 @@ class EventSourcingAdvisoriesTest extends AbstractValidatingTest {
     "NOT fire on the event-sourced version of the same shape" in { (td: TestData) =>
       of(diagnostics(multi("event-sourced", projectorReader), td.name),
         RuleId.EntityCrudWithTransitionsConsumed) mustBe empty
+    }
+
+    "NOT fire when its only morph is the creation morph in `on init`" in { (td: TestData) =>
+      val src = multi("", projectorReader)
+        .replace(
+          """on init is { yield event Opened(id = "x") }""",
+          """on init is { morph entity C.Acct to state Acct.Fresh with record C.Acct.Fields(id = "x") }"""
+        )
+        .replace(
+          """          morph entity C.Acct to state Acct.Live with record C.Acct.Fields(id = o.id)
+""",
+          ""
+        )
+      val msgs = diagnostics(src, td.name)
+      withClue(msgs.map(_.format).mkString("\n")) {
+        of(msgs, RuleId.InitNoMorph) mustBe empty
+        of(msgs, RuleId.EntityCrudWithTransitionsConsumed) mustBe empty
+      }
     }
 
     "NOT fire when nothing else reads its events" in { (td: TestData) =>
