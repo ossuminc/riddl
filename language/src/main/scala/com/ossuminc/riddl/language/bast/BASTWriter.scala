@@ -1717,6 +1717,19 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writeValue(ov.collection)
         writeIdentifierInline(ov.element)
         writeValue(ov.predicate)
+      // 2026-11-21 (revision 38): the collection map -- value tag 30. A presence byte for the filter,
+      // as `SumValue` writes one for its projection.
+      case cm: CollectionMap =>
+        writer.writeU8(30)
+        writeLocation(cm.loc)
+        writeValue(cm.collection)
+        writeIdentifierInline(cm.element)
+        cm.filter match
+          case Some(f) =>
+            writer.writeU8(1)
+            writeValue(f)
+          case None => writer.writeU8(0)
+        writeValue(cm.projection)
       case ow: OtherwiseValue =>
         writer.writeU8(25)
         writeLocation(ow.loc)

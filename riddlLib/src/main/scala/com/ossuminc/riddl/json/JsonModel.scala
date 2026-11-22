@@ -1088,6 +1088,16 @@ object JsonModel:
   case class OneOfValueDto(collection: ValueDto, element: String, predicate: ValueDto)
       extends ValueDto
 
+  /** 2026-11-21: `{ "value": "map", "collection": <value>, "element": "e", "filter": <value>,
+    * "projection": <value> }` -- `filter` only when one is written.
+    */
+  case class CollectionMapDto(
+    collection: ValueDto,
+    element: String,
+    filter: Option[ValueDto],
+    projection: ValueDto
+  ) extends ValueDto
+
   /** BACKLOG [1.27]: `{ "value": "conditional", "condition": <value>, "then": <value>, "else":
     * <value> }`
     */
@@ -2040,6 +2050,13 @@ object JsonModel:
         ConditionalValueDto(readValue(m("condition")), readValue(m("then")), readValue(m("else")))
       case "oneOf" =>
         OneOfValueDto(readValue(m("collection")), m("element").str, readValue(m("predicate")))
+      case "map" =>
+        CollectionMapDto(
+          readValue(m("collection")),
+          m("element").str,
+          m.get("filter").map(readValue),
+          readValue(m("projection"))
+        )
       case "sum" =>
         SumValueDto(readValue(m("collection")), m.get("element").map(_.str), m.get("by").map(readValue))
       case "query" => // B2
@@ -2217,6 +2234,15 @@ object JsonModel:
           "collection" -> writeValue(collection),
           "element" -> ujson.Str(element),
           "predicate" -> writeValue(predicate)
+        )
+      case CollectionMapDto(collection, element, filter, projection) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)](
+            "value" -> ujson.Str("map"),
+            "collection" -> writeValue(collection),
+            "element" -> ujson.Str(element)
+          ) ++ filter.map(f => "filter" -> writeValue(f)).toSeq ++
+            Seq("projection" -> writeValue(projection))
         )
       case SumValueDto(collection, element, by) =>
         ujson.Obj.from(
@@ -3296,6 +3322,8 @@ object JsonModel:
     "quantifier", // B5: the collection kinds
     "duration", // BACKLOG [1.27]: `<unit> of <duration>`
     "by", // BACKLOG [1.27]: `sum of xs as e by <expr>`
+    "filter", // 2026-11-21: the collection map's optional `where`
+    "projection", // 2026-11-21: the collection map's `yielding` value
     "collection",
     "predicate",
     "assignments",

@@ -435,17 +435,29 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         ov.predicate match
           case _: OtherwiseValue => add("(").emitValue(ov.predicate).add(")")
           case _                 => emitValue(ov.predicate)
+      case cm: CollectionMap => // 2026-11-21: `AST.CollectionMap.format`, written by hand
+        add("each of ")
+        emitCollectionOperand(cm.collection)
+        add(s" as ${cm.element.format}")
+        cm.filter.foreach { f =>
+          add(" where ")
+          if CollectionMap.filterNeedsParens(f) then add("(").emitValue(f).add(")") else emitValue(f)
+        }
+        add(" yielding ").emitValue(cm.projection)
       case cv: ConditionalValue => // BACKLOG [1.27]: closed by `when`/`end`, never parenthesized
         add("when ").emitValue(cv.condition)
         add(" then ").emitValue(cv.thenValue)
         add(" else ").emitValue(cv.elseValue)
         add(" end")
       case ow: OtherwiseValue => // BACKLOG [1.27]: left-associative, the loosest level
-        emitValue(ow.value)
+        // A map's projection would absorb the `otherwise` -- `OtherwiseValue.format`'s rule.
+        ow.value match
+          case _: CollectionMap => add("(").emitValue(ow.value).add(")")
+          case _                => emitValue(ow.value)
         add(" otherwise ")
         ow.fallback match
-          case _: OtherwiseValue => add("(").emitValue(ow.fallback).add(")")
-          case _                 => emitValue(ow.fallback)
+          case _: OtherwiseValue | _: CollectionMap => add("(").emitValue(ow.fallback).add(")")
+          case _                                    => emitValue(ow.fallback)
       case mv: MembershipValue =>
         emitCollectionOperand(mv.collection)
         add(" contains ")

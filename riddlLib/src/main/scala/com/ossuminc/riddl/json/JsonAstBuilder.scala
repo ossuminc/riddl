@@ -1695,6 +1695,14 @@ object JsonAstBuilder:
         OtherwiseValue(curAt, buildValue(left), buildValue(right))
       case OneOfValueDto(collection, element, predicate) =>
         OneOfValue(curAt, buildValue(collection), Identifier(curAt, element), buildValue(predicate))
+      case CollectionMapDto(collection, element, filter, projection) =>
+        CollectionMap(
+          curAt,
+          buildValue(collection),
+          Identifier(curAt, element),
+          filter.map(buildValue),
+          buildValue(projection)
+        )
       case SumValueDto(collection, element, by) =>
         SumValue(curAt, buildValue(collection), element.map(Identifier(curAt, _)), by.map(buildValue))
       case MembershipValueDto(collection, element) =>

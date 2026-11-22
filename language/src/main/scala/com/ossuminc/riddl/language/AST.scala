@@ -871,7 +871,7 @@ object AST:
     GetValue | PromptValue | BooleanExpression | Call | Ask | SelfValue | SystemValue | Create |
     NumericLiteral | LookupValue | EmptyValue | ArithmeticExpression | DurationLiteral |
     QueryValue | TableRef | CollectionPredicate | CollectionFilter | CountValue |
-    MembershipValue | DurationUnitsValue | SumValue | OneOfValue | OtherwiseValue | ConditionalValue | Requires | Returns | InvariantBlock | Recurrence |
+    MembershipValue | DurationUnitsValue | SumValue | OneOfValue | CollectionMap | OtherwiseValue | ConditionalValue | Requires | Returns | InvariantBlock | Recurrence |
     CalendarSchedule | CronSchedule | CalendarPeriodLiteral
 
   /** Type of definitions that occur in a [[Root]] without [[Include]]. [[Root]] deliberately stays
@@ -3293,13 +3293,15 @@ object AST:
     * BACKLOG [1.32] (2026-11-20) adds [[CalendarSchedule]] and [[CronSchedule]], making
     * twenty-nine -- values only so they can stand in a recurrence's `period` -- and
     * [[CalendarPeriodLiteral]], the thirtieth, a value only so it can be an arithmetic operand.
+    * The collection map, [[CollectionMap]] (2026-11-21), is the thirty-first.
     */
   type Value =
     LiteralString | PromptValue | Constructor | ValueRef | GetValue | BooleanExpression | Call |
       Ask | SelfValue | SystemValue | Create | NumericLiteral | LookupValue | EmptyValue |
       ArithmeticExpression | DurationLiteral | ConstantRef | QueryValue | CollectionPredicate |
       CollectionFilter | CountValue | MembershipValue | DurationUnitsValue | SumValue | OneOfValue |
-      OtherwiseValue | ConditionalValue | CalendarSchedule | CronSchedule | CalendarPeriodLiteral
+      OtherwiseValue | ConditionalValue | CalendarSchedule | CronSchedule | CalendarPeriodLiteral |
+      CollectionMap
 
   /** A54: a single argument supplied to a [[Constructor]]. Positional when `name` is `None`; named
     * (`id = value`) when `name` is `Some`. Validation requires positional arguments to precede
@@ -4503,6 +4505,44 @@ object AST:
           case _                 => predicate.format)
   end OneOfValue
 
+  /** The collection map (Reid, 2026-11-21): `each of <coll> as <e> [where <pred>] yielding <v>`
+    * -- the collection of `v` evaluated per element, in the source's order, for the elements that
+    * satisfy the predicate. It REVERSES B5's 2026-09-22 ruling that RIDDL asks questions about a
+    * collection but never builds one: Reid chose the GENERAL map, so `v` is any value expression,
+    * a record constructor included. The old ruling is kept as history in the CM (§40).
+    *
+    * Unfiltered, the result keeps the source's cardinality (`T+` gives `U+`, `T{n,m}` gives
+    * `U{n,m}`, anything else `U*`); filtered, its minimum is zero. The element is bound in the
+    * predicate and the projection, and nowhere else.
+    *
+    * `each` and `yielding` are NOT reserved: `each` is recognised only before `of`, and
+    * `yielding` stops `empty`'s optional ascription. The projection is a full value, so the form
+    * is open on its right: as the operand of any operator it is parenthesized
+    * ([[CollectionValues.alwaysParenthesized]]), and so on either side of an `otherwise`.
+    */
+  @JSExportTopLevel("CollectionMap")
+  case class CollectionMap(
+    loc: At,
+    collection: Value,
+    element: Identifier,
+    filter: Option[Value],
+    projection: Value
+  ) extends RiddlValue:
+    override def kind: String = "Collection Map"
+    def format: String =
+      s"each of ${CollectionValues.parenthesized(collection)} as ${element.format}" +
+        filter.map(f => s" where ${CollectionMap.filterFormat(f)}").getOrElse("") +
+        s" yielding ${projection.format}"
+  end CollectionMap
+
+  object CollectionMap:
+    /** The predicate parses as a boolean expression, which stops before `otherwise`, so an
+      * `otherwise` predicate is written in parentheses -- the same rule `one of` follows.
+      */
+    def filterNeedsParens(v: Value): Boolean = v.isInstanceOf[OtherwiseValue]
+    def filterFormat(v: Value): String = if filterNeedsParens(v) then s"(${v.format})" else v.format
+  end CollectionMap
+
   /** BACKLOG [1.27] (Reid, 2026-11-19): `<value> otherwise <fallback>` -- `value` when it is not
     * empty, else `fallback`, which is evaluated only when needed. `value` must admit empty (`T?`,
     * `T*`, `T{0,n}`); of an optional the result is the type inside it, so `line.qty otherwise 0`
@@ -4518,9 +4558,13 @@ object AST:
     override def kind: String = "Otherwise Value"
     def format: String =
       val right = fallback match
-        case _: OtherwiseValue => s"(${fallback.format})"
-        case _                 => fallback.format
-      s"${value.format} otherwise $right"
+        case _: OtherwiseValue | _: CollectionMap => s"(${fallback.format})"
+        case _                                    => fallback.format
+      // A map's projection is a full value and would absorb this `otherwise`.
+      val left = value match
+        case _: CollectionMap => s"(${value.format})"
+        case _                => value.format
+      s"$left otherwise $right"
   end OtherwiseValue
 
   /** BACKLOG [1.27] (Reid, 2026-11-19): `when <cond> then <a> else <b> end` -- a VALUE: `a` when
@@ -4566,6 +4610,8 @@ object AST:
       // [1.31]: B5's quantifiers and filter end in the same open `where <pred>` as `one of`, so a
       // following `and q` would join the predicate -- same text, a different program.
       case _: CollectionPredicate | _: CollectionFilter => true
+      // 2026-11-21: a map ends in its projection, a full value.
+      case _: CollectionMap => true
       // riddl-models, 2026-11-21: the keyword-led VALUE OPERANDS are not atoms of the expression
       // ladder (`value_operand`, not `arithmetic_atom`), so as the operand of any operator they
       // reach it only through `"(" value ")"`. Dropping the parentheses made

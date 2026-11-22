@@ -234,6 +234,9 @@ case class UseCaseWitnessPass(
       case du: DurationUnitsValue => getInputRefsIn(du.duration)
       case sv: SumValue => getInputRefsIn(sv.collection) ++ sv.by.toSeq.flatMap(getInputRefsIn)
       case ov: OneOfValue => getInputRefsIn(ov.collection) ++ getInputRefsIn(ov.predicate)
+      case cm: CollectionMap =>
+        getInputRefsIn(cm.collection) ++ cm.filter.toSeq.flatMap(getInputRefsIn) ++
+          getInputRefsIn(cm.projection)
       case ow: OtherwiseValue => getInputRefsIn(ow.value) ++ getInputRefsIn(ow.fallback)
       case cv: ConditionalValue =>
         getInputRefsIn(cv.condition) ++ getInputRefsIn(cv.thenValue) ++ getInputRefsIn(cv.elseValue)

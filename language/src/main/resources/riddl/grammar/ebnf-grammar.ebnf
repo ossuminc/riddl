@@ -440,7 +440,8 @@ empty_value = ( "empty" | "none" ) [ !ascription_stop type_expression ] ;
    expression, which keeps the retired expression ascriptions parsing so validation can name the
    fix. Kept in step with `ascriptionStop` in StatementParser.scala; `reserved_word` with
    `Keyword.allKeywords` (checked by EbnfReservedWordsTest). *)
-ascription_stop = statement_start | readability_word | ( !type_expression_start reserved_word ) ;
+ascription_stop = statement_start | readability_word | ( !type_expression_start reserved_word )
+                | "yielding" ;
 type_expression_start = "type" | "command" | "query" | "event" | "result" | "record" | "graph"
                       | "table" | "many" | "optional" | "any" | "one" | "sequence" | "mapping"
                       | "replica" | "range" | "reference" ;
@@ -551,7 +552,8 @@ multiplicative_expression = arithmetic_atom { ("*" | "/") arithmetic_atom } ;
 (* BACKLOG [1.26]: `empty_value` is an atom so `x == empty` compares -- the opposite operand
    supplies its type. Before boolean_atom, whose bare path would read `empty` as a reference. *)
 arithmetic_atom = collection_predicate | count_value | duration_units_value | sum_value
-                | one_of_value | conditional_value | duration_literal | calendar_period_literal
+                | one_of_value | collection_map | conditional_value | duration_literal
+                | calendar_period_literal
                 | literal_string | constant_ref | numeric_literal | empty_value | boolean_atom ;
 (* B5: `all of xs as e where p` and its `any`/`none` siblings -- a boolean; the element binding
    is explicit and scoped to the predicate. `count of xs` is a Whole. *)
@@ -570,6 +572,14 @@ sum_value = "sum" "of" arithmetic_atom [ "as" identifier "by" multiplicative_exp
 (* BACKLOG [1.27]: `one of xs as e where p` -- the element satisfying p, or empty when none does.
    The predicate is a full value, so as an operand of any operator the form is parenthesized. *)
 one_of_value = "one" "of" arithmetic_atom "as" identifier "where" value ;
+(* The collection map (Reid, 2026-11-21, reversing B5's "no map"): the projection evaluated per
+   element, for the elements the optional filter admits. `each` and `yielding` are not reserved;
+   `yielding` is in ascription_stop so `where x == empty yielding ...` keeps its `yielding`. The
+   filter is a boolean expression (an `otherwise` there is parenthesized); the projection is a
+   full value, so as an operand of any operator, or beside an `otherwise`, the form is
+   parenthesized. *)
+collection_map = "each" "of" arithmetic_atom "as" identifier [ "where" boolean_expression ]
+                 "yielding" value ;
 (* BACKLOG [1.27]: a conditional VALUE -- only the chosen branch is evaluated; `else` is mandatory
    and a multi-way choice nests in it. The condition is the `when` statement's, without the
    deprecated bare string. *)

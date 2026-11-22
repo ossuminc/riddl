@@ -429,6 +429,34 @@ task files, so they were NOT physically reshuffled; this index carries the order
   remaining site. It was not in riddl-models' task list. Wanted for the same reason as the
   rest of the narrowing: the advisory's own suggested guard should silence it.
 
+- **[1.35]** **NEEDS A RULING — a state collection has no element update.** From
+  riddl-models' collection-map task (2026-11-21, "related"). `KitchenTicket`'s fold wanted
+  `ticketItems[id].ticketItemReady = true`. `set` replaces a whole field,
+  `append`/`remove` add or drop whole elements, and `update … set … where` exists only for
+  a repository TABLE (B2). riddl-models works around it with a parallel
+  `readyMenuItemIds: String(1,50)*` that it appends to, which leaves
+  `TicketItem.ticketItemReady` a flag nothing can set. The collection map does NOT cover
+  this: `set field F to each of F as t yielding <t with one field changed>` would need a
+  record-copy-with-change value, which RIDDL lacks. Options for Reid: a state-collection
+  `update`, a copy-with value, or "model it as a repository".
+
+- **[1.36]** **NEEDS A RULING — a `String` fills an `Id(T)` field with no finding.** From the
+  same task. `tableOrderId = preparationStarted.sourceOrderId` assigns a `String(1,50)` to
+  an `Id(TableOrder)` field at every level, silently. The CONVERSE (`Id(E)` into a
+  `String`/`Pattern`) is a deliberate allowance (2026-08-15, see `checkAssignable`'s
+  doc). Whether this direction is intended was never ruled. Not verified yet: whether
+  `isAssignmentCompatible` admits it deliberately or by accident.
+
+- **[1.37]** **NEEDS A RULING — `query one` has no usable "not found" test.** From the same
+  task. CM line ~1278 gives `let r: record R = query one T where k == v`, with `query one`
+  "the first match or empty". But a `let` annotation cannot be optional (`record R?` is a
+  parse error), and then `r == empty` is `value-empty-not-allowed` because `R` is required.
+  reactive-bbq's `MenuRepository.FindMenuListing` (`MenuContext.riddl:821`) reads the table
+  twice to work around it (`when any of (query …) as s where … then <query one> else …`).
+  An UNANNOTATED `let r = query one T where …` types as `R?` (valueTypeExpr's
+  `QueryValue` arm), so `r == empty` may already work there. Check that first; the fix may
+  be documentation and the optional `let` annotation alone.
+
 - **[1.23]** **`ask` is checked for a PATH but never for a TYPE, and riddl-models asked for
   the type check.** Their 2026-09-09 task asked for two things; only one landed on
   2026-09-10. `msg-ask-target-unreachable` / `msg-ask-reply-unreachable` ask whether a

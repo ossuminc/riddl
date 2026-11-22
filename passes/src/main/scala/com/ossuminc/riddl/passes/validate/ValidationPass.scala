@@ -7488,6 +7488,8 @@ case class ValidationPass(
     case du: DurationUnitsValue => valueReferencedDefs(du.duration)
     case sv: SumValue => valueReferencedDefs(sv.collection) ++ sv.by.toSeq.flatMap(valueReferencedDefs)
     case ov: OneOfValue => valueReferencedDefs(ov.collection) ++ valueReferencedDefs(ov.predicate)
+    case cm: CollectionMap =>
+      valueReferencedDefs(cm.collection) ++ cm.filter.toSeq.flatMap(valueReferencedDefs) ++ valueReferencedDefs(cm.projection)
     case ow: OtherwiseValue => valueReferencedDefs(ow.value) ++ valueReferencedDefs(ow.fallback)
     case cv: ConditionalValue => valueReferencedDefs(cv.condition) ++ valueReferencedDefs(cv.thenValue) ++ valueReferencedDefs(cv.elseValue)
     case mv: MembershipValue => valueReferencedDefs(mv.collection) ++ valueReferencedDefs(mv.element)
@@ -8658,6 +8660,9 @@ case class ValidationPass(
     case du: DurationUnitsValue => countValueFailPoints(du.duration)
     case sv: SumValue => countValueFailPoints(sv.collection) + sv.by.map(countValueFailPoints).getOrElse(0)
     case ov: OneOfValue => countValueFailPoints(ov.collection) + countValueFailPoints(ov.predicate)
+    case cm: CollectionMap =>
+      countValueFailPoints(cm.collection) + cm.filter.map(countValueFailPoints).getOrElse(0) +
+        countValueFailPoints(cm.projection)
     case ow: OtherwiseValue => countValueFailPoints(ow.value) + countValueFailPoints(ow.fallback)
     // [1.27]: only ONE branch runs, so a conditional counts the MAX of its branches.
     case cv: ConditionalValue =>
@@ -8789,6 +8794,8 @@ case class ValidationPass(
     case du: DurationUnitsValue => stateReadsIn(du.duration)
     case sv: SumValue => stateReadsIn(sv.collection) ++ sv.by.toSeq.flatMap(stateReadsIn)
     case ov: OneOfValue => stateReadsIn(ov.collection) ++ stateReadsIn(ov.predicate)
+    case cm: CollectionMap =>
+      stateReadsIn(cm.collection) ++ cm.filter.toSeq.flatMap(stateReadsIn) ++ stateReadsIn(cm.projection)
     case ow: OtherwiseValue => stateReadsIn(ow.value) ++ stateReadsIn(ow.fallback)
     case cv: ConditionalValue => stateReadsIn(cv.condition) ++ stateReadsIn(cv.thenValue) ++ stateReadsIn(cv.elseValue)
     case mv: MembershipValue      => stateReadsIn(mv.collection) ++ stateReadsIn(mv.element)
@@ -8858,6 +8865,8 @@ case class ValidationPass(
     case du: DurationUnitsValue => initiatesIn(du.duration)
     case sv: SumValue => initiatesIn(sv.collection) ++ sv.by.toSeq.flatMap(initiatesIn)
     case ov: OneOfValue => initiatesIn(ov.collection) ++ initiatesIn(ov.predicate)
+    case cm: CollectionMap =>
+      initiatesIn(cm.collection) ++ cm.filter.toSeq.flatMap(initiatesIn) ++ initiatesIn(cm.projection)
     case ow: OtherwiseValue => initiatesIn(ow.value) ++ initiatesIn(ow.fallback)
     case cv: ConditionalValue => initiatesIn(cv.condition) ++ initiatesIn(cv.thenValue) ++ initiatesIn(cv.elseValue)
     case mv: MembershipValue      => initiatesIn(mv.collection) ++ initiatesIn(mv.element)
@@ -8933,6 +8942,8 @@ case class ValidationPass(
     case du: DurationUnitsValue => systemValuesIn(du.duration)
     case sv: SumValue => systemValuesIn(sv.collection) ++ sv.by.toSeq.flatMap(systemValuesIn)
     case ov: OneOfValue => systemValuesIn(ov.collection) ++ systemValuesIn(ov.predicate)
+    case cm: CollectionMap =>
+      systemValuesIn(cm.collection) ++ cm.filter.toSeq.flatMap(systemValuesIn) ++ systemValuesIn(cm.projection)
     case ow: OtherwiseValue => systemValuesIn(ow.value) ++ systemValuesIn(ow.fallback)
     case cv: ConditionalValue => systemValuesIn(cv.condition) ++ systemValuesIn(cv.thenValue) ++ systemValuesIn(cv.elseValue)
     case mv: MembershipValue      => systemValuesIn(mv.collection) ++ systemValuesIn(mv.element)
@@ -8969,6 +8980,8 @@ case class ValidationPass(
     case du: DurationUnitsValue => asksIn(du.duration)
     case sv: SumValue => asksIn(sv.collection) ++ sv.by.toSeq.flatMap(asksIn)
     case ov: OneOfValue => asksIn(ov.collection) ++ asksIn(ov.predicate)
+    case cm: CollectionMap =>
+      asksIn(cm.collection) ++ cm.filter.toSeq.flatMap(asksIn) ++ asksIn(cm.projection)
     case ow: OtherwiseValue => asksIn(ow.value) ++ asksIn(ow.fallback)
     case cv: ConditionalValue => asksIn(cv.condition) ++ asksIn(cv.thenValue) ++ asksIn(cv.elseValue)
     case mv: MembershipValue      => asksIn(mv.collection) ++ asksIn(mv.element)
@@ -11288,6 +11301,7 @@ case class ValidationPass(
       // own TypeExpression -- none of them a NAMED Type. See `valueTypeExpr`.
       case _: CollectionPredicate | _: CountValue | _: MembershipValue => None
       case _: DurationUnitsValue | _: OneOfValue                       => None
+      case _: CollectionMap => None // a collection of the projection's type, never a NAMED Type
       case cv: ConditionalValue =>
         conditionalResultType(cv, parents, lets, elements).flatMap {
           case ate: AliasedTypeExpression => resolveTypeAlias(ate)
@@ -11819,6 +11833,42 @@ case class ValidationPass(
   /** A55: the [[TypeExpression]] any [[Value]] denotes, for the cases where a named [[Type]] is too
     * narrow (a directly-typed `flag: Boolean` field has no named Type).
     */
+  /** 2026-11-21: the element scope a collection map's filter and projection see -- the same
+    * `elements` map a `foreach` element uses. An element of an untypable collection is bound to
+    * `Anything`, so the projection is not blamed for the collection's own unresolved reference.
+    */
+  private def mapScope(
+    cm: CollectionMap,
+    elemType: Option[TypeExpression],
+    elements: Map[String, TypeExpression]
+  ): Map[String, TypeExpression] =
+    elements + (cm.element.value -> elemType.getOrElse(Anything(cm.element.loc)))
+
+  /** 2026-11-21: the type of `each of xs as e [where p] yielding v` -- a collection of `v`'s type
+    * `U`. Unfiltered it keeps the source's cardinality: `T+` gives `U+`, `T{n,m}` gives `U{n,m}`,
+    * and every other collection (`T*`, a sequence, a set, a table, ...) gives `U*`. A filter may
+    * admit nothing, so it drops the minimum to zero: `U*`, or `U{0,m}` of a range. Filling a `T+`
+    * with a filtered map is therefore the existing optional-for-required Advisory, as filling it
+    * with any `T*` is. Untyped (silent) when either the source or the projection is.
+    */
+  private def collectionMapResultType(
+    cm: CollectionMap,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Option[TypeExpression] =
+    val source = valueTypeExpr(cm.collection, parents, lets, elements)
+    val scope = mapScope(cm, source.flatMap(collectionElementType), elements)
+    for
+      src <- source
+      u <- operandTypeExpr(cm.projection, parents, lets, scope)
+    yield aliasFreeTypeExpr(src) match
+      case _: OneOrMore if cm.filter.isEmpty => OneOrMore(cm.loc, u)
+      case sr: SpecificRange =>
+        SpecificRange(cm.loc, u, if cm.filter.isEmpty then sr.min else 0L, sr.max)
+      case _ => ZeroOrMore(cm.loc, u)
+  end collectionMapResultType
+
   /** BACKLOG [1.27]: the element scope a `sum … as e by <expr>` projection sees -- the same
     * `elements` map a `foreach` element uses. An element of an untypable collection is bound to
     * `Anything`, so the projection is not blamed for the collection's own unresolved reference.
@@ -12125,6 +12175,7 @@ case class ValidationPass(
           .flatMap(collectionElementType)
           .map(optionalIfChained(_, chained = true))
       case cf: CollectionFilter => valueTypeExpr(cf.collection, parents, lets, elements)
+      case cm: CollectionMap    => collectionMapResultType(cm, parents, lets, elements)
       case qv: QueryValue =>
         queryRecordType(qv, parents).map { t =>
           // The record's own TypeExpression, wrapped in the cardinality the form implies. Using
@@ -12472,6 +12523,14 @@ case class ValidationPass(
         validateOverCollection(
           ov.collection, Some(ov.element), Some(ov.predicate), "'one of'", parents, lets, elements
         )
+      case cm: CollectionMap => // 2026-11-21
+        // The collection and the filter as for a filter; then the projection under the same
+        // element scope. The map adds no rule of its own: effects in the projection are judged by
+        // the walks, and its type by whatever position it fills.
+        val elemType = validateOverCollection(
+          cm.collection, Some(cm.element), cm.filter, "'each of'", parents, lets, elements
+        )
+        validateValue(cm.projection, parents, lets, mapScope(cm, elemType, elements))
       case du: DurationUnitsValue =>
         validateValue(du.duration, parents, lets, elements)
         // Silent when the operand's type cannot be determined -- reasoning from absence is the

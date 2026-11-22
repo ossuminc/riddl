@@ -1,0 +1,42 @@
+// Exercises the collection map (Reid, 2026-11-21, reversing B5's "no map" ruling):
+//   each of <collection> as <element> [where <predicate>] yielding <value>
+// A collection of the projection's type. Unfiltered it keeps the source's cardinality; filtered
+// its minimum is zero. The element is bound in the filter and the projection only. `each` and
+// `yielding` are NOT reserved -- `each` is recognised only before `of`. Exercised by fastparse
+// (CollectionMapRoundTripTest) and by the EBNF/TatSu grammar (ebnf_tatsu_validator.py).
+domain Kitchen is {
+  context Orders is {
+    record Line is { sku: String, qty: Integer, drink: Boolean, note: String? }
+      with { briefly "an order line" }
+    record Ticket is { code: String, n: Integer, ready: Boolean } with { briefly "a ticket item" }
+    record Board is { lines: Orders.Line*, each: Integer } with { briefly "the board" }
+    command Submit is { lines: Orders.Line* } with { briefly "submit an order" }
+    entity Ticketing is {
+      record TF is { items: Orders.Ticket* } with { briefly "ticket fields" }
+      state TS of record Ticketing.TF
+      handler TH is {
+        on init(items: Orders.Ticket*) is {
+          morph entity Orders.Ticketing to state Orders.Ticketing.TS
+            with record Ticketing.TF(items = items)
+        }
+      } with { briefly "th" }
+    } with { briefly "tickets" }
+    entity Front is {
+      state FS of record Orders.Board
+      inlet I is command Submit
+      handler FH is {
+        on s: command Submit is {
+          let food = each of s.lines as line where not line.drink
+            yielding record Orders.Ticket(code = line.sku, n = line.qty, ready = false)
+          let skus = each of s.lines as line yielding line.sku
+          let noted = each of s.lines as line where line.note != empty yielding line.sku
+          let drinks = count of (each of s.lines as line where line.drink yielding line.qty)
+          let doubled = each of (each of s.lines as line yielding line.qty) as q yielding q * 2
+          let t = create entity Orders.Ticketing(food)
+          log t
+        }
+        on other is { error "unexpected" }
+      } with { briefly "fh" }
+    } with { briefly "front" }
+  } with { briefly "orders" }
+} with { briefly "kitchen" }

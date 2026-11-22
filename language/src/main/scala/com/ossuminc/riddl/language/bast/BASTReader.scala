@@ -2805,6 +2805,12 @@ class BASTReader(
         val coll = readValue()
         val element = readIdentifierInline()
         OneOfValue(loc, coll, element, readValue())
+      case 30 => // 2026-11-21: CollectionMap (revision 38)
+        val loc = readLocation()
+        val coll = readValue()
+        val element = readIdentifierInline()
+        val filter = if reader.readU8() != 0 then Some(readValue()) else None
+        CollectionMap(loc, coll, element, filter, readValue())
       case 25 => // BACKLOG [1.27]: OtherwiseValue (revision 34)
         val loc = readLocation()
         val v = readValue()

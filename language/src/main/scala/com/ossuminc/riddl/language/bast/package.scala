@@ -192,7 +192,11 @@ package object bast {
     // revision-35 reader throws on them.
     // 37 (2026-11-20) adds value tag 29, a calendar period (`1 month`: amount text and unit word,
     // shaped like tag 15's duration literal); a revision-36 reader throws on it.
-    37 // calendar periods
+    // 38 (2026-11-21) adds value tag 30, the collection map (`each of xs as e [where p] yielding
+    // v`: collection, element, a filter-presence byte and filter, projection); a revision-37
+    // reader throws on it.
+    38 // collection map
+    // 37 was calendar periods
     // 36 was calendar and cron schedules
     // 35 was recurrence: `on every`, `send ... every`
     // 34 was [1.27] value forms

@@ -1636,6 +1636,13 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case ow: OtherwiseValue => OtherwiseValueDto(serializeValue(ow.value), serializeValue(ow.fallback))
     case ov: OneOfValue =>
       OneOfValueDto(serializeValue(ov.collection), ov.element.value, serializeValue(ov.predicate))
+    case cm: CollectionMap =>
+      CollectionMapDto(
+        serializeValue(cm.collection),
+        cm.element.value,
+        cm.filter.map(serializeValue),
+        serializeValue(cm.projection)
+      )
     case sv: SumValue =>
       SumValueDto(serializeValue(sv.collection), sv.element.map(_.value), sv.by.map(serializeValue))
     case mv: MembershipValue => MembershipValueDto(serializeValue(mv.collection), serializeValue(mv.element))

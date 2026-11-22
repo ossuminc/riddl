@@ -927,6 +927,41 @@ Constants were not widened. Tests: `CalendarScheduleRoundTripTest`,
 `CalendarScheduleJsonRoundTripTest`, `CalendarScheduleValidationTest`,
 `CalendarPeriodArithmeticTest`; fixture `language/input/calendar-schedules.riddl`.
 
+## The collection map — `each of … yielding` (2026-11-21)
+
+`each of <coll> as <e> [where <pred>] yielding <value>`: the collection of `<value>` per
+element, for the elements the filter admits. Reid REVERSED B5's 2026-09-22 "no `map`" ruling
+and chose the GENERAL form, so the projection is any value (a record constructor is the
+motivating case: reactive-bbq builds kitchen tickets from an order's food lines). The CM (§40,
+B5 section) carries the lowering and the old ruling as history.
+
+- **AST** `CollectionMap(loc, collection, element, filter: Option[Value], projection)`, the 31st
+  `Value`. **BAST value tag 30, `FORMAT_REVISION` 38**: collection, inline element identifier,
+  a filter-presence byte (as `SumValue`'s), projection. **JSON** `"value": "map"`, with
+  `filter` written only when present.
+- **Words:** neither `each` nor `yielding` is reserved or in the keyword tables. `each` is
+  matched by a `NoCut` `each of` prefix (as `sum of`), so a field named `each` still works (the
+  fixture has one). `yielding` is added to `ascriptionStop` DIRECTLY, by name, rather than by
+  joining `anyKeyword`. Otherwise `where x == empty yielding v` reads `yielding` as `empty`'s
+  ascribed type, the trap `otherwise` hit in [1.27].
+- **Precedence:** the collection is an atom (as `one of`); the filter is `booleanExpr`, which
+  stops before `otherwise`, so an `otherwise` filter is parenthesized
+  (`CollectionMap.filterNeedsParens`); the projection is a FULL `value`, so the form is open on
+  its right to EVERY operator (`CollectionValues.alwaysParenthesized`) **and to `otherwise` on
+  both sides**. `OtherwiseValue.format` and the emitter's copy parenthesize a map left or right
+  operand. Without that, `(a otherwise map) otherwise d` prettifies to text whose last
+  `otherwise` the projection absorbs. That is the same text with a different tree, and
+  `CollectionMapRoundTripTest` compares trees.
+- **Typing** (`collectionMapResultType`): `U` is `operandTypeExpr` of the projection under
+  `mapScope` (the element bound to the collection's element type, or `Anything` when that is
+  untypable). Unfiltered, `T+` gives `U+`, `T{n,m}` gives `U{n,m}`, and anything else gives `U*`.
+  Filtered, the minimum is 0. Into a `T+` that is the EXISTING `value-optional-for-required`
+  Advisory: no new rule. `valueType` (the named-Type view) answers `None`.
+- **Validation:** `validateOverCollection` (with `cm.filter` as the predicate, so
+  `value-not-a-collection` and the boolean-operand check come for free), then the projection
+  under `mapScope`. No map-specific rule; effects in the projection are judged by the six walks,
+  which recurse into all three parts.
+
 ## Collection statements — `append` / `remove` (2026-09-14)
 
 **Syntax.** `append <value> to field F` · `remove <value> from field F` ·

@@ -186,6 +186,7 @@ is covered in that construct's phase. The builder emits references as
 | ConditionalValue | ✅ [1.27] (2026-11-19) | `{ "value": "conditional", "condition": <value>, "then": <value>, "else": <value> }` |
 | OtherwiseValue | ✅ [1.27] (2026-11-19) | `{ "value": "otherwise", "left": <value>, "right": <value> }` |
 | OneOfValue | ✅ [1.27] (2026-11-19) | `{ "value": "oneOf", "collection": <value>, "element": "e", "predicate": <value> }` |
+| CollectionMap | ✅ (2026-11-21) | `{ "value": "map", "collection": <value>, "element": "e", "filter"?: <value>, "projection": <value> }` — `filter` only when written |
 | SumValue | ✅ [1.27] (2026-11-19) | `{ "value": "sum", "collection": <value>, "element"?: "e", "by"?: <value> }` — `element` and `by` together or not at all |
 | QueryValue | ✅ B2 (2026-09-22) | `{ "value": "query", "table": …, "one"?: true, "where"?: <value> }` |
 | LogStatement | ✅ B7 (2026-09-21) | `{ "kind": "log", "value": <value> }` — record a value for humans; deterministic, not state |

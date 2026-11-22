@@ -642,6 +642,10 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         resolveValue(sv.collection, parents); sv.by.foreach(resolveValue(_, parents))
       case ov: OneOfValue =>
         resolveValue(ov.collection, parents); resolveValue(ov.predicate, parents)
+      case cm: CollectionMap => // 2026-11-21: the element binding is lexical, as for `one of`
+        resolveValue(cm.collection, parents)
+        cm.filter.foreach(resolveValue(_, parents))
+        resolveValue(cm.projection, parents)
       case ow: OtherwiseValue =>
         resolveValue(ow.value, parents); resolveValue(ow.fallback, parents)
       case cv: ConditionalValue =>

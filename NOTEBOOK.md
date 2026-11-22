@@ -76,6 +76,33 @@ Empty; the three riddl-models tasks of 2026-11-19 are in `task/done/` with Resul
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-21 (evening) — the collection map, `each of … yielding`
+
+riddl-models' task (from Synapify's DineIn run): three reactive-bbq intakes build an entity from
+the lines of a message, filtered and RESHAPED, and only the collection had no spelling. The
+filter half already existed (B5's `xs as e where p`); the task's table had missed it. Reid
+reversed B5's 2026-09-22 "no `map`" ruling and chose the GENERAL map:
+`each of <coll> as <e> [where <p>] yielding <value>`. It is the 31st `Value`, BAST value tag 30,
+`FORMAT_REVISION` 38, JSON `"map"`. The details are in `docs/claude/language-constructs.md`, and
+the lowering plus the old ruling (as history) are in CM §40.
+- **Typing:** unfiltered keeps the source's cardinality (`T+` to `U+`); filtered, the minimum
+  drops to 0. A filtered map into a `T+` is therefore the EXISTING optional-for-required
+  Advisory, so no new rule was needed. The task asked for this question to be decided, and this
+  is the decision.
+- **A parenthesizing hazard the plan missed:** the projection is a full `value`, so it
+  absorbs a following `otherwise`. `OtherwiseValue.format` (and the emitter's copy)
+  parenthesize a map on EITHER side, or `(a otherwise map) otherwise d` prettifies to text
+  with a different tree. It was found while writing the round-trip cases, before running them.
+- **`T{n,m}` HAS NO SOURCE SPELLING.** `SpecificRange` exists in the AST, BAST and docs, but no
+  parser rule builds one and the EBNF has no production. A test fixture using `C.Line{1,3}`
+  failed to parse. The map's range typing arm is reachable only from BAST/JSON. The docs and
+  CLAUDE.md talk about `T{0,n}` as if it could be written; that has not been reconciled.
+- The task's three "related" items each need a ruling: [1.35] element update of a state
+  collection, [1.36] `String` filling an `Id(T)`, and [1.37] `query one` with no usable
+  not-found test.
+- The session that planned this crashed (low power) after the plan was approved and before any
+  code was written. Tasks 1-3 of that batch were already committed.
+
 ## 2026-11-21 (later) — a yield travels the wiring; prettify keeps a query's parentheses
 
 Three riddl-models/synapify tasks, one theme: CM §20.4 said only that `yield` delivers "to the

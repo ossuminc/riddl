@@ -691,7 +691,11 @@ private[parsing] trait StatementParser {
     * words cannot follow `empty` unquoted -- measured as no such type name in either corpus.
     */
   private def ascriptionStop[u: P]: P[Unit] = {
-    P(statementStart | anyReadability | (!typeExpressionStart ~ Keywords.anyKeyword))
+    P(
+      statementStart | anyReadability | (!typeExpressionStart ~ Keywords.anyKeyword) |
+        // 2026-11-21: the collection map's `yielding` follows its filter, which may end in `empty`
+        ("yielding" ~~ &(Keywords.isNotKeywordChar))
+    )
   }
 
   /** The reserved words a type expression may begin with -- the aggregate use cases and the
@@ -845,6 +849,21 @@ private[parsing] trait StatementParser {
       Index ~ NoCut(Keywords.one ~ of) ~/ arithAtom ~ as ~/ identifier ~ Keywords.where ~/
         booleanExpr ~ Index
     ).map { case (start, coll, element, pred, end) => OneOfValue(at(start, end), coll, element, pred) }
+  }
+
+  /** The collection map (2026-11-21): `each of <coll> as <e> [where <pred>] yielding <value>`.
+    * `each` is NOT reserved, so the `each of` prefix is `NoCut`, as `sum of`'s is. The collection
+    * is an atom, as for `one of`; the predicate is a boolean expression, which stops at
+    * `yielding` (and `yielding` stops `empty`'s ascription, see [[ascriptionStop]]); the
+    * projection is a full value, so the form is open on its right.
+    */
+  private def collectionMap[u: P]: P[CollectionMap] = {
+    P(
+      Index ~ NoCut(Keywords.keyword("each") ~ of) ~/ arithAtom ~ as ~/ identifier ~
+        (Keywords.where ~/ booleanExpr).? ~ Keywords.keyword("yielding") ~/ value ~ Index
+    ).map { case (start, coll, element, filter, projection, end) =>
+      CollectionMap(at(start, end), coll, element, filter, projection)
+    }
   }
 
   /** BACKLOG [1.27]: `when <cond> then <a> else <b> end` as a VALUE. The condition is the
@@ -1052,6 +1071,7 @@ private[parsing] trait StatementParser {
         durationUnitsValue.map(du => du: Value) | // BACKLOG [1.27]
         sumValue.map(sv => sv: Value) |
         oneOfValue.map(ov => ov: Value) |
+        collectionMap.map(cm => cm: Value) | // 2026-11-21
         conditionalValue.map(cv => cv: Value) |
         durationLiteral.map(dl => dl: Value) |
         calendarPeriodLiteral.map(cp => cp: Value) | // BACKLOG [1.32]
