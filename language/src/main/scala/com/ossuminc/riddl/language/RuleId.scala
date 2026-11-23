@@ -554,6 +554,9 @@ enum RuleId(
   // riddl-models, 2026-11-21 (CM §20.4): a `yield`/`reply` already publishes on every own outlet
   // admitting its type, so a `send` of the same value to one of those outlets beside it is redundant.
   case SendDuplicatesYield extends RuleId("stmt-send-duplicates-yield")
+  // Reid, 2026-11-23 (riddl-models' creation sites): a `create` whose entity's `on init` publishes
+  // the answer DELEGATES it, so a `yield` of that answer beside it publishes a second copy.
+  case YieldDuplicatesCreation extends RuleId("stmt-yield-duplicates-creation")
   case SendAtNotInstant extends RuleId("stmt-send-at-not-instant")
   // Reid, 2026-11-19 (riddl-models' usage-metering): recurrence. A recurring `send` registers a
   // timer each time it runs, so it is legal only where it runs once per instance, in `on init`.

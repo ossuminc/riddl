@@ -76,6 +76,38 @@ Empty; the three riddl-models tasks of 2026-11-19 are in `task/done/` with Resul
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-23 — a `create` delegates a creation command's answer
+
+From a riddl-models task: 11 sites handle a creation command by `create`ing entity E and also
+yielding X. E's `on init` already `send`s X, and that is the copy that reaches the sender. No
+spelling of this shape was legal. Without the `yield` it drew `msg-yield-undeclared`. With the
+`yield` it drew `msg-answer-unreachable`, because only processors that HANDLE the command
+counted as answerers. Reid ruled (A): **`create` delegates the answer, as `forward` does.**
+
+What changed:
+- `delegatedAnswerers` (in `ValidationPass`) finds the entities a clause creates whose `on init`
+  publishes the answer on every path. Both rules now use it.
+- A new Style rule, `stmt-yield-duplicates-creation`, reports a `yield` of the same answer
+  beside such a `create`.
+- CM §18.7 now names four ways to settle a declared response, adding delegation by creation,
+  with a replay must-preserve. §20.7's discharge list and §20.4 were updated to match.
+
+Lessons:
+- **`dischargesOnEveryPathSeq` answered `false` for a `let` WITHOUT asking `settles`.** So
+  `let s = create …`, the corpus's shape, could never settle. Every other predicate returns
+  `false` for a `let`, so asking is free. The three red tests found it, not reading the code.
+- **The census was 44 findings, not 11.** riddl-models counted the sites `msg-answer-unreachable`
+  flagged. The other 33 have the same double publication, and there the context's copy ALSO has
+  a route back, so the sender receives both and nothing complained. All 11
+  `msg-answer-unreachable` findings are gone, and no other rule moved (191 models).
+- **Canaries.** Removing each of the three arms (the yields settle, the answerer extension, the
+  duplicate rule) reddened 3, 3 and 1 cases of `CreationAnswerDelegationTest`.
+
+Same day, two smaller things:
+- 2.8.3 shipped.
+- `commands` now runs its suites serially. Its Coverage run went red on a one-string commit
+  because CommandTest printed into ValidateJsonTest's stdout capture.
+
 ## 2026-11-21 (evening) — the collection map, `each of … yielding`
 
 riddl-models' task (from Synapify's DineIn run): three reactive-bbq intakes build an entity from

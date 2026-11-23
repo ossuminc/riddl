@@ -171,6 +171,7 @@ case class ValidationPass(
       checkDuplicateEmissions()
       checkAskReachability()
       checkAnswerReachability()
+      checkYieldDuplicatesCreation()
       checkTellDeliverability()
       checkInletsAreReceived(root)
       val delivered = deliveries(root)
@@ -1008,6 +1009,76 @@ case class ValidationPass(
     }
   }
 
+  /** The entities `clause` `create`s whose `on init` publishes `answer` on every path: the
+    * processors to which the clause DELEGATES a creation command's answer (Reid, 2026-11-23,
+    * riddl-models' 11 creation sites). A `create` settles a declared `yields` the way `forward`
+    * does -- downstream, not locally -- and the answer travels from the created entity's outlets
+    * (CM §20.7).
+    *
+    * "Publishes" is a `send` or `tell` of a value admitted by `answer`; an `error`/`require` in
+    * `on init` settles its path as well, since a refused creation creates nothing and owes no
+    * answer. Path analysis is [[dischargesOnEveryPath]]'s, so a publication in one branch of a
+    * `when` does not delegate.
+    */
+  private def delegatedAnswerers(clause: OnClause, answer: Type): Seq[Entity] =
+    val creates = mutable.ArrayBuffer.empty[Create]
+    walkStatements(clause.contents) { st => creates ++= statementValues(st).flatMap(initiatesIn) }
+    creates.toSeq
+      .flatMap(createdEntity(_, clause))
+      .distinctBy(ByIdentity[Entity](_))
+      .filter(publishesOnInit(_, answer))
+  end delegatedAnswerers
+
+  private def createdEntity(init: Create, clause: OnClause): Option[Entity] =
+    resolution.refMap
+      .definitionOf[Processor[?]](init.processor.pathId, clause)
+      .orElse(resolution.refMap.definitionOf[Processor[?]](init.processor.pathId))
+      .collect { case e: Entity => e }
+
+  private def publishesOnInit(e: Entity, answer: Type): Boolean =
+    e.handlers.flatMap(_.clauses).collect { case oic: OnInitializationClause => oic } match
+      case Seq() => false
+      case inits =>
+        inits.forall { oic =>
+          dischargesOnEveryPath(oic.contents) { (st, _) =>
+            st match
+              case _: ErrorStatement | _: RequireStatement => true
+              case s: SendStatement => clauseOperandType(s.msg, oic).exists(typeAdmits(answer, _))
+              case t: TellStatement => clauseOperandType(t.msg, oic).exists(typeAdmits(answer, _))
+              case _                => false
+          }
+        }
+
+  /** A clause that `create`s an entity delegated its answer (see [[delegatedAnswerers]]) AND
+    * `yield`s that answer itself publishes it twice: the entity's `on init` copy reaches the sender,
+    * and the clause's goes out on whatever outlets of its own admit it -- nowhere at most of the
+    * corpus's sites, and to a party that refuses it at reactive-bbq's FrontOfHouse. The copies get
+    * distinct message ids, so nothing downstream can recognise them as one answer.
+    */
+  private def checkYieldDuplicatesCreation(): Unit =
+    processors.foreach { p =>
+      handlerClausesOf(p).foreach { clause =>
+        walkStatements(clause.contents) {
+          case y: YieldStatement =>
+            clauseOperandType(y.msg, clause).foreach { answer =>
+              delegatedAnswerers(clause, answer).headOption.foreach { e =>
+                messages.addStyle(
+                  y.loc,
+                  s"this 'yield' publishes ${answer.identify} a second time: the clause creates " +
+                    s"${e.identify}, whose 'on init' already publishes it as the answer; the copies " +
+                    "get different message ids, so a receiver sees two answers",
+                  suggestion = s"Remove the 'yield'. The 'create' of ${e.identify} delivers the " +
+                    "answer from its own outlets (CM §20.7).",
+                  ruleId = Some(RuleId.YieldDuplicatesCreation)
+                )
+              }
+            }
+          case _ => ()
+        }
+      }
+    }
+  end checkYieldDuplicatesCreation
+
   /** Does a message of type `told`, placed on `outlet`, ARRIVE at `target`? Type-aware: it lands
     * only on an inlet admitting it and continues only through a processor whose `on X` clause
     * transmits X again ([[messageCarriage]]). Shared by the tell-route checks and
@@ -1065,9 +1136,21 @@ case class ValidationPass(
           resolution.refMap.definitionOf[Type](omc.msg.pathId).exists(h => typeAdmits(h, msg))
         case _ => false
       }
-    def answerers(receiver: Processor[?], msg: Type): Seq[Processor[?]] =
-      (receiver +: processors.toSeq.filter(q => symbols.parentsOf(q).exists(_ eq receiver)))
-        .filter(handles(_, msg))
+    // A handling clause that `create`s an entity whose `on init` publishes the answer DELEGATES it
+    // (Reid, 2026-11-23): that entity answers too, from its own outlets.
+    def answerers(receiver: Processor[?], msg: Type, answer: Type): Seq[Processor[?]] =
+      val handlers =
+        (receiver +: processors.toSeq.filter(q => symbols.parentsOf(q).exists(_ eq receiver)))
+          .filter(handles(_, msg))
+      val delegated = handlers.flatMap { q =>
+        handlerClausesOf(q).flatMap {
+          case omc: OnMessageLikeClause if omc.msg.nonEmpty &&
+              resolution.refMap.definitionOf[Type](omc.msg.pathId).exists(h => typeAdmits(h, msg)) =>
+            delegatedAnswerers(omc, answer)
+          case _ => Seq.empty
+        }
+      }
+      (handlers ++ delegated).distinctBy(ByIdentity[Processor[?]](_))
     def admits(p: Processor[?], answer: Type): Boolean =
       p.inlets.exists(i =>
         resolution.refMap.definitionOf[Type](i.type_.pathId).exists(t => typeAdmits(t, answer))
@@ -1077,7 +1160,7 @@ case class ValidationPass(
       answerOf(msg).foreach { answer =>
         if !isOpaqueProcessor(sender) && sender.nonEmpty then
           val lost = receivers.distinctBy(ByIdentity[Processor[?]](_)).filter { r =>
-            val as = answerers(r, msg)
+            val as = answerers(r, msg, answer)
             val decidable = !isOpaqueProcessor(r) && r.nonEmpty && !(r eq sender) && as.nonEmpty &&
               !as.exists(_ eq sender) && !as.forall(a => a.outlets.isEmpty)
             decidable && !as.exists { a =>
@@ -1087,7 +1170,11 @@ case class ValidationPass(
             }
           }
           if lost.nonEmpty then
-            val names = lost.map(_.identify).mkString(", ")
+            // The receivers, plus any entity a receiver's clause CREATES to deliver the answer: that
+            // entity's outlets are where the missing route has to start.
+            val creators = lost.flatMap(r => answerers(r, msg, answer)).filterNot(handles(_, msg))
+            val names = (lost ++ creators).distinctBy(ByIdentity[Processor[?]](_))
+              .map(_.identify).mkString(", ")
             val keyword = msg.typEx match
               case auc: AggregateUseCaseTypeExpression if auc.usecase == AggregateUseCase.QueryCase =>
                 "reply"
@@ -3834,9 +3921,25 @@ case class ValidationPass(
           // written the first way and validates BECAUSE of its `require`, not its `send`. What
           // this predicate exists to catch is a path that does not decide at all; `set`/`do`/an
           // empty branch fail it, and so does a lone `send`.
+          //
+          // A `create` settles a command's `yields` by DELEGATION, as `forward` does, when the
+          // created entity's `on init` publishes the declared answer on every path (Reid,
+          // 2026-11-23; CM §20.7). A query creates nothing, so only `yields` qualifies.
+          val delegates: Seq[Entity] =
+            if isQuery then Seq.empty
+            else
+              auc.yields
+                .flatMap(r => resolution.refMap.definitionOf[Type](r.pathId))
+                .toSeq
+                .flatMap(delegatedAnswerers(omc, _))
+          def createsDelegate(stmt: Statement): Boolean =
+            delegates.nonEmpty && statementValues(stmt).flatMap(initiatesIn).exists { init =>
+              createdEntity(init, omc).exists(e => delegates.exists(_ eq e))
+            }
           val settled = dischargesOnEveryPath(omc.contents) { (stmt, _) =>
             stmt match
               case _: ErrorStatement | _: RequireStatement => true
+              case s if createsDelegate(s)                  => true
               // BOTH response statements settle a path. Counting only the pairing-correct one would
               // report the same mistake twice -- `checkResponsePairing` already names a `yield` in a
               // query clause, and a second "does not reply on every path" adds nothing.
@@ -3855,7 +3958,9 @@ case class ValidationPass(
                   s"${handledType.identify} declares '$declKeyword ${declaredYield.format}' " +
                     s"but ${omc.identify} does not $verb it on every path",
                   suggestion = s"Use '$stmtKeyword ${declaredYield.format}' (or refuse with " +
-                    "'error'/'require') on every path through this handler. A 'when' with no " +
+                    "'error'/'require'" +
+                    (if isQuery then "" else ", or 'create' an entity whose 'on init' publishes it") +
+                    ") on every path through this handler. A 'when' with no " +
                     "'else', a 'match' with no 'default', and a 'foreach' all leave a path " +
                     "that does neither.",
                   ruleId = Some(RuleId.YieldUndeclared)
@@ -8609,7 +8714,9 @@ case class ValidationPass(
     statements.exists {
       case ls: LetStatement =>
         curLets = curLets :+ ls
-        false // a `let` itself never settles the obligation
+        // Asked, not assumed false: `let s = create entity E(...)` DELEGATES a creation command's
+        // answer (2026-11-23). Every other predicate answers false for a `let`.
+        settles(ls, curLets)
       case WhenStatement(_, _, thenStatements, elseStatements) =>
         dischargesOnEveryPathSeq(thenStatements.toSeq, curLets)(settles) &&
         elseStatements.nonEmpty &&
