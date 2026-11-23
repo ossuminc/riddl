@@ -163,6 +163,7 @@ case class ValidationPass(
   private var emittedEventTypes: mutable.Set[Type] = mutable.Set.empty
 
   override def postProcess(root: PassRoot): Unit = {
+    checkDeferredCreationIds()
     checkOverloads()
     checkTermConsistency()
     if mode == ValidationMode.Full then
@@ -3089,26 +3090,139 @@ case class ValidationPass(
     * a `let` in a `when` body is invisible outside it, and [[checkStatementScopes]] recurses with
     * that inner list, so each nesting level asks about its own scope.
     */
-  private def checkUnusedInitiateId(ls: LetStatement, scope: Seq[Statement]): Unit =
+  private def checkUnusedInitiateId(
+    ls: LetStatement,
+    scope: Seq[Statement],
+    parents: Parents
+  ): Unit =
     ls.expression match
-      case _: Create =>
+      case init: Create =>
         val name = ls.identifier.value
         val used = scope.exists(s => !(s eq ls) && mentionsName(s.format, name))
         if !used then
-          messages.addWarning(
-            ls.loc,
-            s"'$name' holds the identity of the instance this 'create' makes, but nothing " +
-              "else in this clause refers to it",
-            suggestion = s"Refer to '$name' — address the new instance ('tell … to …'), keep it " +
-              s"('set field … to $name'), pass it in a message, or 'terminate' it — or leave it " +
-              "as is if the new instance is self-terminating and never needs addressing.",
-            ruleId = Some(RuleId.InitiateIdUnused)
-          )
+          // A clause handling a command that declares `yields X` may be DELEGATING its answer to
+          // the created entity (CM §18.7). Whether that delegation reaches every sender needs the
+          // whole model, so the decision waits for `postProcess`.
+          val deferred = for
+            omc <- parents.collectFirst { case c: OnMessageLikeClause => c }
+            cmd <- resolution.refMap.definitionOf[Type](omc.msg.pathId)
+            answer <- cmd.typEx match
+              case auc: AggregateUseCaseTypeExpression if auc.usecase == AggregateUseCase.CommandCase =>
+                auc.yields.flatMap(r => resolution.refMap.definitionOf[Type](r.pathId))
+              case _ => None
+          yield DeferredCreationId(ls, init, omc, cmd, answer)
+          deferred match
+            case Some(d) => deferredCreationIds += d
+            case None    => reportUnusedInitiateId(ls, "")
         end if
       // Every other bound expression: nothing to say. An unused `let` in general is a separate
       // question from this one and is deliberately NOT raised here.
       case _ => ()
   end checkUnusedInitiateId
+
+  private def reportUnusedInitiateId(ls: LetStatement, why: String, fix: String = ""): Unit =
+    val name = ls.identifier.value
+    messages.addWarning(
+      ls.loc,
+      s"'$name' holds the identity of the instance this 'create' makes, but nothing " +
+        s"else in this clause refers to it$why",
+      suggestion =
+        if fix.nonEmpty then fix
+        else
+          s"Refer to '$name' — address the new instance ('tell … to …'), keep it " +
+            s"('set field … to $name'), pass it in a message, or 'terminate' it — or leave it " +
+            "as is if the new instance is self-terminating and never needs addressing.",
+      ruleId = Some(RuleId.InitiateIdUnused)
+    )
+  end reportUnusedInitiateId
+
+  private case class DeferredCreationId(
+    ls: LetStatement,
+    init: Create,
+    clause: OnMessageLikeClause,
+    command: Type,
+    answer: Type
+  )
+  private val deferredCreationIds = mutable.ListBuffer.empty[DeferredCreationId]
+
+  /** A DELEGATING `create`'s unbound id is NOT unused when the answer carries it to whoever asked
+    * (Reid, 2026-11-23). The created entity's `on init` publishes the creation event, which
+    * carries the new instance's id to the senders of the command, so it is exempt from
+    * `stmt-initiate-id-unused` -- but ONLY when EVERY sender of the command has an explicit clause
+    * handling that event. `on other` does not count: it is a policy for the unmatched, and says
+    * nothing about using an id. When any sender lacks one, or nothing sends the command at all,
+    * the warning stays and NAMES the case, rather than leaving the author to find it.
+    */
+  private def checkDeferredCreationIds(): Unit =
+    deferredCreationIds.foreach { d =>
+      val delegating =
+        createdEntity(d.init, d.clause).exists(e => delegatedAnswerers(d.clause, d.answer).exists(_ eq e))
+      if !delegating then reportUnusedInitiateId(d.ls, "")
+      else
+        val senders = sendersOf(d.command)
+        val missing = senders.filterNot(handlesExplicitly(_, d.answer))
+        val ev = d.answer.identify
+        if senders.isEmpty then
+          reportUnusedInitiateId(
+            d.ls,
+            s"; the created entity publishes it in $ev, but nothing in the model sends " +
+              s"${d.command.identify}, so no sender receives it",
+            s"Send ${d.command.identify} from the processor that needs the new instance, and " +
+              s"give it an 'on event' clause for $ev."
+          )
+        else if missing.nonEmpty then
+          val names = missing.map(_.identify).mkString(", ")
+          reportUnusedInitiateId(
+            d.ls,
+            s"; the created entity publishes it in $ev, but $names " +
+              (if missing.sizeIs == 1 then "sends" else "send") +
+              s" ${d.command.identify} and " + (if missing.sizeIs == 1 then "has" else "have") +
+              s" no clause handling $ev, so the id is never learned there",
+            s"Give $names an 'on event' clause for $ev ('on other' does not count), or refer " +
+              s"to '${d.ls.identifier.value}' in this clause."
+          )
+        end if
+    }
+  end checkDeferredCreationIds
+
+  /** The processors that send a message admitted by `command`: those with a `send` or `tell` of
+    * one, and a context with a group INPUT that acquires one, since a user issues that command
+    * through the context (riddl-models' creation commands mostly arrive this way).
+    */
+  private def sendersOf(command: Type): Seq[Processor[?]] =
+    def acquiresIt(c: Context): Boolean =
+      Finder(c.contents).recursiveFindByType[Input].exists { in =>
+        resolution.refMap
+          .definitionOf[Type](in.takeIn.pathId, in)
+          .orElse(resolution.refMap.definitionOf[Type](in.takeIn.pathId))
+          .exists(typeAdmits(command, _))
+      }
+    processors.toSeq.filter { p =>
+      (p match
+        case c: Context => acquiresIt(c)
+        case _          => false) ||
+      handlerClausesOf(p).exists { clause =>
+        var sends = false
+        walkStatements(clause.contents) {
+          case s: SendStatement =>
+            sends ||= clauseOperandType(s.msg, clause).exists(typeAdmits(command, _))
+          case t: TellStatement =>
+            sends ||= clauseOperandType(t.msg, clause).exists(typeAdmits(command, _))
+          case _ => ()
+        }
+        sends
+      }
+    }.distinctBy(ByIdentity[Processor[?]](_))
+
+  /** An explicit `on <message>` clause for `msg` (or an alternation containing it); never `on
+    * other`.
+    */
+  private def handlesExplicitly(p: Processor[?], msg: Type): Boolean =
+    handlerClausesOf(p).exists {
+      case omc: OnMessageLikeClause if omc.msg.nonEmpty =>
+        resolution.refMap.definitionOf[Type](omc.msg.pathId).exists(h => typeAdmits(h, msg))
+      case _ => false
+    }
 
   /** Whole-word containment: does `text` mention `name` other than as part of a longer identifier?
     *
@@ -14123,7 +14237,7 @@ case class ValidationPass(
           // then check its type against a declared `let x: T = …`.
           validateValue(ls.expression, parents, lets, elements)
           checkLocalName(ls.identifier, "'let' local", parents) // A55
-          checkUnusedInitiateId(ls, stmts) // Task 5
+          checkUnusedInitiateId(ls, stmts, parents) // Task 5
           ls.typeRef.foreach { tr =>
             val expected = resolution.refMap.definitionOf[Type](tr.pathId)
             expected match

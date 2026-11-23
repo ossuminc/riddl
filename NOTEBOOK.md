@@ -139,6 +139,22 @@ made. My earlier claim that a site "validates with neither finding" once its `yi
 deleted was false, because the test never asserted on that rule. It is corrected in the task
 file.
 
+**Re-ruled within the hour: (B), with a condition.** The premise "nothing ever receives the
+id" was false: `on init` puts `self.id` in the creation event, which reaches the senders. So a
+delegating `create`'s unbound id is exempt, but only when EVERY sender has an explicit clause
+for the event. `on other` does not count.
+- **When some sender lacks the clause,** the warning names those senders rather than leaving
+  the author to find them (Reid's requirement). When nothing sends the command, it says so.
+- **The decision is DEFERRED to `postProcess`.** "Every sender" needs the whole model, and the
+  clause walk runs before it is known.
+- **A sender includes an application context whose group input ACQUIRES the command.** The
+  first cut counted only `send`/`tell`, and so reported "nothing sends" for most of the corpus.
+  That is true of the statements and false of the model, since users issue creation commands.
+  Found by classifying the corpus findings, not by the tests.
+- **Corpus** (riddl-models' `riddl-2.8.4` tree, with the 44 `yield`s deleted): 43 → 39. Every
+  one of the 39 is an application context that lacks an `on event` clause for the creation
+  event.
+
 Same day, two smaller things:
 - 2.8.3 shipped.
 - `commands` now runs its suites serially. Its Coverage run went red on a one-string commit

@@ -23,7 +23,10 @@ class CreationAnswerDelegationTest extends AbstractValidatingTest {
   private def model(
     orderBody: String = "let s = create entity C.Shipment(id = c.id)",
     initBody: String = publish,
-    wiring: String = "    connector B is from outlet C.Shipment.Out to inlet C.Front.Back"
+    wiring: String = "    connector B is from outlet C.Shipment.Out to inlet C.Front.Back",
+    frontAnswer: String = "on event C.Created is { do \"note it\" }",
+    frontSends: Boolean = true,
+    extra: String = ""
   ): String =
     s"""domain D is {
        |  context C is {
@@ -57,12 +60,13 @@ class CreationAnswerDelegationTest extends AbstractValidatingTest {
        |      inlet Back is event C.Created with { briefly "i" }
        |      outlet ToOrders is command C.Create with { briefly "o" }
        |      handler H is {
-       |        on t: event C.Trigger is { send command C.Create(id = t.id) to outlet C.Front.ToOrders }
-       |        on event C.Created is { do "note it" }
+       |        on t: event C.Trigger is { ${if frontSends then "send command C.Create(id = t.id) to outlet C.Front.ToOrders" else "do \"wait\""} }
+       |        $frontAnswer
        |      } with { briefly "h" }
        |    } with { briefly "f" }
        |    connector A is from outlet C.Front.ToOrders to inlet C.Orders.In
        |$wiring
+       |$extra
        |  } with { briefly "c" }
        |} with { briefly "d" }
        |""".stripMargin
@@ -90,6 +94,8 @@ class CreationAnswerDelegationTest extends AbstractValidatingTest {
         of(ms, RuleId.YieldUndeclared) mustBe empty
         of(ms, RuleId.AnswerUnreachable) mustBe empty
         of(ms, RuleId.YieldDuplicatesCreation) mustBe empty
+        // The id leaves in the creation event, which the only sender handles explicitly.
+        of(ms, RuleId.InitiateIdUnused) mustBe empty
       }
     }
 
@@ -124,6 +130,90 @@ class CreationAnswerDelegationTest extends AbstractValidatingTest {
         val lost = of(ms, RuleId.AnswerUnreachable)
         lost must have size 1
         lost.head.message must include("Shipment")
+      }
+    }
+  }
+
+  "a delegating create's unbound id" should {
+    "be reported, naming the sender, when the sender has no clause for the event" in {
+      (td: TestData) =>
+        val ms = all(model(frontAnswer = ""), td.name)
+        withClue(clue(ms)) {
+          val unused = of(ms, RuleId.InitiateIdUnused)
+          unused must have size 1
+          unused.head.message must include("Front")
+          unused.head.message must include("no clause handling")
+        }
+    }
+
+    "be reported when the sender handles the event only through 'on other'" in { (td: TestData) =>
+      val ms = all(model(frontAnswer = """on other is { error "x" }"""), td.name)
+      withClue(clue(ms)) {
+        val unused = of(ms, RuleId.InitiateIdUnused)
+        unused must have size 1
+        unused.head.message must include("Front")
+      }
+    }
+
+    "be reported, naming only the sender that does not handle it, when there are two" in {
+      (td: TestData) =>
+        val second =
+          """    entity Back is {
+            |      inlet T is event C.Trigger with { briefly "i" }
+            |      outlet ToOrders is command C.Create with { briefly "o" }
+            |      handler H is {
+            |        on t: event C.Trigger is { send command C.Create(id = t.id) to outlet C.Back.ToOrders }
+            |      } with { briefly "h" }
+            |    } with { briefly "b" }""".stripMargin
+        val ms = all(model(extra = second), td.name)
+        withClue(clue(ms)) {
+          val unused = of(ms, RuleId.InitiateIdUnused)
+          unused must have size 1
+          unused.head.message must include("Back")
+          unused.head.message must not include "Front"
+        }
+    }
+
+    "be reported when nothing sends the command" in { (td: TestData) =>
+      val ms = all(model(frontSends = false), td.name)
+      withClue(clue(ms)) {
+        val unused = of(ms, RuleId.InitiateIdUnused)
+        unused must have size 1
+        unused.head.message must include("nothing in the model sends")
+      }
+    }
+
+    "count an application context whose group input acquires the command as a sender" in {
+      (td: TestData) =>
+        def app(answer: String): String =
+          s"""    application context App is {
+             |      group Screen is {
+             |        input Make acquires command C.Create with { briefly "m" }
+             |      } with { briefly "g" }
+             |      handler AH is { $answer } with { briefly "ah" }
+             |    } with { briefly "a" }""".stripMargin
+        // The app lives beside C, so wrap: replace the model's closing of C with the app after it.
+        def withApp(answer: String): String =
+          model(frontSends = false)
+            .replace("  } with { briefly \"c\" }\n} with { briefly \"d\" }",
+              s"  } with { briefly \"c\" }\n${app(answer)}\n} with { briefly \"d\" }")
+        val ignoring = all(withApp("""on other is { error "x" }"""), td.name)
+        withClue(clue(ignoring)) {
+          val unused = of(ignoring, RuleId.InitiateIdUnused)
+          unused must have size 1
+          unused.head.message must include("App")
+          unused.head.message must not include "nothing in the model sends"
+        }
+        val handling = all(withApp("on event C.Created is { do \"show it\" }"), td.name)
+        withClue(clue(handling)) { of(handling, RuleId.InitiateIdUnused) mustBe empty }
+    }
+
+    "be reported as before when the create does not delegate" in { (td: TestData) =>
+      val ms = all(model(initBody = "send event C.Other(id = id) to outlet C.Shipment.Else"), td.name)
+      withClue(clue(ms)) {
+        val unused = of(ms, RuleId.InitiateIdUnused)
+        unused must have size 1
+        unused.head.message must not include "publishes it in"
       }
     }
   }
