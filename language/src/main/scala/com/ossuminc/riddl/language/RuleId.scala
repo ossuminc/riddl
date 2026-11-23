@@ -598,6 +598,8 @@ enum RuleId(
   /** [1.29](a), Reid 2026-11-18: an optional value for a required field is an ADVISORY asking for
     * a guard -- emptiness is a run-time fact, and the generator proceeds and chooses. */
   case OptionalForRequired extends RuleId("value-optional-for-required")
+  // Reid, 2026-11-23 (synapify's DineIn run): an optional operand of ordering or arithmetic.
+  case OptionalOperand extends RuleId("value-optional-operand")
   /** BACKLOG [1.27], Reid 2026-11-19: `minutes of <d>` needs a Duration. */
   case DurationUnitsNotDuration extends RuleId("value-duration-units-not-duration")
   /** BACKLOG [1.27]: `sum of` adds numbers, Durations or Currency -- nothing else. */

@@ -76,6 +76,38 @@ Empty; the three riddl-models tasks of 2026-11-19 are in `task/done/` with Resul
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-23 (evening) — an optional operand of ordering or arithmetic; [1.34]
+
+From synapify's DineIn run: at reactive-bbq `InventoryItem.riddl:555` a `<=` compares against a
+`Decimal?` that `on init` sets to `empty`. riddlc said nothing, and the CM gave no meaning.
+
+Reid ruled:
+- **riddlc:** a new **Advisory**, `value-optional-operand`.
+- **CM:** equality with an optional is defined (absent equals only `empty`). Ordering and
+  arithmetic on an absent operand have NO value in the model, so a generator must refuse rather
+  than invent one.
+- **`and`/`or` SHORT-CIRCUIT**, and that is now a must-preserve. So inside a condition, the right
+  operand is validated under the left's narrowing: `x != empty and x <= t` is guarded.
+
+Reid then chose to fix **[1.34] in the same change**, and that changed the outcome:
+- **First census:** 4 sites, of which 2 were real (reactive-bbq :555 and :567). The other 2
+  (shopping-cart Cart:892, supply-chain SupplyOrder:424) were [1.34]'s gap: a guard on `line`
+  does not narrow `line.unitCost`.
+- **The fix:** `typeExprOfPath` does not chain through the `?` of a proven prefix.
+- **A sound extension:** a proven path proves its prefixes, so a guard on `line.quantity`
+  proves `line`. riddl-models had rewritten Cart:892's guard that way.
+- **After:** exactly the 2 real sites, and no other rule moved.
+
+[1.34] stays open for STATE-anchored paths (see BACKLOG): `refMap.isOptionalChain` is a single
+Boolean.
+
+**Two vacuous tests caught by canaries:**
+- An optional-for-required case written with `set field` passed with or without the fix,
+  because `set field` does not run that check. It is now a constructor argument, as at the real
+  site.
+- The nested-expression skip in `checkOptionalOperand` changes nothing today, because
+  arithmetic does not propagate `?`. It is kept as a guard and commented as such.
+
 ## 2026-11-23 (later) — `T{n,m}` gets a spelling, and a BAST tag of its own
 
 ossum.tech asked whether its four `T{0,n}` lines were right. Reid ruled to add the syntax, with

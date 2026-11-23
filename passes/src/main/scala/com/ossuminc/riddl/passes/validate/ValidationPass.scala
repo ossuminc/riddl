@@ -11156,6 +11156,44 @@ case class ValidationPass(
       )
   end checkOptionalIntoRequired
 
+  /** An OPTIONAL operand of an ordering comparison or of arithmetic (Reid, 2026-11-23, from
+    * synapify's DineIn run): `stock <= reorderThreshold` with the threshold `Decimal?`. The model
+    * gives such an expression NO value when the operand is absent (CM §0.3 ruling 6) -- not
+    * `false`, not unknown, not zero -- so it is an ADVISORY asking the model to say what happens,
+    * the same bar as [[checkOptionalIntoRequired]]. Equality is not asked here: `x == empty` is the
+    * presence test. A collection is not optional in this sense, and its misuse is other rules'
+    * business; a nested arithmetic or comparison is skipped because its own leaves are checked.
+    */
+  private def checkOptionalOperand(
+    op: String,
+    operand: Value,
+    parents: Parents,
+    lets: Seq[LetStatement],
+    elements: Map[String, TypeExpression]
+  ): Unit =
+    val guarded = operand match
+      case vr: ValueRef                                    => narrowedNonEmpty.contains(vr.path.value)
+      // Its leaves are checked on their own. Today `arithmeticResultType` does not carry an operand's
+      // optionality into the result, so this arm is a GUARD, not load-bearing: a canary removing it
+      // (2026-11-23) changed nothing. It stops a double report if that typing ever propagates `?`.
+      case _: ArithmeticExpression | _: ComparisonExpression => true
+      case _                                               => false
+    if !guarded then
+      operandTypeExpr(operand, parents, lets, elements).map(aliasFreeTypeExpr(_)) match
+        case Some(_: Optional) =>
+          messages.addAdvisory(
+            operand.loc,
+            s"'$op' needs a value, but '${operand.format}' may be empty, and the model gives " +
+              "this expression no value when it is",
+            suggestion = s"Say what happens when it is empty: supply a default with " +
+              s"'${operand.format} otherwise <default>', or guard it with 'when " +
+              s"${operand.format} != empty then ... end', '${operand.format} != empty and ...' " +
+              s"or 'require ${operand.format} != empty'. Without either, the generator must refuse.",
+            ruleId = Some(RuleId.OptionalOperand)
+          )
+        case _ => ()
+  end checkOptionalOperand
+
   private def resolveTypeAlias(ate: AliasedTypeExpression): Option[Type] =
     resolution.refMap.definitionOf[Type](ate.pathId)
 
@@ -11927,19 +11965,34 @@ case class ValidationPass(
     * for `let`-headed paths — a `let` is not a Definition, so ResolutionPass cannot anchor there
     * and cannot walk the rest for us. Everything else comes from the refMap.
     */
-  private def typeExprOfPath(start: TypeExpression, names: Seq[String]): Option[TypeExpression] =
+  private def typeExprOfPath(
+    start: TypeExpression,
+    names: Seq[String],
+    head: Seq[String] = Seq.empty
+  ): Option[TypeExpression] =
     // BACKLOG [1.27] Q-A (optional chaining): a step may pass THROUGH a `T?` -- written inline or
     // behind a type name -- and then the value reached is optional too. Collections do not chain:
     // `aggregateFieldsOf` has no arm for `*`, `+` or a range, so the walk stops there as before.
+    //
+    // BACKLOG [1.34] (2026-11-23): a step through the `?` of a prefix a guard has PROVEN non-empty
+    // does not chain. `when line == empty then error else … line.unitCost …` makes `line` present,
+    // so `line.unitCost` is optional only if a segment AFTER `line` is. `head` is the path to
+    // `start` itself (the `let` or element name), so each prefix can be looked up as written.
     var chained = false
-    def throughOptional(te: TypeExpression): TypeExpression = aliasFreeTypeExpr(te) match
-      case opt: Optional =>
-        chained = true
-        opt.typeExp
-      case _ => te
-    names
-      .foldLeft(Option(start)) { (acc, n) =>
-        acc.flatMap(te => aggregateFieldsOf(throughOptional(te)).find(_.id.value == n).map(_.typeEx))
+    def throughOptional(te: TypeExpression, prefix: Seq[String]): TypeExpression =
+      aliasFreeTypeExpr(te) match
+        case opt: Optional =>
+          // A proven path proves its PREFIXES too: `line.quantity` can be non-empty only if `line`
+          // is present, so `when line.quantity == empty then error else …` guards `line.cost`.
+          if !(head.nonEmpty && narrowedNonEmpty.exists(_.startsWith(prefix))) then chained = true
+          opt.typeExp
+        case _ => te
+    names.zipWithIndex
+      .foldLeft(Option(start)) { case (acc, (n, i)) =>
+        val prefix = head ++ names.take(i)
+        acc.flatMap(te =>
+          aggregateFieldsOf(throughOptional(te, prefix)).find(_.id.value == n).map(_.typeEx)
+        )
       }
       .map(optionalIfChained(_, chained))
   end typeExprOfPath
@@ -12033,11 +12086,13 @@ case class ValidationPass(
     // A25: a `foreach` element is typed by the collection it iterates, and the remaining path
     // components walk that type exactly as they walk a `let`'s. Checked BEFORE lets so an element
     // shadows an outer local of the same name, matching the lexical rule `let` already follows.
-    else if elements.contains(names.head) then typeExprOfPath(elements(names.head), names.tail)
+    else if elements.contains(names.head) then
+      typeExprOfPath(elements(names.head), names.tail, Seq(names.head))
     else
       val idx = letIndexOf(names.head, lets)
       if idx >= 0 then
-        letTypeExpr(idx, parents, lets, elements).flatMap(te => typeExprOfPath(te, names.tail))
+        letTypeExpr(idx, parents, lets, elements)
+          .flatMap(te => typeExprOfPath(te, names.tail, Seq(names.head)))
       else
         val chained = parents.headOption.exists(resolution.refMap.isOptionalChain(vr.path, _))
         valueRefDefinition(vr, parents)
@@ -12623,6 +12678,10 @@ case class ValidationPass(
         validateComparisonOperand(ce.left, parents, lets, elements)
         validateComparisonOperand(ce.right, parents, lets, elements)
         checkComparison(ce, parents, lets, elements)
+        ce.op match
+          case ComparisonOperator.EQ | ComparisonOperator.NE => () // the presence test; defined
+          case _ =>
+            Seq(ce.left, ce.right).foreach(checkOptionalOperand(ce.op.symbol, _, parents, lets, elements))
       // B4: arithmetic validates its operands, then whether the operator may combine them; a
       // duration literal names nothing; `constant X` must exist.
       case ae: ArithmeticExpression =>
@@ -12633,6 +12692,7 @@ case class ValidationPass(
           case operand                  => validateValue(operand, parents, lets, elements)
         }
         checkArithmetic(ae, parents, lets, elements)
+        Seq(ae.left, ae.right).foreach(checkOptionalOperand(ae.op.symbol, _, parents, lets, elements))
       case _: DurationLiteral => ()
       case cp: CalendarPeriodLiteral =>
         messages.addError(
@@ -12788,7 +12848,13 @@ case class ValidationPass(
           }
       case le: LogicalExpression =>
         validateValue(le.left, parents, lets, elements)
-        validateValue(le.right, parents, lets, elements)
+        // `and`/`or` SHORT-CIRCUIT (Reid, 2026-11-23; CM §40): the right operand runs only when
+        // the left has not decided, so it sees what the left PROVED -- its truth under `and`, its
+        // falsehood under `or`. `x != empty and x > t` is guarded.
+        val (whenTrue, whenFalse) = emptyNarrowing(le.left)
+        withNarrowed(if le.op == LogicalOperator.And then whenTrue else whenFalse) {
+          validateValue(le.right, parents, lets, elements)
+        }
         checkBooleanOperand(le.left, s"'${le.op.symbol}'", parents, lets, elements)
         checkBooleanOperand(le.right, s"'${le.op.symbol}'", parents, lets, elements)
       case ne: NotExpression =>
