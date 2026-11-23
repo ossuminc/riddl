@@ -456,7 +456,14 @@ lazy val commands_cp = CrossModule("commands", "riddl-commands", V.scala)(JVM, N
   .settings(
     scalaVersion := V.scala, // Override 3.3.7 LTS - see top of file for reason
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings"),
-    description := "RIDDL Command Infrastructure and command definitions"
+    description := "RIDDL Command Infrastructure and command definitions",
+    // Several suites capture the process-global System.out (ValidateJsonTest, the summary and
+    // stdout suites). StdStreamCapture's lock protects only suites that use it, and CommandTest
+    // runs Commands.runMain without it, so in parallel its `about` banner landed inside
+    // ValidateJsonTest's capture and broke the JSON parse (CI, 2026-11-22, on a commit changing
+    // one string). Serialising closes the race for every suite, including the next one to forget
+    // the lock -- the same fix utils needed for SysLoggerTest.
+    Test / parallelExecution := false
   )
   .jvmConfigure(With.coverage(50))
   .jvmConfigure(With.MiMa(V.previous))
