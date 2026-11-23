@@ -408,8 +408,14 @@ object Messages {
     loc: At = At.empty,
     context: String = ""
   ): Message = {
-    val message = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n", "\n  ", "\n")
-    Message(loc, s"While $context: $message", SevereError)
+    // Name the ROOT CAUSE's class and message first, always. The stack trace alone is not enough:
+    // on Scala Native `getRootCauseStackTrace` comes back EMPTY, so a crash in CI's Native corpus
+    // run reported only "Exception Thrown:: :" and nothing to diagnose (2026-11-23).
+    var root = exception
+    while Option(root.getCause).exists(_ ne root) do root = root.getCause
+    val what = root.getClass.getName + Option(root.getMessage).map(m => s": $m").getOrElse("")
+    val trace = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n", "\n  ", "\n")
+    Message(loc, s"While $context: $what$trace", SevereError)
   }
 
   /** Generate a severe error message based on an exception received */
