@@ -429,6 +429,29 @@ task files, so they were NOT physically reshuffled; this index carries the order
   remaining site. It was not in riddl-models' task list. Wanted for the same reason as the
   rest of the narrowing: the advisory's own suggested guard should silence it.
 
+- **[1.38]** **An INTERMITTENT crash in CI's Linux Native `RiddlModelsRoundTripTest`.** Step 1
+  (`validate`) on reactive-bbq threw a NonFatal exception (so NOT a StackOverflowError) in
+  Native-commands. Record for Linux Native-commands:
+  - `59435d128`: passed.
+  - `cf59c44f2`: failed, and failed again on a re-run of the job.
+  - `3ca36aef6`: passed. Its only change was how a severe message reports an exception, so it
+    cannot have fixed the crash.
+
+  It never reproduced on macOS: not in the Native or JVM suites, and not with the staged native
+  riddlc (0 errors).
+
+  Its type is unknown. `Messages.exceptionToError` built the text only from
+  `getRootCauseStackTrace`, which is EMPTY on Scala Native, so CI printed `Exception Thrown:: :`.
+  `3ca36aef6` now leads with the root cause's class and message, so **the next occurrence is
+  readable: grep the Native-commands log for `While Exception Thrown`.**
+
+  A related one-off: the JVM job on `59435d128` hit `java.lang.VerifyError` (ValidationPass "not
+  assignable to" Pass, in testkit's RunPassTestTest), and the job passed on the next commit.
+
+  Suspects, none verified: Native memory on the runner (the `gc = "none"` family, see CLAUDE.md
+  Build/CI), or state shared through the corpus checkout, which this test writes `.bast` files
+  into. 2.8.4 was shipped on Reid's ruling with this open (2026-11-23).
+
 - **[1.35]** **NEEDS A RULING — a state collection has no element update.** From
   riddl-models' collection-map task (2026-11-21, "related"). `KitchenTicket`'s fold wanted
   `ticketItems[id].ticketItemReady = true`. `set` replaces a whole field,
