@@ -128,6 +128,17 @@ Lessons:
 - **Canaries.** Removing each of the three arms (the yields settle, the answerer extension, the
   duplicate rule) reddened 3, 3 and 1 cases of `CreationAnswerDelegationTest`.
 
+**Follow-up, the same day: 43 sites then drew `stmt-initiate-id-unused`.** The `let` binding
+the `create` had been read only by the deleted `yield`. riddl-models asked for one of two
+fixes: (A) a `create` statement, or (B) an exemption. **Reid declined both.**
+- Not (A): an instance whose id nobody holds can never be sent a message.
+- Not (B): an exemption only silences a valid warning.
+
+The model must USE the id: *"send it a message, otherwise why create it?"* No riddl change was
+made. My earlier claim that a site "validates with neither finding" once its `yield` is
+deleted was false, because the test never asserted on that rule. It is corrected in the task
+file.
+
 Same day, two smaller things:
 - 2.8.3 shipped.
 - `commands` now runs its suites serially. Its Coverage run went red on a one-string commit
