@@ -1,0 +1,29 @@
+// Exercises the cardinality range (Reid, 2026-11-23): T{n,m}, T{n,} (no maximum) and T{,m}
+// (minimum 0). An exact count, T{3,3}, is legal; T{,0} is an error. Prettify writes a bound only
+// when it is not open, so T{0,5} comes back as T{,5}. Exercised by fastparse
+// (RangeCardinalityRoundTripTest) and by the EBNF/TatSu grammar (ebnf_tatsu_validator.py).
+domain Fleet is {
+  context Depot is {
+    record Seat is { row: Integer, letter: String } with { briefly "a seat" }
+    type Crew is Integer{1,4} with { briefly "one to four crew members" }
+    type Plate is String{,3} with { briefly "up to three plates" }
+    record Vehicle is {
+      seats: Depot.Seat{2,},
+      wheels: Integer{3,3},
+      plates: Depot.Plate,
+      crew: Depot.Crew
+    } with { briefly "a vehicle" }
+    command Register is { seats: Depot.Seat{2,8} } with { briefly "register a vehicle" }
+    entity Garage is {
+      state GS of record Depot.Vehicle
+      inlet I is command Register
+      handler GH is {
+        on r: command Register is {
+          let spare: type Depot.Plate = empty
+          log spare
+        }
+        on other is { error "unexpected" }
+      } with { briefly "gh" }
+    } with { briefly "the garage" }
+  } with { briefly "the depot" }
+} with { briefly "a fleet" }

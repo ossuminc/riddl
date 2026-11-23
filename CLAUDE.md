@@ -227,7 +227,13 @@ such a node was misread. Fixed 2026-08-13 with `NODE_CONSTANT` (109) /
 comment (*"This is ambiguous … For now, assume Field"*), which is the part worth
 learning from: **a known-ambiguous decode is a latent corruption, not a rough
 edge. Two node kinds may share a tag only if they write byte-identical
-payloads.**
+payloads.** A second instance survived to 2026-11-23: `SpecificRange` (`T{n,m}`)
+shared `TYPE_RANGE` with `RangeType`, and the reader picked one by PEEKING for a
+`TYPE_NUMBER`/`TYPE_STRING` byte, so `Integer{1,3}` or `Seat{2,8}` decoded as a
+`RangeType` and derailed. It hid only because no parser rule built a
+`SpecificRange`; giving the range a spelling (`TYPE_CARDINALITY_RANGE` 112,
+`FORMAT_REVISION` 39) is what made it live. **A peek-and-guess reader is the same
+admission in code.**
 
 **A BAST error names where the reader DERAILED, never what derailed it.** The
 same single constant surfaced as `Invalid string table index` in a 13-node model

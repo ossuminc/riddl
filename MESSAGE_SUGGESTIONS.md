@@ -104,8 +104,9 @@ artifact, so table rows exceed the usual 80-column limit.)
 | `Replica type expressions may not have cardinality` | Remove the cardinality from the replica's element type; a replica wraps a single replicable type. |
 | `Type expression in Replica is not a replicable type` | Use a replicable element type for the replica: a mapping, sequence, set, or integer type. |
 | `Minimum cardinality must be non-negative` | Use a minimum cardinality of 0 or greater. |
-| `Maximum cardinality must be non-negative` | Use a maximum cardinality of 0 or greater. |
-| `Minimum cardinality must be less than maximum cardinality` | Make the minimum cardinality strictly less than the maximum (e.g. {1..5}). |
+| `Maximum cardinality must be non-negative` | Use a maximum cardinality of 1 or greater, or leave it open (T{n,}). |
+| `Minimum cardinality must not exceed maximum cardinality` | Make the minimum cardinality at most the maximum (e.g. {1,5}, or {3,3} for exactly three). |
+| `A cardinality range with a maximum of 0 is a collection that can hold nothing` (Error, `type-range-max-zero`, 2026-11-23) | Give the range a maximum of at least 1, or remove the field. |
 | `The whole number part must be positive` | Specify a whole-number part of at least 1 for the Decimal, e.g. 'Decimal(10,2)'. |
 | `The fractional part must be positive` | Specify a fractional part of at least 1 for the Decimal, e.g. 'Decimal(10,2)'. |
 

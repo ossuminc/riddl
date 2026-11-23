@@ -2464,7 +2464,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writeTypeExpression(oom.typeExp)
 
       case sr: SpecificRange =>
-        writer.writeU8(TYPE_RANGE)
+        writer.writeU8(TYPE_CARDINALITY_RANGE)
         writeLocation(sr.loc)
         writeTypeExpression(sr.typeExp)
         writer.writeVarLong(sr.min)

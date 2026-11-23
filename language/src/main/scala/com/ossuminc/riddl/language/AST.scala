@@ -2168,7 +2168,19 @@ object AST:
     min: Long,
     max: Long
   ) extends Cardinality:
-    override def format: String = s"${typeExp.format}{$min,$max}"
+    override def format: String = s"${typeExp.format}${SpecificRange.boundsText(min, max)}"
+  end SpecificRange
+
+  object SpecificRange:
+    /** `{n,m}`, writing a bound only when it is not open: a minimum of 0 and a maximum of
+      * `Long.MaxValue` (unbounded) are omitted, so `T{0,5}` is written `T{,5}` and an unbounded
+      * range `T{2,}` (Reid, 2026-11-23). ONE copy, shared by `format`, the prompt ascription and
+      * `RiddlFileEmitter`, so the three cannot disagree about the canonical spelling.
+      */
+    def boundsText(min: Long, max: Long): String =
+      val lo = if min == 0L then "" else min.toString
+      val hi = if max == Long.MaxValue then "" else max.toString
+      s"{$lo,$hi}"
   end SpecificRange
 
   /** Represents one variant among (one or) many variants that comprise an [[Enumeration]]
@@ -3909,7 +3921,8 @@ object AST:
       case Optional(_, typex)                  => s"${ascriptionFormat(typex)}?"
       case ZeroOrMore(_, typex)                => s"${ascriptionFormat(typex)}*"
       case OneOrMore(_, typex)                 => s"${ascriptionFormat(typex)}+"
-      case SpecificRange(_, typex, min, max)   => s"${ascriptionFormat(typex)}{$min,$max}"
+      case SpecificRange(_, typex, min, max)   =>
+        s"${ascriptionFormat(typex)}${SpecificRange.boundsText(min, max)}"
       case other                               => other.format
   end PromptValue
 

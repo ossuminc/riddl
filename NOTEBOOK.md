@@ -76,6 +76,31 @@ Empty; the three riddl-models tasks of 2026-11-19 are in `task/done/` with Resul
 
 **Run `/ossuminc-skills:check-tasks` in the new session** — triage is the driver's call.
 
+## 2026-11-23 (later) — `T{n,m}` gets a spelling, and a BAST tag of its own
+
+ossum.tech asked whether its four `T{0,n}` lines were right. Reid ruled to add the syntax, with
+`min <= max` and both bounds omittable:
+- `T{n,}` has no maximum, stored as `Long.MaxValue`.
+- `T{,m}` has a minimum of 0.
+
+Prettify writes a bound only when it is not open, so `T{0,5}` comes back as `T{,5}`. Details are
+in `docs/claude/language-constructs.md` § Cardinality ranges.
+
+Lessons:
+- **Giving a node a spelling made a latent BAST corruption live.** `SpecificRange` shared
+  `TYPE_RANGE` with `RangeType`, and the reader GUESSED which by peeking for `TYPE_NUMBER` or
+  `TYPE_STRING`. So `Integer{1,3}` (`TYPE_INTEGER`) and `Seat{2,8}` (`TYPE_REF`) decoded as a
+  `RangeType`. The canary, the old reader and writer restored, gave `Invalid string table index`.
+  This is the second instance of CLAUDE.md's one-tag-per-wire-shape hazard. It now has its own
+  tag, 112, at `FORMAT_REVISION` 39.
+- **An exact count was an Error only because nobody could write one.** The validator required
+  `min < max`; now it is `<=`, and its suggestion no longer shows the wrong spelling `{1..5}`.
+- **JSON cannot carry `Long.MaxValue`.** A ujson `Num` is a Double, so the writer omits `max` for
+  an open bound. The reader's default for an absent `max` was `1L`, arbitrary and never
+  exercised; now an absent `max` is open.
+- The typing (`admitsEmpty`, optional-for-required, the collection map's `{n,m}` arm) was
+  already there. It was simply unreachable from source until now; `RangeCardinalityTest` pins it.
+
 ## 2026-11-23 — a `create` delegates a creation command's answer
 
 From a riddl-models task: 11 sites handle a creation command by `create`ing entity E and also

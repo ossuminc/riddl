@@ -767,9 +767,7 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
       case ZeroOrMore(_, typex) => emitTypeExpression(typex).add("*")
       case OneOrMore(_, typex)  => emitTypeExpression(typex).add("+")
       case SpecificRange(_, typex, n, x) =>
-        emitTypeExpression(typex).add("{")
-        add(n.toString).add(",")
-        add(x.toString).add("}")
+        emitTypeExpression(typex).add(SpecificRange.boundsText(n, x))
       case ate: AggregateTypeExpression =>
         ate match {
           case aggr: Aggregation                  => emitAggregation(aggr)

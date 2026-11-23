@@ -466,3 +466,4 @@ value-time-zone-malformed
 stmt-send-duplicates-yield
 msg-answer-unreachable
 stmt-yield-duplicates-creation
+type-range-max-zero

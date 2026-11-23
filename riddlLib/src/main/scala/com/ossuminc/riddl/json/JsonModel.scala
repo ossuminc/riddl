@@ -153,7 +153,8 @@ object JsonModel:
   case class EntityRefDto(entity: Option[String] = None) extends TypeExprDto
 
   /** `{ "cardinality": "optional"|"zeroOrMore"|"oneOrMore"|"range", "of": <typeExpr>, "min"?: Int,
-    * "max"?: Int }` — min/max only used by "range" (SpecificRange).
+    * "max"?: Int }` — min/max only used by "range" (SpecificRange). An absent "max" is an open
+    * maximum (`T{n,}`), the writer's spelling of Long.MaxValue, which a JSON number cannot hold.
     */
   case class CardinalityDto(
     cardinality: String,

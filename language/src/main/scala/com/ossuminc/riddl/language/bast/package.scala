@@ -195,7 +195,14 @@ package object bast {
     // 38 (2026-11-21) adds value tag 30, the collection map (`each of xs as e [where p] yielding
     // v`: collection, element, a filter-presence byte and filter, projection); a revision-37
     // reader throws on it.
-    38 // collection map
+    // 39 (2026-11-23) gives SpecificRange (`T{n,m}`) its own tag, TYPE_CARDINALITY_RANGE. It had
+    // shared TYPE_RANGE with RangeType, and the reader GUESSED between them by peeking for a
+    // TYPE_NUMBER/TYPE_STRING byte -- so a range over `Integer` (TYPE_INTEGER) or an alias
+    // (TYPE_REF) decoded as a RangeType and derailed every byte after it. Latent only because no
+    // parser rule built a SpecificRange until this revision gave it a spelling. A revision-38
+    // reader misreads the new tag; a revision-38 file holding a SpecificRange was never sound.
+    39 // cardinality range
+    // 38 was the collection map
     // 37 was calendar periods
     // 36 was calendar and cron schedules
     // 35 was recurrence: `on every`, `send ... every`
@@ -228,6 +235,12 @@ package object bast {
     * ContainedGroup: identifier, group ref). The reader's peek to disambiguate never worked.
     */
   val NODE_CONTAINED_GROUP: Byte = 111
+
+  /** `T{n,m}` (SpecificRange). Its own tag since FORMAT_REVISION 39: it shared [[TYPE_RANGE]] with
+    * RangeType, and the reader had to guess which by peeking at the next byte. One tag per WIRE
+    * SHAPE.
+    */
+  val TYPE_CARDINALITY_RANGE: Byte = 112
 
   /** Magic bytes for BAST file identification: "BAST" */
   val MAGIC_BYTES: Array[Byte] = Array('B'.toByte, 'A'.toByte, 'S'.toByte, 'T'.toByte)

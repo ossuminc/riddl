@@ -1957,22 +1957,16 @@ class BASTReader(
 
       case TYPE_RANGE =>
         val loc = readLocation()
-        val saved = reader.position
-        val nextTag = reader.peekU8()
-        reader.seek(saved)
+        val min = reader.readVarLong()
+        val max = reader.readVarLong()
+        RangeType(loc, min, max)
 
-        if nextTag == TYPE_NUMBER || nextTag == TYPE_STRING then
-          // SpecificRange
-          val typeExp = readTypeExpression()
-          val min = reader.readVarLong()
-          val max = reader.readVarLong()
-          SpecificRange(loc, typeExp, min, max)
-        else
-          // RangeType
-          val min = reader.readVarLong()
-          val max = reader.readVarLong()
-          RangeType(loc, min, max)
-        end if
+      case TYPE_CARDINALITY_RANGE =>
+        val loc = readLocation()
+        val typeExp = readTypeExpression()
+        val min = reader.readVarLong()
+        val max = reader.readVarLong()
+        SpecificRange(loc, typeExp, min, max)
 
       // References - all variants have subtype byte
       case TYPE_REF =>

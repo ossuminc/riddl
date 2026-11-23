@@ -117,7 +117,7 @@ aggregate_use_case = "type" | "command" | "query" | "event" | "result" | "record
 (* Type Expressions *)
 type_expression =
     ("many" ["optional"] | "optional") type_expression_alternatives |
-    type_expression_alternatives ["?" | "*" | "+"] ;
+    type_expression_alternatives ["?" | "*" | "+" | range_cardinality] ;
 type_expression_alternatives = infix_alternation | predefined_types | pattern_type | unique_id_type | enumeration | sequence_type | mapping_from_to | a_set_type |
     graph_type | table_type | replica_type | range_type | decimal_type | alternation | entity_reference_type |
     aggregation | aggregate_use_case_type_expression | aliased_type_expression ;
@@ -191,9 +191,12 @@ field = identifier is field_type_expression [with_metadata] ;
 method = identifier "(" [arguments] ")" is field_type_expression [with_metadata] ;
 arguments = {method_argument [","]} ;
 method_argument = identifier ":" field_type_expression ;
+(* A count range after a type: T{n,m}, T{n,} (no maximum) or T{,m} (minimum 0). An exact
+   count, T{3,3}, is legal; T{,0} is an error, a collection that can hold nothing. *)
+range_cardinality = "{" [ integer ] "," [ integer ] "}" ;
 field_type_expression =
     ("many" ["optional"] | "optional") field_type_alternatives |
-    field_type_alternatives ["?" | "*" | "+"] ;
+    field_type_alternatives ["?" | "*" | "+" | range_cardinality] ;
 field_type_alternatives = infix_alternation | predefined_types | pattern_type | unique_id_type | enumeration | sequence_type | mapping_from_to | a_set_type |
     graph_type | table_type | replica_type | range_type | decimal_type | alternation | aggregation |
     aliased_type_expression | entity_reference_type ;

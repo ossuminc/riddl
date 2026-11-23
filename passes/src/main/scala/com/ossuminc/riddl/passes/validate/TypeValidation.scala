@@ -401,16 +401,27 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
           "Maximum cardinality must be non-negative",
           Error,
           typ.loc,
-          suggestion = "Use a maximum cardinality of 0 or greater.",
+          suggestion = "Use a maximum cardinality of 1 or greater, or leave it open (T{n,}).",
           ruleId = Some(RuleId.NegativeMaxCardinality)
         )
+        // `min == max` is an exact count, `T{3,3}`, and legal (Reid, 2026-11-23); it was refused
+        // while no source could spell a range at all.
         check(
-          min < max,
-          "Minimum cardinality must be less than maximum cardinality",
+          min <= max,
+          "Minimum cardinality must not exceed maximum cardinality",
           Error,
           typ.loc,
-          suggestion = "Make the minimum cardinality strictly less than the maximum (e.g. {1..5}).",
+          suggestion = "Make the minimum cardinality at most the maximum (e.g. {1,5}, or {3,3} " +
+            "for exactly three).",
           ruleId = Some(RuleId.MinExceedsMax)
+        )
+        check(
+          max != 0,
+          "A cardinality range with a maximum of 0 is a collection that can hold nothing",
+          Error,
+          typ.loc,
+          suggestion = "Give the range a maximum of at least 1, or remove the field.",
+          ruleId = Some(RuleId.RangeMaxZero)
         )
       case UniqueId(loc, pid, kindKeyword) =>
         checkPathRef[Processor[?]](pid, parents)

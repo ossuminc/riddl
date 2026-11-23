@@ -512,6 +512,30 @@ decision.
   corpus count; **grep the declaration SHAPE (`^\s*processor <Id>`), never the
   bare word.**
 
+## Cardinality ranges — `T{n,m}` (2026-11-23)
+
+`T{n,m}` is a collection of `n` to `m` elements: an `AST.SpecificRange` beside `T?`, `T*` and
+`T+`, legal wherever they are (type definitions, fields, ascriptions). Either bound may be left
+open: `T{n,}` has no maximum (`max = Long.MaxValue`, the sentinel `range(,)` uses) and `T{,m}` a
+minimum of 0. `T{,}` means `T*` and `T{1,}` means `T+`; both are accepted without comment.
+
+- **The node existed for years with NO source spelling** -- AST, validation, prettify, BAST and
+  JSON all carried it, the docs described `T{0,n}`, and no parser rule built one, so its `format`
+  emitted text that did not parse. Reid ruled the syntax in rather than the docs out.
+- **Validation** (`TypeValidation`): `min <= max` (`type-min-exceeds-max`; an exact count
+  `T{3,3}` is legal, it was refused while unreachable) and a maximum of 0 is an Error
+  (`type-range-max-zero`).
+- **Canonical form writes a bound only when it is not open**: `T{0,5}` prettifies to `T{,5}`.
+  One helper, `SpecificRange.boundsText`, feeds `format`, the prompt ascription and
+  `RiddlFileEmitter`.
+- **Parser**: `rangeCardinality` in `TypeParser`, an alternative of `cardinality`'s suffix with
+  NO cut inside, so a `{` that is not a range backtracks. EBNF `range_cardinality`.
+- **BAST**: its own tag, `TYPE_CARDINALITY_RANGE` (112), `FORMAT_REVISION` 39 -- see the BAST
+  hazard in CLAUDE.md. **JSON**: `cardinality: "range"`, `min`, and `max` OMITTED when open.
+- Typing was already there and is now reachable: `admitsEmpty` reads `min == 0`, a `{,m}` value
+  filling a `T+` is the optional-for-required Advisory, and the collection map keeps `{n,m}`
+  unfiltered and gives `{,m}` filtered.
+
 ## Values and literals
 
 - **Numeric literals** — `NumericLiteral(loc, text)` in the `Value` and

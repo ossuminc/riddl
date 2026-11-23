@@ -107,8 +107,8 @@ class CollectionMapTest extends AbstractValidatingTest {
         val filtered = s"each of E.S.plus as l where not l.drink yielding $ticket"
         mustBeClean("C.Ticket*", filtered, td)
         mustAdvise("C.Ticket+", filtered, td)
-        // `T{n,m}` has no source spelling (no parser rule builds a SpecificRange), so the range
-        // arm of the typing is reachable only from BAST or JSON and is not exercised here.
+        // The `T{n,m}` arm of the typing is exercised in RangeCardinalityTest, now that the range
+        // has a source spelling (2026-11-23).
     }
 
     "parse `where x == empty yielding`, not read `yielding` as a type" in { (td: TestData) =>

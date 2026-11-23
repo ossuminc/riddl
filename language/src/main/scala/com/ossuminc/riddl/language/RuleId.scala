@@ -709,6 +709,8 @@ enum RuleId(
   case NegativeMinCardinality extends RuleId("type-negative-min-cardinality")
   case NegativeMaxCardinality extends RuleId("type-negative-max-cardinality")
   case MinExceedsMax extends RuleId("type-min-exceeds-max")
+  // Reid, 2026-11-23, when `T{n,m}` gained a source spelling: `T{,0}` can hold nothing.
+  case RangeMaxZero extends RuleId("type-range-max-zero")
   case IdNamesNonProcessor extends RuleId("type-id-names-non-processor")
   case WholePartPositive extends RuleId("type-whole-part-positive")
   case FractionPartPositive extends RuleId("type-fraction-part-positive")

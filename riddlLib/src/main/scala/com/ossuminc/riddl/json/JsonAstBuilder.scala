@@ -2337,7 +2337,8 @@ object JsonAstBuilder:
           case "optional"   => Optional(curAt, inner)
           case "zeroOrMore" => ZeroOrMore(curAt, inner)
           case "oneOrMore"  => OneOrMore(curAt, inner)
-          case "range"      => SpecificRange(curAt, inner, min.getOrElse(0L), max.getOrElse(1L))
+          // An absent max is OPEN (`T{n,}`), which is how the writer spells Long.MaxValue.
+          case "range" => SpecificRange(curAt, inner, min.getOrElse(0L), max.getOrElse(Long.MaxValue))
           case other =>
             ctx.err(s"unknown cardinality '$other' (expected optional|zeroOrMore|oneOrMore|range)")
             inner

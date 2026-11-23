@@ -1376,7 +1376,9 @@ class JsonifierPass(input: PassInput, outputs: PassesOutput)(using PlatformConte
     case ZeroOrMore(_, inner) => CardinalityDto("zeroOrMore", serializeTypeExpr(inner))
     case OneOrMore(_, inner)  => CardinalityDto("oneOrMore", serializeTypeExpr(inner))
     case SpecificRange(_, inner, mn, mx) =>
-      CardinalityDto("range", serializeTypeExpr(inner), Some(mn), Some(mx))
+      // An open maximum (`T{n,}`) is Long.MaxValue, which a JSON number (a Double) cannot hold
+      // exactly, so it is OMITTED; the reader takes an absent max as open.
+      CardinalityDto("range", serializeTypeExpr(inner), Some(mn), Option.when(mx != Long.MaxValue)(mx))
     case a: AggregateTypeExpression =>
       RecordDto(
         a.fields.map(serializeField),

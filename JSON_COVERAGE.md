@@ -135,7 +135,7 @@ is covered in that construct's phase. The builder emits references as
 | Aggregation | ✅ Phase 1 | `kind: "Record"` with `aggregate: "aggregation"` |
 | AliasedTypeExpression | ✅ Phase 1 | `kind: "Alias"` |
 | Optional / ZeroOrMore / OneOrMore | ✅ Phase 1 | `cardinality` wrapper |
-| SpecificRange | ✅ Phase 2 | `cardinality: "range"` with min/max |
+| SpecificRange | ✅ Phase 2 | `cardinality: "range"` with min/max; an open max (`T{n,}`, Long.MaxValue) OMITS `max`, since a JSON number cannot hold it (2026-11-23) |
 | UserId | ✅ Phase 2 | |
 | Anything | ✅ Phase 2 | serialized as `kind: "Anything"`; `"Abstract"` still accepted on input (deprecated) |
 | Location | ✅ Phase 2 | |

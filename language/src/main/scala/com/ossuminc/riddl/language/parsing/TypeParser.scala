@@ -728,23 +728,35 @@ private[parsing] trait TypeParser {
     ).map { case (start, min, max, end) => RangeType(at(start, end), min, max) }
   }
 
+  /** `{n,m}`, `{n,}` or `{,m}` after a type: a [[SpecificRange]] (Reid, 2026-11-23). An omitted
+    * minimum is 0 and an omitted maximum is unbounded (`Long.MaxValue`, the sentinel `range(,)`
+    * uses). There is deliberately NO cut inside, so a `{` that does not continue as a range
+    * backtracks instead of failing the type it follows.
+    */
+  private def rangeCardinality[u: P]: P[(Long, Long)] =
+    P(
+      Punctuation.curlyOpen ~ integer.? ~ Punctuation.comma ~ integer.? ~ Punctuation.curlyClose
+    ).map { case (min, max) => (min.getOrElse(0L), max.getOrElse(Long.MaxValue)) }
+
   private def cardinality[u: P](p: => P[TypeExpression]): P[TypeExpression] = {
     // Cardinality can be specified with:
     // - Prefix: "many" (=+), "optional" (=?), or "many optional" (=*)
     // - Suffix: ? (optional), + (one-or-more), * (zero-or-more)
+    // - Suffix range: T{n,m}, with either bound omittable -- T{n,} (no maximum), T{,m} (minimum 0)
     // - But NOT both prefix and suffix together (ambiguous)
     P(
       Index ~
-        Keywords.many.!.? ~ Keywords.optional.!.? ~ p ~ StringIn(
-          Punctuation.question,
-          Punctuation.asterisk,
-          Punctuation.plus
-        ).!.? ~/ Index
+        Keywords.many.!.? ~ Keywords.optional.!.? ~ p ~ (
+          StringIn(Punctuation.question, Punctuation.asterisk, Punctuation.plus).!.map(Left(_)) |
+            rangeCardinality.map(Right(_))
+        ).? ~/ Index
     ).map {
       // Suffix only (no prefix)
-      case (start, None, None, typ, Some("?"), end) => Optional(at(start, end), typ)
-      case (start, None, None, typ, Some("+"), end) => OneOrMore(at(start, end), typ)
-      case (start, None, None, typ, Some("*"), end) => ZeroOrMore(at(start, end), typ)
+      case (start, None, None, typ, Some(Left("?")), end) => Optional(at(start, end), typ)
+      case (start, None, None, typ, Some(Left("+")), end) => OneOrMore(at(start, end), typ)
+      case (start, None, None, typ, Some(Left("*")), end) => ZeroOrMore(at(start, end), typ)
+      case (start, None, None, typ, Some(Right((min, max))), end) =>
+        SpecificRange(at(start, end), typ, min, max)
       // Prefix only (no suffix)
       case (start, Some("many"), None, typ, None, end)     => OneOrMore(at(start, end), typ)
       case (start, None, Some("optional"), typ, None, end) => Optional(at(start, end), typ)
@@ -753,7 +765,10 @@ private[parsing] trait TypeParser {
       // No cardinality modifier
       case (_, None, None, typ, None, _) => typ
       // Invalid: prefix and suffix together
-      case (start, prefix, optPrefix, typ, Some(suffix), end) =>
+      case (start, prefix, optPrefix, typ, Some(suffixed), end) =>
+        val suffix = suffixed match
+          case Left(s)           => s
+          case Right((min, max)) => SpecificRange.boundsText(min, max)
         val prefixStr = (prefix, optPrefix) match
           case (Some("many"), Some("optional")) => "many optional"
           case (Some("many"), None)             => "many"
